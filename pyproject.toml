@@ -12,12 +12,10 @@ license = { text = "MIT" }
 authors = [{ name = "leeewayyy", email = "leewei036@gmail.com" }]
 keywords = ["transcription", "whisper", "whisperx", "diarization", "subtitles", "speech-to-text"]
 
-dependencies = [
-    # ASR + alignment + diarization, all self-hosted.
-    "whisperx>=3.1.1",
-    # Source downloading (YouTube + thousands of sites).
-    "yt-dlp>=2024.1.0",
-]
+# No hard runtime dependencies: the base install stays lightweight so the Mac
+# client (`pip install -e ".[client]"`) never pulls torch/whisperx. The heavy ML
+# stack lives in the `server` extra; the thin client lives in `client`.
+dependencies = []
 
 [project.optional-dependencies]
 # torch is intentionally NOT pinned here because the correct wheel is
@@ -26,8 +24,18 @@ dev = [
     "pytest>=7.4",
     "ruff>=0.4",
 ]
+# Local processing (the `transcript` CLI + `transcribe()` library). Install with
+# `pip install -e ".[local]"`. torch is installed separately (see README).
+local = [
+    # ASR + alignment + diarization, all self-hosted.
+    "whisperx>=3.1.1",
+    # Source downloading (YouTube + thousands of sites).
+    "yt-dlp>=2024.1.0",
+]
 # Install on the GPU host to expose the HTTP API: `pip install -e ".[server]"`.
+# Builds on `local` and adds the web layer.
 server = [
+    "transcript[local]",
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",

@@ -55,10 +55,15 @@ pip install torch torchaudio
 
 ### 3. This package
 
+Pick the extra that matches how you'll use it — the base install pulls in no
+heavy dependencies:
+
 ```bash
-pip install -e .          # from the project root
+pip install -e ".[local]"    # local processing: `transcript` CLI + library
+pip install -e ".[server]"   # GPU host: HTTP API (`transcript-server`)
+pip install -e ".[client]"   # thin client only (`transcript-remote`, needs just requests)
 # with dev tools:
-pip install -e ".[dev]"
+pip install -e ".[local,dev]"
 ```
 
 ### 4. Hugging Face token (only for speaker labels)
