@@ -92,7 +92,13 @@ class TranscriptionEngine:
             except ImportError:
                 from whisperx import DiarizationPipeline  # older layout
 
-            self._diarizer = DiarizationPipeline(use_auth_token=self.hf_token, device=self.device)
+            # The auth kwarg was renamed use_auth_token -> token in newer whisperx.
+            try:
+                self._diarizer = DiarizationPipeline(token=self.hf_token, device=self.device)
+            except TypeError:
+                self._diarizer = DiarizationPipeline(
+                    use_auth_token=self.hf_token, device=self.device
+                )
         return self._diarizer
 
     # --- main pipeline --------------------------------------------------------
