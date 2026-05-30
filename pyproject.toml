@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "transcript"
+version = "0.1.0"
+description = "Generate transcripts (with speaker labels) from any video/audio file or URL."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "leeewayyy", email = "leewei036@gmail.com" }]
+keywords = ["transcription", "whisper", "whisperx", "diarization", "subtitles", "speech-to-text"]
+
+dependencies = [
+    # ASR + alignment + diarization, all self-hosted.
+    "whisperx>=3.1.1",
+    # Source downloading (YouTube + thousands of sites).
+    "yt-dlp>=2024.1.0",
+]
+
+[project.optional-dependencies]
+# torch is intentionally NOT pinned here because the correct wheel is
+# platform/CUDA-specific. See README for the right install command for your box.
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.4",
+]
+# Install on the GPU host to expose the HTTP API: `pip install -e ".[server]"`.
+server = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart>=0.0.9",
+]
+# Install on the Mac (client only) — no torch/whisperx needed:
+#   pip install requests   (or  pip install -e ".[client]")
+client = [
+    "requests>=2.31",
+]
+
+[project.scripts]
+transcript = "transcript.cli:main"
+transcript-server = "transcript.server:main"
+transcript-remote = "transcript.remote:main"
+
+[project.urls]
+Homepage = "https://github.com/leeewayyy/transcript"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/transcript"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

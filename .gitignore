@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Model caches / outputs (don't commit large artifacts)
+*.wav
+*.srt
+*.vtt
+transcript-*/
+.cache/
+
+# OS
+.DS_Store
+
+# Claude Code local settings
+.claude/settings.local.json

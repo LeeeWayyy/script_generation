@@ -1,0 +1,33 @@
+# systemd unit for the transcript API server (Linux GPU host).
+#
+# Install:
+#   sudo cp deploy/transcript-server.service /etc/systemd/system/
+#   sudo systemctl edit transcript-server   # set User, WorkingDirectory, env below
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now transcript-server
+#   journalctl -u transcript-server -f       # logs (shows the token on first run)
+#
+# Edit the placeholders (USER, /path/to/...) to match your machine.
+
+[Unit]
+Description=transcript API server (WhisperX transcription + diarization)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=USER
+WorkingDirectory=/path/to/transcript
+# Point at the venv that has the [server] extra + torch installed.
+Environment=PATH=/path/to/transcript/.venv/bin:/usr/local/bin:/usr/bin:/bin
+# Required for speaker diarization:
+Environment=HF_TOKEN=hf_xxx
+# Auth token clients must send. Generate once: python -c "import secrets;print(secrets.token_urlsafe(24))"
+Environment=TRANSCRIPT_TOKEN=CHANGE_ME
+Environment=TRANSCRIPT_MODEL=large-v3
+ExecStart=/path/to/transcript/.venv/bin/transcript-server --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
