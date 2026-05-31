@@ -71,9 +71,15 @@ pip install -e ".[local,dev]"
 Diarization uses gated pyannote models. One-time setup:
 
 1. Create a token at <https://huggingface.co/settings/tokens>.
-2. Accept the license at
-   <https://huggingface.co/pyannote/speaker-diarization-3.1> (and the
-   `segmentation-3.0` model it links to).
+2. Accept the license for the diarization models. Which one you need depends on
+   your WhisperX version:
+   - WhisperX 3.8+ uses
+     <https://huggingface.co/pyannote/speaker-diarization-community-1>.
+   - Older WhisperX uses
+     <https://huggingface.co/pyannote/speaker-diarization-3.1> (and the
+     `segmentation-3.0` model it links to).
+
+   Accepting access is usually instant. If you're unsure, accept both.
 3. Expose it: `export HF_TOKEN=hf_xxx` (or pass `--hf-token` / `hf_token=`).
 
 ## CLI usage
