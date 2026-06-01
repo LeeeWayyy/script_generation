@@ -101,6 +101,16 @@ def transcribe(
                 "diarized": diarize,
             }
         )
+        # Download recipe (provenance): for a URL, yt-dlp named the media file
+        # `<id>.<ext>`, so the stem is the resolved platform id; also record the
+        # downloader version. (No-op for local-file sources.)
+        if source.startswith(("http://", "https://")):
+            from importlib.metadata import PackageNotFoundError, version
+            try:
+                ytdlp_ver = version("yt-dlp")
+            except PackageNotFoundError:
+                ytdlp_ver = None
+            result.meta.update({"video_id": Path(media).stem, "downloader": "yt-dlp", "yt_dlp_version": ytdlp_ver})
         return result
     finally:
         if own_work_dir and not keep_audio:

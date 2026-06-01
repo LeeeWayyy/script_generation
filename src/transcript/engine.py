@@ -123,13 +123,16 @@ class TranscriptionEngine:
         result = asr.transcribe(audio, batch_size=self.batch_size, language=language)
         detected_language = result.get("language", language)
 
+        align_ok: Optional[bool] = None
         if align and detected_language:
+            align_ok = False
             try:
                 log.info("Aligning words (language=%s) ...", detected_language)
                 model_a, metadata = self._load_align(detected_language)
                 result = whisperx.align(
                     result["segments"], model_a, metadata, audio, self.device, return_char_alignments=False
                 )
+                align_ok = True
             except Exception as exc:
                 log.warning("Word alignment failed (%s); continuing without word timestamps.", exc)
 
@@ -139,7 +142,32 @@ class TranscriptionEngine:
             diarize_segments = diarizer(audio, min_speakers=min_speakers, max_speakers=max_speakers)
             result = whisperx.assign_word_speakers(diarize_segments, result)
 
-        return _to_transcript(result, language=detected_language)
+        t = _to_transcript(result, language=detected_language)
+        # Provenance recipe (engine-side; merged into Transcript.meta so DailyNotes
+        # records it honestly, never hardcoded). Success flags distinguish
+        # "requested" from "actually applied".
+        ends = [s.end for s in t.segments if s.end is not None]
+        t.meta.update(
+            {
+                "align_requested": align,
+                "align_succeeded": align_ok,
+                "diarize_requested": diarize,
+                "diarize_succeeded": (any(s.speaker for s in t.segments) if diarize else None),
+                "duration_s": (max(ends) if ends else None),
+                "whisperx_version": _pkg_version("whisperx"),
+                "pyannote_version": _pkg_version("pyannote.audio"),
+            }
+        )
+        return t
+
+
+def _pkg_version(name: str) -> Optional[str]:
+    """Installed package version (for provenance); None if unknown."""
+    from importlib.metadata import PackageNotFoundError, version
+    try:
+        return version(name)
+    except PackageNotFoundError:
+        return None
 
 
 def _to_transcript(result: dict, *, language: Optional[str]) -> Transcript:
