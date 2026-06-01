@@ -48,6 +48,7 @@ def _download_url(url: str, work_dir: Path) -> Path:
         "--no-playlist",
         "-o",
         out_template,
+        "--write-info-json",   # full provenance metadata → <id>.info.json (read by transcribe())
         "--print",
         "after_move:filepath",
         "--no-simulate",

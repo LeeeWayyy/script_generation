@@ -131,6 +131,11 @@ class Worker(threading.Thread):
                     max_speakers=job.max_speakers,
                     engine=engine,
                 )
+                # Job/server identity → Transcript.meta (the join point: to_json
+                # serializes only the Transcript, so Job-level fields must be
+                # merged here to reach `-f json`).
+                from . import __version__ as _ver
+                job.transcript.meta.update({"job_id": job.id, "server_version": _ver})
                 job.status = "done"
                 log.info("Job %s: done (%d segments)", job.id, len(job.transcript.segments))
             except Exception as exc:  # noqa: BLE001 — surface to client
