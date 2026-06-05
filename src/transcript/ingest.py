@@ -70,12 +70,73 @@ def _download_url(url: str, work_dir: Path) -> Path:
     if printed and os.path.exists(printed[-1]):
         return Path(printed[-1])
 
-    # Fallback: pick the newest file in work_dir.
-    candidates = sorted(work_dir.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)
+    # Fallback: pick the newest file in work_dir, excluding the sidecar
+    # `<id>.info.json` (written by --write-info-json) — it is typically NEWER than
+    # the media, so a naive newest-file pick would wrongly return the JSON.
+    candidates = sorted(
+        (p for p in work_dir.glob("*") if p.suffix.lower() != ".json"),
+        key=lambda p: p.stat().st_mtime, reverse=True,
+    )
     if candidates:
         return candidates[0]
 
     raise RuntimeError(f"Download appeared to succeed but no file was found in {work_dir}.")
+
+
+def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> tuple[Path, str | None]:
+    """Download a *capped video stream* for frame extraction (plan §B).
+
+    This is SEPARATE from the ASR download: the audio for ASR is still taken from
+    the same ``bestaudio`` stream the legacy path uses (via :func:`transcribe`),
+    so a video job and an audio job for one URL yield the same transcript. A
+    muxed ``best`` could carry a different audio stream — we never decode ASR
+    audio from this video file. Uses a distinct output template + subdir so the
+    two downloads cannot overwrite/ambiguate each other's ``info.json``.
+
+    Returns ``(video_path, selected_video_format_id)``.
+    """
+    frame_dir = work_dir / "frame-stream"
+    frame_dir.mkdir(parents=True, exist_ok=True)
+    out_template = str(frame_dir / "%(id)s.video.%(ext)s")
+    fmt = f"bestvideo[height<={height_cap}]/best[height<={height_cap}]/best"
+
+    cmd = [
+        sys.executable, "-m", "yt_dlp",
+        "-f", fmt,
+        "--no-playlist",
+        "-o", out_template,
+        "--write-info-json",
+        "--print", "after_move:filepath",
+        "--print", "format_id",
+        "--no-simulate",
+        url,
+    ]
+    log.info("Downloading capped video stream for frames: %s", url)
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+    except FileNotFoundError as exc:
+        raise RuntimeError("yt-dlp is not available. Install it with `pip install yt-dlp`.") from exc
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(f"yt-dlp failed to download video for {url}:\n{exc.stderr}") from exc
+
+    printed = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+    path = None
+    fmt_id = None
+    if printed and os.path.exists(printed[0]):
+        path = Path(printed[0])
+        fmt_id = printed[1] if len(printed) > 1 else None
+    if path is None:
+        # Exclude the `.video.info.json` sidecar (--write-info-json), which yt-dlp
+        # writes AFTER the media and would otherwise win the newest-file pick.
+        candidates = sorted(
+            (p for p in frame_dir.glob("*.video.*") if p.suffix.lower() != ".json"),
+            key=lambda p: p.stat().st_mtime, reverse=True,
+        )
+        if candidates:
+            path = candidates[0]
+    if path is None:
+        raise RuntimeError(f"Frame-stream download produced no file in {frame_dir}.")
+    return path, fmt_id
 
 
 def ensure_tool(name: str) -> None:

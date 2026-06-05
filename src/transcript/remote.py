@@ -16,8 +16,9 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-import time
 from pathlib import Path
+
+from ._remote_http import build_headers, poll_until_done
 
 
 def _is_url(s: str) -> bool:
@@ -57,7 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
 
     base = args.server.rstrip("/")
-    headers = {"Authorization": f"Bearer {args.token}"} if args.token else {}
+    headers = build_headers(args.token)
 
     def note(msg: str) -> None:
         if not args.quiet:
@@ -106,32 +107,13 @@ def main(argv: list[str] | None = None) -> int:
     job_id = r.json()["id"]
     note(f"Job {job_id} queued. Polling ...")
 
-    deadline = args.timeout
-    waited = 0.0
-    last_status = None
-    while True:
-        try:
-            s = requests.get(f"{base}/jobs/{job_id}", headers=headers).json()
-        except requests.RequestException as exc:
-            print(f"Error polling job: {exc}", file=sys.stderr)
-            return 1
-
-        status = s.get("status")
-        if status != last_status:
-            note(f"  status: {status}")
-            last_status = status
-
-        if status == "done":
-            break
-        if status == "error":
-            print(f"Error: transcription failed: {s.get('error')}", file=sys.stderr)
-            return 1
-
-        time.sleep(args.poll)
-        waited += args.poll
-        if waited >= deadline:
-            print(f"Error: timed out after {deadline}s (job still {status}).", file=sys.stderr)
-            return 1
+    # Shared submit/poll logic (also used by extract-remote) lives in _remote_http.
+    try:
+        poll_until_done(requests, f"{base}/jobs/{job_id}", headers,
+                        poll=args.poll, timeout=args.timeout, note=note)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
     rr = requests.get(
         f"{base}/jobs/{job_id}/result", params={"format": args.format}, headers=headers
