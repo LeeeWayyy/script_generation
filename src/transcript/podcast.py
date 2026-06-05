@@ -227,6 +227,9 @@ class EnclosureDownload:
 
 # Cap a direct enclosure download so a hostile/misconfigured feed can't fill disk.
 MAX_ENCLOSURE_BYTES = 4 * 1024 * 1024 * 1024  # 4 GiB
+# Feed fetch bounds — a slow/hanging feed must not block the single worker.
+FEED_FETCH_TIMEOUT = 30.0
+MAX_FEED_BYTES = 64 * 1024 * 1024  # 64 MiB is enormous for an RSS feed
 
 
 class _EnclosureTooLarge(Exception):
@@ -342,8 +345,25 @@ def _parse_feed(feed_url: str) -> tuple[list[Episode], bool]:
 
     import feedparser
 
-    parsed = feedparser.parse(feed_url)
-    feed_is_https = str(parsed.get("href", feed_url)).lower().startswith("https")
+    # Fetch the feed OURSELVES with a timeout + size cap (feedparser.parse(url)
+    # has no timeout and would block the single worker on a slow/hanging host),
+    # then hand the bytes to feedparser.
+    import urllib.request
+    try:
+        req = urllib.request.Request(feed_url, headers={"User-Agent": "transcript/0.1"})
+        with urllib.request.urlopen(req, timeout=FEED_FETCH_TIMEOUT) as resp:
+            raw = resp.read(MAX_FEED_BYTES + 1)
+    except Exception as exc:  # noqa: BLE001 — network/timeout → structured failure
+        raise PodcastResolutionError(
+            "feed_identity_unavailable", f"could not fetch feed {feed_url!r}: {exc}"
+        ) from exc
+    if len(raw) > MAX_FEED_BYTES:
+        raise PodcastResolutionError(
+            "feed_identity_unavailable", f"feed exceeds {MAX_FEED_BYTES}-byte cap"
+        )
+
+    parsed = feedparser.parse(raw)
+    feed_is_https = feed_url.lower().startswith("https")
     episodes: list[Episode] = []
     for entry in parsed.entries:
         encs = []

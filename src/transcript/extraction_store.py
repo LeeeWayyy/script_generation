@@ -267,14 +267,21 @@ class ExtractionStore:
                 return None
 
     def _bump(self, job_id: str, *, now: Optional[float] = None) -> None:
+        """Bump last-access: update the in-memory index UNDER the lock, then write
+        the (best-effort, restart-only) manifest file OUTSIDE the lock so disk I/O
+        never serializes concurrent store operations. The in-memory ``_index`` is
+        the authority for TTL decisions, so a momentarily-stale on-disk manifest
+        is harmless."""
         now = time.time() if now is None else now
-        manifest = self._index.get(job_id)
-        if manifest is None:
-            return
-        manifest["last_access"] = now
+        with self._lock:
+            manifest = self._index.get(job_id)
+            if manifest is None:
+                return
+            manifest["last_access"] = now
+            snapshot = dict(manifest)
         try:
             (self._job_dir(job_id) / self.MANIFEST_NAME).write_text(
-                json.dumps(manifest), encoding="utf-8"
+                json.dumps(snapshot), encoding="utf-8"
             )
         except OSError:
             pass
@@ -285,18 +292,22 @@ class ExtractionStore:
         concurrent sweep cannot unlink the dir mid-stream. Yields the job dir, or
         ``None`` if the bundle is gone (TTL-evicted / lost on restart)."""
         with self._lock:
-            available = job_id in self._index and self.result_path(job_id).is_file()
-            if available:
-                self._leases[job_id] = self._leases.get(job_id, 0) + 1
-                self._bump(job_id)
-                job_dir = self._job_dir(job_id)
-        # Yield OUTSIDE the lock in both branches so a caller that does real work
-        # in the None-path can't block all store operations.
+            known = job_id in self._index
+        # stat OUTSIDE the lock (result.json is immutable once published).
+        available = known and self.result_path(job_id).is_file()
+        if available:
+            with self._lock:
+                # Re-check membership: an eviction may have raced the stat above.
+                if job_id in self._index:
+                    self._leases[job_id] = self._leases.get(job_id, 0) + 1
+                else:
+                    available = False
         if not available:
             yield None
             return
+        self._bump(job_id)  # in-memory under lock; manifest write outside (above)
         try:
-            yield job_dir
+            yield self._job_dir(job_id)
         finally:
             with self._lock:
                 n = self._leases.get(job_id, 0) - 1

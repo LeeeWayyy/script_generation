@@ -275,10 +275,23 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
     assert server._safe_upload_name("..") == "upload.bin"
     assert server._safe_upload_name("") == "upload.bin"
     assert server._safe_upload_name("ok.zip") == "ok.zip"
-    # Windows reserved device names (any case / extension) are rejected.
-    for reserved in ("CON", "nul.txt", "COM1", "lpt9.bin", "AUX"):
+    # Windows reserved device names (any case / extension / 2-digit) are rejected.
+    for reserved in ("CON", "nul.txt", "COM1", "lpt9.bin", "AUX", "COM10", "LPT12.x"):
         assert server._safe_upload_name(reserved) == "upload.bin"
     assert server._safe_upload_name("console.txt") == "console.txt"  # not reserved
+
+
+def test_upload_size_cap_rejects_oversized(monkeypatch, tmp_path):
+    import transcript.server as server
+    monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    monkeypatch.setattr(server, "MAX_UPLOAD_BYTES", 16)  # tiny cap for the test
+    monkeypatch.setattr("transcript.ocr._load_engine", lambda: "FAKE_OCR")
+    monkeypatch.setattr("transcript.ocr.run_ocr", _fake_ocr)
+    from fastapi.testclient import TestClient
+    with TestClient(server.create_app()) as client:
+        r = client.post("/extractions", data={"kind": "image_note"},
+                        files={"file": ("big.zip", b"x" * 64)})  # > 16-byte cap
+        assert r.status_code == 413
 
 
 def test_audio_extraction_explicit_enclosure_is_user_supplied(monkeypatch, tmp_path):

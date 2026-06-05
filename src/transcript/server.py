@@ -38,6 +38,30 @@ from fastapi.responses import PlainTextResponse
 
 log = logging.getLogger("transcript.server")
 
+# Cap an uploaded file so an authenticated client can't fill the server's temp
+# disk before the (post-write) archive decompression cap even runs.
+MAX_UPLOAD_BYTES = int(os.environ.get("TRANSCRIPT_MAX_UPLOAD_BYTES", 8 * 1024 * 1024 * 1024))
+
+
+def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
+    """Stream an UploadFile to ``dest`` in chunks, aborting (HTTPException 413) if
+    it exceeds ``max_bytes`` — never trusts a client-declared length."""
+    from fastapi import HTTPException
+
+    max_bytes = MAX_UPLOAD_BYTES if max_bytes is None else max_bytes
+    written = 0
+    with dest.open("wb") as fh:
+        while True:
+            chunk = src.read(1024 * 1024)
+            if not chunk:
+                break
+            written += len(chunk)
+            if written > max_bytes:
+                fh.close()
+                dest.unlink(missing_ok=True)
+                raise HTTPException(status_code=413, detail="Upload exceeds the size limit.")
+            fh.write(chunk)
+
 
 def _safe_upload_name(filename: Optional[str]) -> str:
     """Return a safe bare basename for an untrusted multipart upload filename.
@@ -55,9 +79,9 @@ def _safe_upload_name(filename: Optional[str]) -> str:
     # can hang the process or write to a device on a Windows host.
     stem = os.path.splitext(base)[0].upper()
     if stem in {"CON", "PRN", "AUX", "NUL"} or (
-        len(stem) == 4 and stem[:3] in {"COM", "LPT"} and stem[3].isdigit()
+        len(stem) > 3 and stem[:3] in {"COM", "LPT"} and stem[3:].isdigit()
     ):
-        return "upload.bin"
+        return "upload.bin"  # incl. COM1..COM999 / LPT1..LPT999
     return base
 
 
@@ -403,8 +427,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         if file is not None:
             upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
             dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
-            with dest.open("wb") as fh:
-                shutil.copyfileobj(file.file, fh)
+            _save_upload(file.file, dest)
             local_path, source = str(dest), f"upload:{file.filename}"
         else:
             local_path, source = url, url
@@ -502,8 +525,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         if file is not None:
             upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
             dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
-            with dest.open("wb") as fh:
-                shutil.copyfileobj(file.file, fh)
+            _save_upload(file.file, dest)
             local_path, source = str(dest), f"upload:{file.filename}"
         else:
             local_path = source = url or feed_url or enclosure_url
@@ -572,6 +594,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         import zipfile
 
         from fastapi.responses import StreamingResponse
+        from starlette.background import BackgroundTask
 
         # Build the zip to a TEMP FILE under the lease (so the asset files can't be
         # evicted mid-build), then stream that file back. We never hold the whole
@@ -604,17 +627,23 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
                 raise
 
         def _stream():
-            try:
-                with open(tmp.name, "rb") as fh:
-                    while True:
-                        chunk = fh.read(1024 * 1024)
-                        if not chunk:
-                            break
-                        yield chunk
-            finally:
-                _os.unlink(tmp.name)
+            with open(tmp.name, "rb") as fh:
+                while True:
+                    chunk = fh.read(1024 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
 
-        return StreamingResponse(_stream(), media_type="application/zip")
+        def _cleanup():
+            try:
+                _os.unlink(tmp.name)
+            except OSError:
+                pass
+
+        # A BackgroundTask runs after the response finishes (incl. a dropped
+        # connection) without relying on generator-finalizer GC timing.
+        return StreamingResponse(_stream(), media_type="application/zip",
+                                 background=BackgroundTask(_cleanup))
 
     return app
 

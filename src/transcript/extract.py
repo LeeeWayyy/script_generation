@@ -83,12 +83,17 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
         assets.append(_asset_ref(key, member.path))
         asset_files.append((key, member.path))
 
+    import os
     meta: dict = {
         "ocr_engine": _ocr_engine_version(),
         "ocr_model": OCR_PARAMS["lang"],
+        # The pinned weights dir, if any — two hosts with different weights at
+        # different paths produce different ocr_text under identical params, so
+        # the recipe records which weights were used to explain divergence.
+        "ocr_model_dir": os.environ.get("TRANSCRIPT_OCR_MODEL_DIR"),
         "ocr_params": OCR_PARAMS,
     }
-    _tag_provenance(meta, recipe=["ocr_engine", "ocr_model", "ocr_params"],
+    _tag_provenance(meta, recipe=["ocr_engine", "ocr_model", "ocr_model_dir", "ocr_params"],
                     observation=["cards"])
     result = ExtractionResult(
         kind="image_note",

@@ -59,8 +59,11 @@ class BundleVerificationError(Exception):
     pass
 
 
-def _check_key(key: str, what: str) -> str:
-    """Reject absolute / drive-letter / ``..`` / backslash paths; return POSIX key."""
+_CHUNK = 1024 * 1024
+
+
+def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
+    """Reject absolute / drive-letter / ``..`` / backslash / reserved paths."""
     kp = str(key)
     if not kp or kp.endswith("/"):
         raise BundleVerificationError(f"empty/invalid {what}: {key!r}")
@@ -69,6 +72,8 @@ def _check_key(key: str, what: str) -> str:
     is_drive = len(kp) >= 2 and kp[0].isalpha() and kp[1] == ":"  # "C:/x" AND "C:x"
     if kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in kp.split("/"):
         raise BundleVerificationError(f"unsafe {what} rejected: {key!r}")
+    if kp in reserved:
+        raise BundleVerificationError(f"{what} collides with a reserved name: {key!r}")
     return kp
 
 
@@ -90,51 +95,67 @@ def _safe_member_names(zf: zipfile.ZipFile) -> list[str]:
     return names
 
 
-def unpack_and_verify(zip_bytes: bytes, out_dir: Path) -> dict:
-    """Verify a bundle fully IN MEMORY, then write only the verified members.
+def _stream_member_hash(zf: zipfile.ZipFile, name: str) -> tuple[str, int]:
+    """sha256 + size of a zip member, read in bounded chunks (never whole-in-RAM)."""
+    hasher = hashlib.sha256()
+    size = 0
+    with zf.open(name) as m:
+        for chunk in iter(lambda: m.read(_CHUNK), b""):
+            hasher.update(chunk)
+            size += len(chunk)
+    return hasher.hexdigest(), size
 
-    The zip member set must be EXACTLY ``{"result.json"} ∪ {asset.key}`` — no
-    extras, no duplicates — and every asset's ``sha256``/``size`` must match
-    before anything is written to ``out_dir``. So a compromised/misconfigured
-    server can neither slip unverified extra files onto disk nor create ambiguous
-    duplicate members. Returns the parsed ``result.json`` envelope.
+
+def unpack_and_verify(zip_source, out_dir: Path) -> dict:
+    """Verify a bundle (streaming, bounded RAM), then write only verified members.
+
+    ``zip_source`` is a path to the downloaded zip on disk (preferred) or raw
+    bytes (for small/in-test bundles). The member set must be EXACTLY
+    ``{"result.json"} ∪ {asset.key}`` — no extras/duplicates, and ``result.json``
+    is reserved (an asset can't claim it) — and every asset's ``sha256``/``size``
+    must match BEFORE anything is written to ``out_dir``. Assets are hashed and
+    copied in 1 MiB chunks, so a large (valid) bundle never lands wholly in RAM.
+    Returns the parsed ``result.json`` envelope.
     """
-    with zipfile.ZipFile(io.BytesIO(zip_bytes)) as zf:
+    def _open():
+        if isinstance(zip_source, (bytes, bytearray)):
+            return zipfile.ZipFile(io.BytesIO(zip_source))
+        return zipfile.ZipFile(zip_source)
+
+    with _open() as zf:
         names = set(_safe_member_names(zf))
         if "result.json" not in names:
             raise BundleVerificationError("bundle is missing result.json")
         envelope = json.loads(zf.read("result.json").decode("utf-8"))
 
-        asset_keys = [_check_key(a["key"], "asset key") for a in envelope.get("assets", [])]
+        asset_keys = [_check_key(a["key"], "asset key", reserved=("result.json",))
+                      for a in envelope.get("assets", [])]
         if len(asset_keys) != len(set(asset_keys)):
             raise BundleVerificationError("duplicate asset key in envelope")
-        expected = {"result.json", *asset_keys}
-        extra = names - expected
+        extra = names - {"result.json", *asset_keys}
         if extra:
             raise BundleVerificationError(f"bundle has unexpected members: {sorted(extra)}")
 
-        # Verify every asset against the envelope BEFORE writing anything.
-        verified: dict[str, bytes] = {}
+        # Pass 1 — verify every asset (streaming hash), writing NOTHING yet.
         for asset, key in zip(envelope.get("assets", []), asset_keys):
             if key not in names:
                 raise BundleVerificationError(f"asset listed but missing from bundle: {key}")
-            data = zf.read(key)
-            if len(data) != asset["size"]:
+            digest, size = _stream_member_hash(zf, key)
+            if size != asset["size"]:
                 raise BundleVerificationError(
-                    f"asset size mismatch for {key}: {len(data)} != {asset['size']}"
+                    f"asset size mismatch for {key}: {size} != {asset['size']}"
                 )
-            if hashlib.sha256(data).hexdigest() != asset["sha256"]:
+            if digest != asset["sha256"]:
                 raise BundleVerificationError(f"asset sha256 mismatch for {key}")
-            verified[key] = data
-        result_bytes = zf.read("result.json")
 
-    # Only now — everything checked out — write the verified bytes to disk.
-    out_dir.mkdir(parents=True, exist_ok=True)
-    (out_dir / "result.json").write_bytes(result_bytes)
-    for key, data in verified.items():
-        dest = out_dir / key
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(data)
+        # Pass 2 — everything verified; stream each member to disk.
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for name in ("result.json", *asset_keys):
+            dest = out_dir / name
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(name) as m, dest.open("wb") as o:
+                for chunk in iter(lambda: m.read(_CHUNK), b""):
+                    o.write(chunk)
     return envelope
 
 
@@ -250,20 +271,37 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    rr = requests.get(f"{base}/extractions/{job_id}/bundle", headers=headers)
-    if rr.status_code in (404, 410):
-        print(f"Error: bundle unavailable ({rr.status_code}): {rr.text}", file=sys.stderr)
-        return 1
-    if not rr.ok:
-        print(f"Error fetching bundle ({rr.status_code}): {rr.text}", file=sys.stderr)
-        return 1
-
-    out_dir = Path(args.out_dir).expanduser() / job_id
+    # Stream the bundle to a temp file (a connect+read timeout so a stalled server
+    # can't hang the client forever; the body is never held wholly in RAM).
+    import tempfile
+    tmp = tempfile.NamedTemporaryFile(prefix="bundle-", suffix=".zip", delete=False)
     try:
-        envelope = unpack_and_verify(rr.content, out_dir)
-    except BundleVerificationError as exc:
-        print(f"Error: bundle verification failed: {exc}", file=sys.stderr)
+        with requests.get(f"{base}/extractions/{job_id}/bundle", headers=headers,
+                          stream=True, timeout=(30, args.timeout)) as rr:
+            if rr.status_code in (404, 410):
+                print(f"Error: bundle unavailable ({rr.status_code})", file=sys.stderr)
+                return 1
+            if not rr.ok:
+                print(f"Error fetching bundle ({rr.status_code})", file=sys.stderr)
+                return 1
+            for chunk in rr.iter_content(chunk_size=1024 * 1024):
+                tmp.write(chunk)
+        tmp.close()
+
+        out_dir = Path(args.out_dir).expanduser() / job_id
+        try:
+            envelope = unpack_and_verify(Path(tmp.name), out_dir)
+        except BundleVerificationError as exc:
+            print(f"Error: bundle verification failed: {exc}", file=sys.stderr)
+            return 1
+    except requests.RequestException as exc:
+        print(f"Error fetching bundle: {exc}", file=sys.stderr)
         return 1
+    finally:
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
 
     note(f"Verified bundle -> {out_dir} ({len(envelope.get('assets', []))} assets)")
     sys.stdout.write(envelope.get("text", ""))

@@ -185,6 +185,32 @@ def test_unpack_nothing_written_until_all_assets_verified(tmp_path):
     assert not (out / "assets" / "a.jpg").exists()
 
 
+def test_unpack_rejects_asset_key_claiming_result_json(tmp_path):
+    # A compromised server can't list result.json as an asset key (reserved).
+    env = {"assets": [{"key": "result.json", "sha256": "0", "size": 0,
+                       "media_type": "application/json"}]}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("result.json", json.dumps(env))
+    with pytest.raises(BundleVerificationError, match="reserved"):
+        unpack_and_verify(buf.getvalue(), tmp_path / "o")
+
+
+def test_unpack_accepts_a_zip_path_and_streams(tmp_path):
+    # The client downloads to a temp file and verifies from the PATH (bounded RAM).
+    data = b"img"
+    env = {"text": "hi", "assets": [
+        {"key": "assets/a.jpg", "sha256": hashlib.sha256(data).hexdigest(),
+         "size": 3, "media_type": "image/jpeg"}]}
+    zpath = tmp_path / "bundle.zip"
+    with zipfile.ZipFile(zpath, "w") as zf:
+        zf.writestr("result.json", json.dumps(env))
+        zf.writestr("assets/a.jpg", data)
+    out = unpack_and_verify(zpath, tmp_path / "o")  # pass a Path, not bytes
+    assert out["text"] == "hi"
+    assert (tmp_path / "o" / "assets" / "a.jpg").read_bytes() == data
+
+
 def test_unpack_requires_result_json(tmp_path):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:

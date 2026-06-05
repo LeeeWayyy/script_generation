@@ -125,6 +125,52 @@ def test_serialize_is_deterministic_and_indent_2():
     assert '\n  "kind"' in s1  # indent=2
 
 
+def test_serialize_image_note_byte_golden():
+    # Pin the EXACT serialized bytes of an image_note envelope so a field-order /
+    # inclusion-policy / float-format change can't silently drift the contract
+    # (the durable result.json must equal these bytes).
+    r = ExtractionResult(
+        kind="image_note", text="## card 1\nHello\n", language=None,
+        cards=[Card(index=0, ocr_text="Hello", image_ref="assets/card-000.jpg",
+                    source_filename="1.jpg", image_sha256="abc123",
+                    width=100, height=50, confidence=0.9)],
+        assets=[AssetRef(key="assets/card-000.jpg", sha256="def456", size=3,
+                         media_type="image/jpeg")],
+        meta={"ocr_model": "ch"},
+    )
+    golden = (
+        '{\n'
+        '  "kind": "image_note",\n'
+        '  "text": "## card 1\\nHello\\n",\n'
+        '  "language": null,\n'
+        '  "cards": [\n'
+        '    {\n'
+        '      "index": 0,\n'
+        '      "ocr_text": "Hello",\n'
+        '      "image_ref": "assets/card-000.jpg",\n'
+        '      "source_filename": "1.jpg",\n'
+        '      "image_sha256": "abc123",\n'
+        '      "width": 100,\n'
+        '      "height": 50,\n'
+        '      "confidence": 0.9\n'
+        '    }\n'
+        '  ],\n'
+        '  "assets": [\n'
+        '    {\n'
+        '      "key": "assets/card-000.jpg",\n'
+        '      "sha256": "def456",\n'
+        '      "size": 3,\n'
+        '      "media_type": "image/jpeg"\n'
+        '    }\n'
+        '  ],\n'
+        '  "meta": {\n'
+        '    "ocr_model": "ch"\n'
+        '  }\n'
+        '}'
+    )
+    assert serialize(r) == golden
+
+
 def test_serialize_meta_preserves_insertion_order():
     r = ExtractionResult(kind="audio_extraction", text="x\n", segments=[],
                          meta={"feed_url": "u", "episode_guid": "g", "resolution_source": "feed_parse"})
