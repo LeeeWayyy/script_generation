@@ -30,10 +30,16 @@ log = logging.getLogger("transcript.extract")
 
 
 def _asset_ref(key: str, path: Path) -> AssetRef:
-    data = path.read_bytes()
+    # Stream the hash in chunks — an asset can be large (frames/images up to the
+    # archive cap), so never read the whole file into memory just for integrity.
+    hasher = hashlib.sha256()
+    size = 0
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            hasher.update(chunk)
+            size += len(chunk)
     media_type = mimetypes.guess_type(key)[0] or "application/octet-stream"
-    return AssetRef(key=key, sha256=hashlib.sha256(data).hexdigest(),
-                    size=len(data), media_type=media_type)
+    return AssetRef(key=key, sha256=hasher.hexdigest(), size=size, media_type=media_type)
 
 
 def _tag_provenance(meta: dict, *, recipe: list[str], observation: list[str]) -> None:

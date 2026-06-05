@@ -333,6 +333,13 @@ class PodcastResolution:
 
 
 def _parse_feed(feed_url: str) -> tuple[list[Episode], bool]:
+    # SSRF / local-file-disclosure guard (BEFORE importing feedparser, which would
+    # otherwise happily parse a local path or file:// URL). Only http(s) is valid.
+    if urlsplit(feed_url).scheme not in ("http", "https"):
+        raise PodcastResolutionError(
+            "feed_identity_unavailable", f"feed URL scheme not allowed: {feed_url!r}"
+        )
+
     import feedparser
 
     parsed = feedparser.parse(feed_url)

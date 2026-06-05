@@ -37,7 +37,9 @@ def poll_until_done(
     Returns the final status dict. Raises :class:`RuntimeError` with a clean
     message on a failed job or a timeout.
     """
-    waited = 0.0
+    # Measure against the monotonic wall clock so slow network requests count
+    # toward the deadline (accumulating only `poll` would overshoot `timeout`).
+    deadline = time.monotonic() + timeout
     last_status = None
     while True:
         try:
@@ -57,7 +59,6 @@ def poll_until_done(
         if status == "error":
             raise RuntimeError(f"job failed: {s.get('error')}")
 
-        time.sleep(poll)
-        waited += poll
-        if waited >= timeout:
+        if time.monotonic() >= deadline:
             raise RuntimeError(f"timed out after {timeout}s (job still {status}).")
+        time.sleep(poll)

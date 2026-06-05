@@ -34,6 +34,15 @@ def test_canonicalize_preserves_encoded_slash():
     assert canonicalize_url("https://h.com/a%2Fb%20c") == "https://h.com/a%2Fb c"
 
 
+def test_resolve_podcast_rejects_non_http_feed_scheme():
+    # SSRF / LFD guard: feedparser will read local files / file:// — refuse them.
+    from transcript.podcast import resolve_podcast
+    for bad in ("file:///etc/passwd", "/etc/passwd"):
+        with pytest.raises(PodcastResolutionError) as ei:
+            resolve_podcast(bad, episode_guid="g")
+        assert ei.value.reason == "feed_identity_unavailable"
+
+
 def test_download_enclosure_rejects_non_http_scheme(tmp_path):
     # SSRF / local-file-disclosure guard: file:// (and any non-http(s)) is refused.
     from transcript.podcast import download_enclosure

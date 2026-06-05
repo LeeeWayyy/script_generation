@@ -97,6 +97,10 @@ class Job:
     transcript: object = field(default=None, repr=False)
     # Internal: the local path to process (uploaded temp file or the URL)
     _local_path: Optional[str] = field(default=None, repr=False)
+    # Internal: a temp dir WE created for an upload, to remove when the job ends.
+    # Explicit ownership beats a startswith(gettempdir()) heuristic, which breaks
+    # on macOS where mkdtemp returns /private/var/... but gettempdir() is /var/...
+    _upload_tmp_dir: Optional[str] = field(default=None, repr=False)
 
     def public(self) -> dict:
         d = {
@@ -201,9 +205,9 @@ class Worker(threading.Thread):
                 job.error_reason = getattr(exc, "reason", None)
                 log.exception("Job %s failed", job.id)
             finally:
-                # Clean up an uploaded temp file (URLs have no temp upload).
-                if job._local_path and job._local_path.startswith(tempfile.gettempdir()):
-                    shutil.rmtree(Path(job._local_path).parent, ignore_errors=True)
+                # Clean up the upload temp dir WE created (URLs/feeds have none).
+                if job._upload_tmp_dir:
+                    shutil.rmtree(job._upload_tmp_dir, ignore_errors=True)
 
     # -- legacy ASR (byte-stable; guarded by the byte-golden test) -----------
 
@@ -395,9 +399,10 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
 
         job_id = uuid.uuid4().hex[:12]
 
+        upload_tmp_dir = None
         if file is not None:
-            tmp_dir = Path(tempfile.mkdtemp(prefix="transcript-upload-"))
-            dest = tmp_dir / _safe_upload_name(file.filename)
+            upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
+            dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
             with dest.open("wb") as fh:
                 shutil.copyfileobj(file.file, fh)
             local_path, source = str(dest), f"upload:{file.filename}"
@@ -413,6 +418,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
             max_speakers=max_speakers,
         )
         job._local_path = local_path
+        job._upload_tmp_dir = upload_tmp_dir
         store.add(job)
         worker.submit(job_id)
         return job.public()
@@ -492,9 +498,10 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
             )
 
         job_id = uuid.uuid4().hex[:12]
+        upload_tmp_dir = None
         if file is not None:
-            tmp_dir = Path(tempfile.mkdtemp(prefix="transcript-upload-"))
-            dest = tmp_dir / _safe_upload_name(file.filename)
+            upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
+            dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
             with dest.open("wb") as fh:
                 shutil.copyfileobj(file.file, fh)
             local_path, source = str(dest), f"upload:{file.filename}"
@@ -509,6 +516,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
             enclosure_url=enclosure_url,
         )
         job._local_path = local_path
+        job._upload_tmp_dir = upload_tmp_dir
         store.add(job)
         worker.submit(job_id)
         return job.public_extraction()

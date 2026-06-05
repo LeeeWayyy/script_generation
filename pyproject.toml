@@ -29,6 +29,7 @@ dev = [
     "fastapi>=0.110",
     "httpx>=0.27",
     "python-multipart>=0.0.9",
+    "requests>=2.31",
 ]
 # Local processing (the `transcript` CLI + `transcribe()` library). Install with
 # `pip install -e ".[local]"`. torch is installed separately (see README).

@@ -186,9 +186,10 @@ def _load_engine():
 def _decode_image(image_path: Path):
     from PIL import Image, ImageOps
 
-    img = Image.open(image_path)
-    if OCR_PARAMS["exif_transpose"]:
-        img = ImageOps.exif_transpose(img)
+    # Close the source descriptor promptly — Image.open is lazy and would
+    # otherwise leak FDs across thousands of video frames.
+    with Image.open(image_path) as src:
+        img = ImageOps.exif_transpose(src) if OCR_PARAMS["exif_transpose"] else src.copy()
     if img.mode in ("RGBA", "LA", "P"):
         img = img.convert("RGBA")
         bg = Image.new("RGBA", img.size, (255, 255, 255, 255))
