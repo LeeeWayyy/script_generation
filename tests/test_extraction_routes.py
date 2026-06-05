@@ -275,6 +275,10 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
     assert server._safe_upload_name("..") == "upload.bin"
     assert server._safe_upload_name("") == "upload.bin"
     assert server._safe_upload_name("ok.zip") == "ok.zip"
+    # Windows reserved device names (any case / extension) are rejected.
+    for reserved in ("CON", "nul.txt", "COM1", "lpt9.bin", "AUX"):
+        assert server._safe_upload_name(reserved) == "upload.bin"
+    assert server._safe_upload_name("console.txt") == "console.txt"  # not reserved
 
 
 def test_audio_extraction_explicit_enclosure_is_user_supplied(monkeypatch, tmp_path):

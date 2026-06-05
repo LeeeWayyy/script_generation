@@ -51,6 +51,13 @@ def _safe_upload_name(filename: Optional[str]) -> str:
     base = os.path.basename((filename or "").replace("\\", "/")).strip()
     if not base or base in (".", "..") or "/" in base or "\\" in base:
         return "upload.bin"
+    # Reject Windows reserved device names (CON/PRN/AUX/NUL/COM1-9/LPT1-9), which
+    # can hang the process or write to a device on a Windows host.
+    stem = os.path.splitext(base)[0].upper()
+    if stem in {"CON", "PRN", "AUX", "NUL"} or (
+        len(stem) == 4 and stem[:3] in {"COM", "LPT"} and stem[3].isdigit()
+    ):
+        return "upload.bin"
     return base
 
 

@@ -63,10 +63,11 @@ def _reject_path(name: str) -> None:
     # directory entry trips the rule rather than being silently skipped. The
     # caller decides separately (via is_dir()) not to extract directories.
     stripped = p.rstrip("/")
-    # Reject POSIX-absolute AND Windows drive-letter absolutes (e.g. "C:/x") —
-    # the latter is not is_absolute() on Linux/macOS, so check it explicitly. We
-    # match only a real drive prefix ("C:/") so a POSIX name like "0:00.jpg" is OK.
-    is_drive = len(stripped) >= 3 and stripped[0].isalpha() and stripped[1] == ":" and stripped[2] == "/"
+    # Reject POSIX-absolute AND Windows drive paths — both absolute ("C:/x") and
+    # drive-RELATIVE ("C:x", which still escapes the dest on a Windows host). The
+    # latter is not is_absolute() on Linux/macOS, so check it explicitly. A POSIX
+    # name like "0:00.jpg" is fine because its first char isn't a letter.
+    is_drive = len(stripped) >= 2 and stripped[0].isalpha() and stripped[1] == ":"
     if p.startswith("/") or Path(stripped).is_absolute() or is_drive:
         raise UnsafeArchiveError(f"absolute member path rejected: {name!r}")
     if ".." in stripped.split("/"):

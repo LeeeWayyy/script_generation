@@ -127,10 +127,12 @@ def test_zip_fifo_mode_rejected(tmp_path):
 
 
 def test_zip_drive_letter_rejected_but_posix_colon_ok(tmp_path):
-    with pytest.raises(UnsafeArchiveError):
-        extract_images(_write_zip(tmp_path, {"C:/evil.jpg": b"x"}), tmp_path / "o1")
-    # A POSIX filename with a colon (not a drive prefix) is fine.
-    members = extract_images(_write_zip(tmp_path, {"0:00.jpg": b"x"}), tmp_path / "o2")
+    # Both drive-ABSOLUTE ("C:/x") and drive-RELATIVE ("C:x") escape on Windows.
+    for bad in ("C:/evil.jpg", "C:evil.jpg"):
+        with pytest.raises(UnsafeArchiveError):
+            extract_images(_write_zip(tmp_path, {bad: b"x"}), tmp_path / "o")
+    # A POSIX filename whose colon is not a drive prefix is fine.
+    members = extract_images(_write_zip(tmp_path, {"0:00.jpg": b"x"}), tmp_path / "ok")
     assert members[0].basename == "0:00.jpg"
 
 

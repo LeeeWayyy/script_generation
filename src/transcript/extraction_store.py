@@ -100,9 +100,10 @@ class ExtractionStore:
         if "\\" in key:
             raise ValueError(f"non-POSIX asset key (backslash) rejected: {key!r}")
         norm = key
-        # Reject POSIX-absolute and Windows drive-letter absolutes ("C:/x"), but
-        # not a stray colon in a POSIX name ("0:00.jpg").
-        is_drive = len(norm) >= 3 and norm[0].isalpha() and norm[1] == ":" and norm[2] == "/"
+        # Reject POSIX-absolute and Windows drive paths — absolute ("C:/x") AND
+        # drive-relative ("C:x") — but not a stray colon in a POSIX name
+        # ("0:00.jpg", whose first char isn't a letter).
+        is_drive = len(norm) >= 2 and norm[0].isalpha() and norm[1] == ":"
         if norm.startswith("/") or is_drive:
             raise ValueError(f"absolute asset key rejected: {key!r}")
         parts = norm.split("/")

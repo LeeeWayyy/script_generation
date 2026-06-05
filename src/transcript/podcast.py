@@ -229,6 +229,10 @@ class EnclosureDownload:
 MAX_ENCLOSURE_BYTES = 4 * 1024 * 1024 * 1024  # 4 GiB
 
 
+class _EnclosureTooLarge(Exception):
+    """Internal sentinel: the download exceeded the byte cap (fatal, no fallback)."""
+
+
 def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
                        max_bytes: int = MAX_ENCLOSURE_BYTES) -> EnclosureDownload:
     """Stream-download a direct RSS ``<enclosure>`` to ``dest_dir``, capturing the
@@ -242,10 +246,20 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
     """
     import urllib.request
 
+    # SSRF / local-file-disclosure guard: urllib supports file://, ftp://, etc.
+    # Only http(s) enclosures are valid — refuse anything else outright.
+    if urlsplit(url).scheme not in ("http", "https"):
+        raise PodcastResolutionError(
+            "feed_identity_unavailable", f"enclosure URL scheme not allowed: {url!r}"
+        )
+
     chain: list[str] = []
 
     class _Track(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
+            # Don't let a redirect escape http(s) (e.g. a 302 → file://).
+            if urlsplit(newurl).scheme not in ("http", "https"):
+                return None
             chain.append(newurl)
             return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -269,9 +283,20 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
                         break
                     size += len(chunk)
                     if size > max_bytes:
-                        raise ValueError("enclosure exceeds max_bytes")
+                        raise _EnclosureTooLarge()
                     out.write(chunk)
-    except Exception:  # noqa: BLE001 — best-effort; fall back to yt-dlp
+    except _EnclosureTooLarge as exc:
+        # A too-large enclosure must FAIL the job, not fall back to yt-dlp (which
+        # has no size cap and would download it anyway, bypassing the limit).
+        try:
+            dest.unlink()
+        except OSError:
+            pass
+        raise PodcastResolutionError(
+            "enclosure_too_large",
+            f"enclosure exceeds the {max_bytes}-byte download cap",
+        ) from exc
+    except Exception:  # noqa: BLE001 — other failures are best-effort; fall back to yt-dlp
         try:
             dest.unlink()
         except OSError:

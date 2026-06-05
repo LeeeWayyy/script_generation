@@ -66,7 +66,7 @@ def _check_key(key: str, what: str) -> str:
         raise BundleVerificationError(f"empty/invalid {what}: {key!r}")
     if "\\" in kp:  # keys/members are POSIX-relative; a backslash is never valid
         raise BundleVerificationError(f"non-POSIX {what} rejected: {key!r}")
-    is_drive = len(kp) >= 3 and kp[0].isalpha() and kp[1] == ":" and kp[2] == "/"
+    is_drive = len(kp) >= 2 and kp[0].isalpha() and kp[1] == ":"  # "C:/x" AND "C:x"
     if kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in kp.split("/"):
         raise BundleVerificationError(f"unsafe {what} rejected: {key!r}")
     return kp
@@ -146,7 +146,10 @@ def main(argv: list[str] | None = None) -> int:
         description="Submit a URL/file/bundle to a transcript-server extraction "
         "route and fetch the verified bundle.",
     )
-    p.add_argument("source", help="URL, local media file, or manual-export bundle (zip/tar).")
+    p.add_argument("source", nargs="?",
+                   help="URL, local media file, or manual-export bundle (zip/tar). For "
+                   "audio_extraction a positional feed URL is also accepted, or omit it "
+                   "and pass --feed-url / --enclosure-url.")
     p.add_argument("--kind", choices=KINDS, help="Modality (else inferred from the extension).")
     p.add_argument("--frames", action="store_true", help="Extract video frames (with --kind video).")
     p.add_argument("--cadence", type=float, help="Frame cadence in seconds (with --frames).")
@@ -170,35 +173,58 @@ def main(argv: list[str] | None = None) -> int:
     headers = build_headers(args.token)
     note = stderr_note(args.quiet)
 
+    if not args.kind and not args.source:
+        print("Error: pass a source, or --kind with the relevant flags.", file=sys.stderr)
+        return 1
     kind = args.kind or sniff_kind(args.source)
+
+    feed_url, enclosure_url = args.feed_url, args.enclosure_url
+    # For audio_extraction (podcast-only), a positional URL source is the feed URL
+    # (the server ignores `url` for this kind) — route it so the documented
+    # `extract-remote --kind audio_extraction <feed-url> ...` form works.
+    if kind == "audio_extraction" and args.source \
+            and args.source.startswith(("http://", "https://")) \
+            and not feed_url and not enclosure_url:
+        feed_url = args.source
+    if kind == "audio_extraction" and not feed_url and not enclosure_url:
+        print("Error: audio_extraction needs --feed-url (+selector) or --enclosure-url "
+              "(or a positional feed URL).", file=sys.stderr)
+        return 1
 
     data = {"kind": kind, "diarize": str(args.diarize).lower()}
     if args.frames:
         data["frames"] = "true"
     if args.cadence is not None:
         data["cadence_s"] = str(args.cadence)
-    for k, v in (("feed_url", args.feed_url), ("episode_guid", args.episode_guid),
+    for k, v in (("feed_url", feed_url), ("episode_guid", args.episode_guid),
                  ("episode_url", args.episode_url), ("episode_title", args.episode_title),
                  ("episode_published", args.episode_published),
-                 ("enclosure_url", args.enclosure_url), ("language", args.language)):
+                 ("enclosure_url", enclosure_url), ("language", args.language)):
         if v:
             data[k] = v
 
     files = None
     fh = None
-    is_url = args.source.startswith(("http://", "https://"))
+    # audio_extraction submits no url/file (provenance comes from feed/enclosure).
+    submit_source = args.source if kind != "audio_extraction" else None
+    is_url = bool(submit_source) and submit_source.startswith(("http://", "https://"))
     try:
-        if is_url:
-            data["url"] = args.source
+        if kind == "audio_extraction":
+            note(f"Submitting {kind} (feed/enclosure) to {base} ...")
+        elif is_url:
+            data["url"] = submit_source
             note(f"Submitting {kind} URL to {base} ...")
-        else:
-            path = Path(args.source).expanduser()
+        elif submit_source:
+            path = Path(submit_source).expanduser()
             if not path.is_file():
                 print(f"Error: file not found: {path}", file=sys.stderr)
                 return 1
             fh = path.open("rb")
             files = {"file": (path.name, fh)}
             note(f"Uploading {path.name} ({kind}) to {base} ...")
+        else:
+            print(f"Error: kind={kind} requires a URL or file source.", file=sys.stderr)
+            return 1
         try:
             r = requests.post(f"{base}/extractions", data=data, files=files, headers=headers)
         finally:

@@ -52,6 +52,7 @@ def _download_url(url: str, work_dir: Path) -> Path:
         "--print",
         "after_move:filepath",
         "--no-simulate",
+        "--",   # end of options: a URL starting with '-' can't be parsed as a flag
         url,
     ]
 
@@ -109,6 +110,7 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
         "--print", "after_move:filepath",
         "--print", "format_id",
         "--no-simulate",
+        "--",   # end of options: a URL starting with '-' can't be parsed as a flag
         url,
     ]
     log.info("Downloading capped video stream for frames: %s", url)

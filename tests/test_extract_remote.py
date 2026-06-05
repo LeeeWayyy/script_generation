@@ -27,6 +27,52 @@ def test_sniff_kind_ambiguous_hard_fails():
         sniff_kind("mystery.bin")
 
 
+def test_audio_extraction_positional_feed_url_is_routed(monkeypatch):
+    # `extract-remote --kind audio_extraction <feed-url>` must route the positional
+    # URL into feed_url (server ignores `url` for this kind) and submit — not 400.
+    from transcript import extract_remote
+    captured = {}
+
+    class _Resp:
+        status_code, ok = 200, True
+
+        @staticmethod
+        def json():
+            return {"id": "job1"}
+
+    class _FakeRequests:
+        RequestException = Exception
+
+        @staticmethod
+        def post(url, data=None, files=None, headers=None):
+            captured["data"] = data
+            return _Resp()
+
+    monkeypatch.setitem(__import__("sys").modules, "requests", _FakeRequests)
+    # Short-circuit polling + bundle fetch so we only test submission.
+    monkeypatch.setattr(extract_remote, "poll_until_done", lambda *a, **k: {"status": "done"})
+    monkeypatch.setattr(extract_remote, "build_headers", lambda t: {})
+
+    def _stop(*a, **k):
+        raise SystemExit(0)
+    monkeypatch.setattr(_FakeRequests, "get", _stop, raising=False)
+
+    try:
+        extract_remote.main(["--kind", "audio_extraction", "https://feed.example/rss",
+                             "--episode-guid", "g1"])
+    except SystemExit:
+        pass
+    assert captured["data"]["feed_url"] == "https://feed.example/rss"
+    assert "url" not in captured["data"]  # not submitted as a plain url
+    assert captured["data"]["episode_guid"] == "g1"
+
+
+def test_audio_extraction_without_feed_or_enclosure_errors(monkeypatch, capsys):
+    from transcript import extract_remote
+    rc = extract_remote.main(["--kind", "audio_extraction"])  # no source/feed/enclosure
+    assert rc == 1
+
+
 def _bundle(envelope: dict, assets: dict[str, bytes], *, extra_members=None) -> bytes:
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:

@@ -23,6 +23,12 @@ dependencies = []
 dev = [
     "pytest>=7.4",
     "ruff>=0.4",
+    # The test suite drives the FastAPI app + TestClient (which needs httpx) and
+    # multipart uploads. These are light web deps — NOT the heavy ML stack — so the
+    # full suite runs under `pip install -e ".[dev]"` without torch/whisperx.
+    "fastapi>=0.110",
+    "httpx>=0.27",
+    "python-multipart>=0.0.9",
 ]
 # Local processing (the `transcript` CLI + `transcribe()` library). Install with
 # `pip install -e ".[local]"`. torch is installed separately (see README).

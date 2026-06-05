@@ -34,10 +34,39 @@ def test_canonicalize_preserves_encoded_slash():
     assert canonicalize_url("https://h.com/a%2Fb%20c") == "https://h.com/a%2Fb c"
 
 
-def test_download_enclosure_never_raises_on_bad_url(tmp_path):
+def test_download_enclosure_rejects_non_http_scheme(tmp_path):
+    # SSRF / local-file-disclosure guard: file:// (and any non-http(s)) is refused.
     from transcript.podcast import download_enclosure
-    d = download_enclosure("not-a-valid-url", tmp_path)  # urllib raises → caught
-    assert d.ok is False and d.path is None and d.downloaded_size is None
+    with pytest.raises(PodcastResolutionError) as ei:
+        download_enclosure("file:///etc/passwd", tmp_path)
+    assert ei.value.reason == "feed_identity_unavailable"
+
+
+def test_download_enclosure_network_failure_is_soft(tmp_path):
+    # A genuine http failure (connection refused) is best-effort → ok=False, no raise.
+    from transcript.podcast import download_enclosure
+    d = download_enclosure("http://127.0.0.1:9/x.mp3", tmp_path, timeout=0.5)
+    assert d.ok is False and d.path is None
+
+
+def test_enclosure_too_large_is_fatal_not_fallback(monkeypatch):
+    # A too-large enclosure FAILS the job (no silent fall-back to unlimited yt-dlp).
+    import transcript.podcast as podcast
+    from transcript.extract import extract_audio_extraction
+    from transcript.podcast import PodcastResolution
+
+    monkeypatch.setattr(podcast, "resolve_podcast", lambda *a, **k: PodcastResolution(
+        enclosure_url="https://cdn/ep.mp3", resolution_source="feed_parse", feed_url="f"))
+
+    def boom_download(url, dest, **k):
+        raise PodcastResolutionError("enclosure_too_large", "too big")
+    monkeypatch.setattr(podcast, "download_enclosure", boom_download)
+
+    with pytest.raises(PodcastResolutionError) as ei:
+        extract_audio_extraction(feed_url="f", engine=None,
+                                 transcribe_fn=lambda *a, **k: (_ for _ in ()).throw(
+                                     AssertionError("must not transcribe after size-cap")))
+    assert ei.value.reason == "enclosure_too_large"
 
 
 def test_authoritative_length_mismatch_is_fatal(monkeypatch):
