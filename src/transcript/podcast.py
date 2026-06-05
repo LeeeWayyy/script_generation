@@ -232,6 +232,44 @@ FEED_FETCH_TIMEOUT = 30.0
 MAX_FEED_BYTES = 64 * 1024 * 1024  # 64 MiB is enormous for an RSS feed
 
 
+def _assert_public_url(url: str) -> None:
+    """SSRF guard: require http(s) and reject a URL whose host resolves to a
+    private / loopback / link-local / reserved / multicast address — so a feed or
+    enclosure URL can't make the server reach internal services (cloud metadata,
+    localhost admin, the LAN). Set TRANSCRIPT_ALLOW_PRIVATE_FETCH=1 to opt out
+    (e.g. an intranet feed on a trusted host). Called on the initial URL and on
+    every redirect target. (Residual DNS-rebinding TOCTOU is not addressed here.)
+    """
+    import ipaddress
+    import os
+    import socket
+
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https"):
+        raise PodcastResolutionError(
+            "feed_identity_unavailable", f"URL scheme not allowed: {url!r}"
+        )
+    if os.environ.get("TRANSCRIPT_ALLOW_PRIVATE_FETCH") == "1":
+        return
+    host = parts.hostname
+    if not host:
+        raise PodcastResolutionError("feed_identity_unavailable", f"no host in {url!r}")
+    try:
+        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
+    except socket.gaierror as exc:
+        raise PodcastResolutionError(
+            "feed_identity_unavailable", f"cannot resolve host {host!r}: {exc}"
+        ) from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                or ip.is_multicast or ip.is_unspecified):
+            raise PodcastResolutionError(
+                "feed_identity_unavailable",
+                f"refusing to fetch a non-public host: {host} → {ip}",
+            )
+
+
 class _EnclosureTooLarge(Exception):
     """Internal sentinel: the download exceeded the byte cap (fatal, no fallback)."""
 
@@ -249,20 +287,19 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
     """
     import urllib.request
 
-    # SSRF / local-file-disclosure guard: urllib supports file://, ftp://, etc.
-    # Only http(s) enclosures are valid — refuse anything else outright.
-    if urlsplit(url).scheme not in ("http", "https"):
-        raise PodcastResolutionError(
-            "feed_identity_unavailable", f"enclosure URL scheme not allowed: {url!r}"
-        )
+    # SSRF guard: http(s) only + no private/loopback/link-local host (file://,
+    # ftp://, localhost, cloud-metadata, LAN are all refused).
+    _assert_public_url(url)
 
     chain: list[str] = []
 
     class _Track(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
-            # Don't let a redirect escape http(s) (e.g. a 302 → file://).
-            if urlsplit(newurl).scheme not in ("http", "https"):
-                return None
+            # Re-validate every redirect target (scheme + host) before following.
+            try:
+                _assert_public_url(newurl)
+            except PodcastResolutionError:
+                return None  # block the redirect → urlopen fails → ok=False
             chain.append(newurl)
             return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -336,23 +373,32 @@ class PodcastResolution:
 
 
 def _parse_feed(feed_url: str) -> tuple[list[Episode], bool]:
-    # SSRF / local-file-disclosure guard (BEFORE importing feedparser, which would
-    # otherwise happily parse a local path or file:// URL). Only http(s) is valid.
-    if urlsplit(feed_url).scheme not in ("http", "https"):
-        raise PodcastResolutionError(
-            "feed_identity_unavailable", f"feed URL scheme not allowed: {feed_url!r}"
-        )
+    # SSRF guard (BEFORE importing feedparser, which would otherwise parse a local
+    # path / file:// URL): http(s) only + no private/loopback/link-local host.
+    _assert_public_url(feed_url)
 
     import feedparser
 
     # Fetch the feed OURSELVES with a timeout + size cap (feedparser.parse(url)
     # has no timeout and would block the single worker on a slow/hanging host),
-    # then hand the bytes to feedparser.
+    # then hand the bytes to feedparser. Redirects are re-validated for SSRF.
     import urllib.request
+
+    class _Track(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            try:
+                _assert_public_url(newurl)
+            except PodcastResolutionError:
+                return None
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
     try:
+        opener = urllib.request.build_opener(_Track())
         req = urllib.request.Request(feed_url, headers={"User-Agent": "transcript/0.1"})
-        with urllib.request.urlopen(req, timeout=FEED_FETCH_TIMEOUT) as resp:
+        with opener.open(req, timeout=FEED_FETCH_TIMEOUT) as resp:
             raw = resp.read(MAX_FEED_BYTES + 1)
+    except PodcastResolutionError:
+        raise
     except Exception as exc:  # noqa: BLE001 — network/timeout → structured failure
         raise PodcastResolutionError(
             "feed_identity_unavailable", f"could not fetch feed {feed_url!r}: {exc}"

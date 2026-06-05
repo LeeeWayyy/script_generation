@@ -51,11 +51,27 @@ def test_download_enclosure_rejects_non_http_scheme(tmp_path):
     assert ei.value.reason == "feed_identity_unavailable"
 
 
-def test_download_enclosure_network_failure_is_soft(tmp_path):
-    # A genuine http failure (connection refused) is best-effort → ok=False, no raise.
+def test_download_enclosure_blocks_loopback_ssrf(tmp_path):
+    # SSRF guard: a loopback/private host is refused (raises), not fetched.
+    from transcript.podcast import download_enclosure
+    with pytest.raises(PodcastResolutionError) as ei:
+        download_enclosure("http://127.0.0.1:9/x.mp3", tmp_path, timeout=0.5)
+    assert ei.value.reason == "feed_identity_unavailable"
+
+
+def test_download_enclosure_network_failure_is_soft(tmp_path, monkeypatch):
+    # With the SSRF opt-out, a genuine http failure (refused) is best-effort → ok=False.
+    monkeypatch.setenv("TRANSCRIPT_ALLOW_PRIVATE_FETCH", "1")
     from transcript.podcast import download_enclosure
     d = download_enclosure("http://127.0.0.1:9/x.mp3", tmp_path, timeout=0.5)
     assert d.ok is False and d.path is None
+
+
+def test_resolve_podcast_blocks_loopback_feed_ssrf():
+    from transcript.podcast import resolve_podcast
+    with pytest.raises(PodcastResolutionError) as ei:
+        resolve_podcast("http://127.0.0.1/feed.xml", episode_guid="g")
+    assert ei.value.reason == "feed_identity_unavailable"
 
 
 def test_enclosure_too_large_is_fatal_not_fallback(monkeypatch):

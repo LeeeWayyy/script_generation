@@ -43,6 +43,10 @@ FRAME_POLICY = {
 
 TIMECODE_ROUND_DP = FRAME_POLICY["timecode_round_dp"]
 
+# Cadence floor (plan §B "cadence floor for long video"): below this, frame +
+# OCR cost explodes, so reject rather than sample faster.
+MIN_CADENCE_S = 0.5
+
 
 @dataclass
 class FrameAsset:
@@ -96,6 +100,10 @@ def extract_frames(
     """
     from .ingest import ensure_tool
 
+    # A non-positive (or absurdly tiny) cadence would make the ffmpeg select filter
+    # emit every frame and then run OCR on each — a resource-exhaustion vector.
+    if cadence_s < MIN_CADENCE_S:
+        raise ValueError(f"cadence_s must be >= {MIN_CADENCE_S} (got {cadence_s})")
     ensure_tool("ffmpeg")
     dest_dir.mkdir(parents=True, exist_ok=True)
     out_template = str(dest_dir / "frame-%06d.jpg")

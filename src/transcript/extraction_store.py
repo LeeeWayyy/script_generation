@@ -130,6 +130,8 @@ class ExtractionStore:
         # "unrecoverable after restart" alternative).
         self._tombstones: "collections.deque[str]" = collections.deque(maxlen=10_000)
         self._tombstone_set: set[str] = set()
+        # job_ids whose staging dir is being written RIGHT NOW (gc_staging skips).
+        self._staging_active: set[str] = set()
         self.root.mkdir(parents=True, exist_ok=True)
         (self.root / self.STAGING_DIR).mkdir(exist_ok=True)
         self._scan()
@@ -192,6 +194,18 @@ class ExtractionStore:
         for key, _src in assets:
             self._validate_key(key, seen)
 
+        # Mark this staging dir as actively-being-written so a concurrent
+        # gc_staging() can't reap it mid-publish (the janitor's running_ids
+        # snapshot may predate this job).
+        with self._lock:
+            self._staging_active.add(job_id)
+        try:
+            self._record_staging(job_id, kind, result_json, assets, now)
+        finally:
+            with self._lock:
+                self._staging_active.discard(job_id)
+
+    def _record_staging(self, job_id, kind, result_json, assets, now) -> None:
         staging = self.staging_dir(job_id)
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
@@ -329,8 +343,10 @@ class ExtractionStore:
             return 0
         # Pick targets under the lock, then rmtree OUTSIDE it (blocking disk I/O
         # under the lock would stall get/lease/record) — mirrors evict_expired.
+        # Skip dirs for running jobs AND for any publish in flight right now.
         with self._lock:
-            targets = [c for c in staging_root.iterdir() if c.name not in running_ids]
+            targets = [c for c in staging_root.iterdir()
+                       if c.name not in running_ids and c.name not in self._staging_active]
         for child in targets:
             shutil.rmtree(child, ignore_errors=True)
         return len(targets)

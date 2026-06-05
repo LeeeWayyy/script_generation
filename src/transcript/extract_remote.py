@@ -299,6 +299,10 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     finally:
         try:
+            tmp.close()
+        except OSError:
+            pass
+        try:
             os.unlink(tmp.name)
         except OSError:
             pass

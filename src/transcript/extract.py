@@ -86,7 +86,8 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
     import os
     meta: dict = {
         "ocr_engine": _ocr_engine_version(),
-        "ocr_model": OCR_PARAMS["lang"],
+        # A model identifier (not just the raw lang, which ocr_params already has).
+        "ocr_model": f"paddleocr-{OCR_PARAMS['lang']}",
         # The pinned weights dir, if any — two hosts with different weights at
         # different paths produce different ocr_text under identical params, so
         # the recipe records which weights were used to explain divergence.

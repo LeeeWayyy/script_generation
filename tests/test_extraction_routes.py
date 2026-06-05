@@ -279,6 +279,7 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
     for reserved in ("CON", "nul.txt", "COM1", "lpt9.bin", "AUX", "COM10", "LPT12.x"):
         assert server._safe_upload_name(reserved) == "upload.bin"
     assert server._safe_upload_name("console.txt") == "console.txt"  # not reserved
+    assert server._safe_upload_name("evil\x00.jpg") == "upload.bin"  # embedded NUL
 
 
 def test_upload_size_cap_rejects_oversized(monkeypatch, tmp_path):
@@ -344,6 +345,14 @@ def test_video_with_feed_url_only_rejected_at_submit(monkeypatch, tmp_path):
         r = client.post("/extractions", data={"kind": "video",
                                               "feed_url": "https://f/rss"})
         assert r.status_code == 400
+
+
+def test_cadence_below_floor_rejected_at_submit(monkeypatch, tmp_path):
+    with _make_app(monkeypatch, tmp_path) as client:
+        r = client.post("/extractions",
+                        data={"kind": "video", "frames": "true", "cadence_s": "0"},
+                        files={"file": ("clip.mp4", b"x")})
+        assert r.status_code == 400 and "cadence" in r.json()["detail"].lower()
 
 
 def test_audio_extraction_structured_error_reason_surfaced(monkeypatch, tmp_path):

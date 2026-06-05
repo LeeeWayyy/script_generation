@@ -63,6 +63,18 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
             fh.write(chunk)
 
 
+def _sweep_stale_temp_dirs() -> None:
+    """Remove crash-leaked worker temp dirs at startup. No jobs are in flight when
+    the server boots, so any leftover ``transcript-upload-*`` / ``transcript-
+    extract-*`` / ``enclosure-*`` dir under the system tempdir is an orphan from a
+    previous crash (the worker's ``finally`` cleanup didn't run)."""
+    tmp = Path(tempfile.gettempdir())
+    for pattern in ("transcript-upload-*", "transcript-extract-*", "enclosure-*"):
+        for child in tmp.glob(pattern):
+            if child.is_dir():
+                shutil.rmtree(child, ignore_errors=True)
+
+
 def _safe_upload_name(filename: Optional[str]) -> str:
     """Return a safe bare basename for an untrusted multipart upload filename.
 
@@ -72,6 +84,8 @@ def _safe_upload_name(filename: Optional[str]) -> str:
     dangerous. We strip any directory component and reject the result if it is
     empty or still references the parent.
     """
+    if "\x00" in (filename or ""):  # embedded NUL — never a valid filename
+        return "upload.bin"
     base = os.path.basename((filename or "").replace("\\", "/")).strip()
     if not base or base in (".", "..") or "/" in base or "\\" in base:
         return "upload.bin"
@@ -263,7 +277,10 @@ class Worker(threading.Thread):
         from .extraction import serialize
         from .extract import (extract_audio_extraction, extract_image_note)
 
-        work = Path(tempfile.mkdtemp(prefix="transcript-extract-"))
+        # audio_extraction is self-contained (it makes its own temp dir); only the
+        # asset-producing kinds need a worker work dir.
+        work = (Path(tempfile.mkdtemp(prefix="transcript-extract-"))
+                if job.kind != "audio_extraction" else None)
         try:
             if job.kind == "image_note":
                 result, asset_files = extract_image_note(
@@ -289,7 +306,8 @@ class Worker(threading.Thread):
             job.status = "done"
             log.info("Job %s: extraction done (%d assets)", job.id, len(asset_files))
         finally:
-            shutil.rmtree(work, ignore_errors=True)
+            if work is not None:
+                shutil.rmtree(work, ignore_errors=True)
 
     def _run_video(self, job: Job, work: Path, transcribe):
         """Acquire ASR audio from the SAME bestaudio stream the legacy path uses,
@@ -383,11 +401,17 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
     extraction_store = ExtractionStore()  # scans existing bundles on construction
     worker = Worker(store, model=model, device=device, extraction_store=extraction_store)
     janitor = Janitor(store, extraction_store)
+    # Bound concurrent /bundle builds so simultaneous downloads can't exhaust the
+    # server's temp disk with full-zip copies.
+    bundle_sem = threading.Semaphore(
+        int(os.environ.get("TRANSCRIPT_MAX_CONCURRENT_BUNDLES", 8))
+    )
 
     app = FastAPI(title="transcript", version="0.1.0")
 
     @app.on_event("startup")
     def _startup():
+        _sweep_stale_temp_dirs()  # reap crash-leaked worker temp dirs
         worker.start()
         janitor.start()
 
@@ -519,6 +543,13 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
                 detail="kind=audio_extraction requires 'feed_url' (+selector) or "
                 "'enclosure_url'.",
             )
+        if cadence_s is not None:
+            from .frames import MIN_CADENCE_S
+            if cadence_s < MIN_CADENCE_S:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"cadence_s must be >= {MIN_CADENCE_S} seconds.",
+                )
 
         job_id = uuid.uuid4().hex[:12]
         upload_tmp_dir = None
@@ -601,30 +632,38 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         # bundle — which can approach the 2 GiB archive cap — in RAM. Zip
         # determinism is NOT required: the consumer hashes `text` + per-asset
         # sha256, not the zip.
-        with extraction_store.lease(job_id) as job_dir:
-            if job_dir is None:
-                # known-but-gone (in-memory done OR the durable index still has it)
-                # → 410, consistent with /result and the status route.
-                job = store.get(job_id)
-                known = ((job is not None and job.kind is not None and job.status == "done")
-                         or extraction_store.get(job_id) is not None
-                         or extraction_store.was_evicted(job_id))
-                if known:
-                    raise HTTPException(status_code=410, detail="Bundle was evicted or lost.")
-                raise HTTPException(status_code=404, detail="No such extraction bundle.")
-            tmp = tempfile.NamedTemporaryFile(prefix="bundle-", suffix=".zip", delete=False)
-            tmp.close()
-            manifest_path = job_dir / ExtractionStore.MANIFEST_NAME
-            try:
-                with zipfile.ZipFile(tmp.name, "w", zipfile.ZIP_DEFLATED) as zf:
-                    for path in sorted(job_dir.rglob("*")):
-                        # Exclude the mutable side manifest by EXACT path (not name)
-                        # so a stray nested manifest.json is never silently dropped.
-                        if path.is_file() and path != manifest_path:
-                            zf.write(path, arcname=path.relative_to(job_dir).as_posix())
-            except BaseException:
-                _os.unlink(tmp.name)  # don't leak the temp file if the build fails
-                raise
+        # Bound concurrent builds so simultaneous downloads can't fill temp disk.
+        if not bundle_sem.acquire(blocking=False):
+            raise HTTPException(status_code=503,
+                                detail="Too many concurrent bundle downloads; retry shortly.")
+        try:
+            with extraction_store.lease(job_id) as job_dir:
+                if job_dir is None:
+                    # known-but-gone (in-memory done OR the durable index has it)
+                    # → 410, consistent with /result and the status route.
+                    job = store.get(job_id)
+                    known = ((job is not None and job.kind is not None and job.status == "done")
+                             or extraction_store.get(job_id) is not None
+                             or extraction_store.was_evicted(job_id))
+                    if known:
+                        raise HTTPException(status_code=410, detail="Bundle was evicted or lost.")
+                    raise HTTPException(status_code=404, detail="No such extraction bundle.")
+                tmp = tempfile.NamedTemporaryFile(prefix="bundle-", suffix=".zip", delete=False)
+                tmp.close()
+                manifest_path = job_dir / ExtractionStore.MANIFEST_NAME
+                try:
+                    with zipfile.ZipFile(tmp.name, "w", zipfile.ZIP_DEFLATED) as zf:
+                        for path in sorted(job_dir.rglob("*")):
+                            # Exclude the mutable side manifest by EXACT path (not
+                            # name) so a stray nested manifest.json isn't dropped.
+                            if path.is_file() and path != manifest_path:
+                                zf.write(path, arcname=path.relative_to(job_dir).as_posix())
+                except BaseException:
+                    _os.unlink(tmp.name)  # don't leak the temp file if the build fails
+                    raise
+        except BaseException:
+            bundle_sem.release()
+            raise
 
         def _stream():
             with open(tmp.name, "rb") as fh:
@@ -639,10 +678,13 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
                 _os.unlink(tmp.name)
             except OSError:
                 pass
+            bundle_sem.release()  # held across the whole stream; released when done
 
         # A BackgroundTask runs after the response finishes (incl. a dropped
         # connection) without relying on generator-finalizer GC timing.
+        size = _os.path.getsize(tmp.name)
         return StreamingResponse(_stream(), media_type="application/zip",
+                                 headers={"Content-Length": str(size)},
                                  background=BackgroundTask(_cleanup))
 
     return app

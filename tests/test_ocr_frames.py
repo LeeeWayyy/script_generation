@@ -88,6 +88,15 @@ def test_planned_timecodes_fixed_grid_and_cap():
     assert planned_timecodes(100.0, 5.0, 3) == [0.0, 5.0, 10.0]
 
 
+def test_extract_frames_rejects_below_cadence_floor(tmp_path):
+    import pytest
+    from transcript.frames import MIN_CADENCE_S, extract_frames
+    with pytest.raises(ValueError, match="cadence_s"):
+        extract_frames(tmp_path / "v.mp4", tmp_path / "f", cadence_s=0.0)
+    with pytest.raises(ValueError):
+        extract_frames(tmp_path / "v.mp4", tmp_path / "f", cadence_s=MIN_CADENCE_S / 2)
+
+
 def test_parse_showinfo_pts_extracts_source_timecodes_in_order():
     # Real per-frame timecodes come from ffmpeg showinfo's pts_time (video clock),
     # including a non-zero start offset — not a synthetic n*cadence grid.
