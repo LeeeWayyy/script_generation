@@ -60,6 +60,7 @@ class BundleVerificationError(Exception):
 
 
 _CHUNK = 1024 * 1024
+_MAX_RESULT_JSON_BYTES = 64 * 1024 * 1024  # the envelope is text; 64 MiB is enormous
 
 
 def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
@@ -126,10 +127,19 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
         names = set(_safe_member_names(zf))
         if "result.json" not in names:
             raise BundleVerificationError("bundle is missing result.json")
-        envelope = json.loads(zf.read("result.json").decode("utf-8"))
-
-        asset_keys = [_check_key(a["key"], "asset key", reserved=("result.json",))
-                      for a in envelope.get("assets", [])]
+        # Cap result.json before reading it into memory (it's the one member we
+        # must fully parse) so a hostile server can't OOM the client with a huge
+        # envelope, and tolerate a malformed envelope as a verification failure.
+        if zf.getinfo("result.json").file_size > _MAX_RESULT_JSON_BYTES:
+            raise BundleVerificationError("result.json is implausibly large")
+        try:
+            envelope = json.loads(zf.read("result.json").decode("utf-8"))
+            assets = envelope.get("assets", [])
+            asset_keys = [_check_key(a["key"], "asset key", reserved=("result.json",))
+                          for a in assets]
+            asset_meta = [(a["sha256"], int(a["size"])) for a in assets]
+        except (ValueError, KeyError, TypeError) as exc:
+            raise BundleVerificationError(f"malformed result.json envelope: {exc}") from exc
         if len(asset_keys) != len(set(asset_keys)):
             raise BundleVerificationError("duplicate asset key in envelope")
         extra = names - {"result.json", *asset_keys}
@@ -137,15 +147,15 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
             raise BundleVerificationError(f"bundle has unexpected members: {sorted(extra)}")
 
         # Pass 1 — verify every asset (streaming hash), writing NOTHING yet.
-        for asset, key in zip(envelope.get("assets", []), asset_keys):
+        for key, (want_sha, want_size) in zip(asset_keys, asset_meta):
             if key not in names:
                 raise BundleVerificationError(f"asset listed but missing from bundle: {key}")
             digest, size = _stream_member_hash(zf, key)
-            if size != asset["size"]:
+            if size != want_size:
                 raise BundleVerificationError(
-                    f"asset size mismatch for {key}: {size} != {asset['size']}"
+                    f"asset size mismatch for {key}: {size} != {want_size}"
                 )
-            if digest != asset["sha256"]:
+            if digest != want_sha:
                 raise BundleVerificationError(f"asset sha256 mismatch for {key}")
 
         # Pass 2 — everything verified; stream each member to disk.

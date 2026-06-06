@@ -50,17 +50,19 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
 
     max_bytes = MAX_UPLOAD_BYTES if max_bytes is None else max_bytes
     written = 0
-    with dest.open("wb") as fh:
-        while True:
-            chunk = src.read(1024 * 1024)
-            if not chunk:
-                break
-            written += len(chunk)
-            if written > max_bytes:
-                fh.close()
-                dest.unlink(missing_ok=True)
-                raise HTTPException(status_code=413, detail="Upload exceeds the size limit.")
-            fh.write(chunk)
+    try:
+        with dest.open("wb") as fh:
+            while True:
+                chunk = src.read(1024 * 1024)
+                if not chunk:
+                    break
+                written += len(chunk)
+                if written > max_bytes:
+                    raise HTTPException(status_code=413, detail="Upload exceeds the size limit.")
+                fh.write(chunk)
+    except HTTPException:
+        dest.unlink(missing_ok=True)
+        raise
 
 
 def _sweep_stale_temp_dirs() -> None:
@@ -450,8 +452,12 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         upload_tmp_dir = None
         if file is not None:
             upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
-            dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
-            _save_upload(file.file, dest)
+            try:
+                dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
+                _save_upload(file.file, dest)
+            except BaseException:
+                shutil.rmtree(upload_tmp_dir, ignore_errors=True)  # don't leak on 413
+                raise
             local_path, source = str(dest), f"upload:{file.filename}"
         else:
             local_path, source = url, url
@@ -537,12 +543,15 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
             raise HTTPException(
                 status_code=400, detail="kind=video requires 'url' or a 'file' upload.",
             )
-        if kind == "audio_extraction" and not feed_url and not enclosure_url:
-            raise HTTPException(
-                status_code=400,
-                detail="kind=audio_extraction requires 'feed_url' (+selector) or "
-                "'enclosure_url'.",
-            )
+        if kind == "audio_extraction":
+            if not feed_url and not enclosure_url:
+                raise HTTPException(
+                    status_code=400, detail="kind=audio_extraction requires 'feed_url' "
+                    "(+selector) or 'enclosure_url'.")
+            if file is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail="kind=audio_extraction does not accept a file upload.")
         if cadence_s is not None:
             from .frames import MIN_CADENCE_S
             if cadence_s < MIN_CADENCE_S:
@@ -550,13 +559,27 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
                     status_code=400,
                     detail=f"cadence_s must be >= {MIN_CADENCE_S} seconds.",
                 )
+        # SSRF guard at submit for any user-supplied fetch URL (video/podcast). The
+        # downstream fetcher (yt-dlp) is opaque, so reject obvious private targets
+        # here; the podcast urllib path additionally re-checks every redirect.
+        from .ingest import SsrfError, assert_public_url
+        for candidate in (url if kind == "video" else None, feed_url, enclosure_url):
+            if candidate and candidate.startswith(("http://", "https://")):
+                try:
+                    assert_public_url(candidate)
+                except SsrfError as exc:
+                    raise HTTPException(status_code=400, detail=str(exc))
 
         job_id = uuid.uuid4().hex[:12]
         upload_tmp_dir = None
         if file is not None:
             upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
-            dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
-            _save_upload(file.file, dest)
+            try:
+                dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
+                _save_upload(file.file, dest)
+            except BaseException:
+                shutil.rmtree(upload_tmp_dir, ignore_errors=True)  # don't leak on 413
+                raise
             local_path, source = str(dest), f"upload:{file.filename}"
         else:
             local_path = source = url or feed_url or enclosure_url
@@ -574,8 +597,18 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         worker.submit(job_id)
         return job.public_extraction()
 
+    import re as _re
+    _JOB_ID_RE = _re.compile(r"^[0-9a-f]{12}$")
+
+    def _valid_job_id(job_id: str) -> None:
+        # job ids are uuid4().hex[:12]; reject anything else structurally so a path
+        # component can never reach the store's `root / job_id` join.
+        if not _JOB_ID_RE.match(job_id):
+            raise HTTPException(status_code=404, detail="No such extraction.")
+
     @app.get("/extractions/{job_id}")
     def get_extraction(job_id: str, _: None = Depends(auth)):
+        _valid_job_id(job_id)
         rec = extraction_store.get(job_id)
         # rec present but the on-disk bundle vanished (deleted out-of-band, or a
         # stale index entry) → 410, consistent with /result and /bundle.
@@ -595,6 +628,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
 
     @app.get("/extractions/{job_id}/result", response_class=PlainTextResponse)
     def get_extraction_result(job_id: str, _: None = Depends(auth)):
+        _valid_job_id(job_id)
         # Durable, completed result (also bumps last-access — /result shares the
         # bundle read-lease so a client doesn't lose /bundle to TTL between calls).
         text = extraction_store.read_result(job_id, bump=True)
@@ -620,6 +654,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
 
     @app.get("/extractions/{job_id}/bundle")
     def get_extraction_bundle(job_id: str, _: None = Depends(auth)):
+        _valid_job_id(job_id)
         import os as _os
         import tempfile
         import zipfile

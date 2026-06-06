@@ -233,41 +233,14 @@ MAX_FEED_BYTES = 64 * 1024 * 1024  # 64 MiB is enormous for an RSS feed
 
 
 def _assert_public_url(url: str) -> None:
-    """SSRF guard: require http(s) and reject a URL whose host resolves to a
-    private / loopback / link-local / reserved / multicast address — so a feed or
-    enclosure URL can't make the server reach internal services (cloud metadata,
-    localhost admin, the LAN). Set TRANSCRIPT_ALLOW_PRIVATE_FETCH=1 to opt out
-    (e.g. an intranet feed on a trusted host). Called on the initial URL and on
-    every redirect target. (Residual DNS-rebinding TOCTOU is not addressed here.)
-    """
-    import ipaddress
-    import os
-    import socket
-
-    parts = urlsplit(url)
-    if parts.scheme not in ("http", "https"):
-        raise PodcastResolutionError(
-            "feed_identity_unavailable", f"URL scheme not allowed: {url!r}"
-        )
-    if os.environ.get("TRANSCRIPT_ALLOW_PRIVATE_FETCH") == "1":
-        return
-    host = parts.hostname
-    if not host:
-        raise PodcastResolutionError("feed_identity_unavailable", f"no host in {url!r}")
+    """SSRF guard (shared with the yt-dlp paths via ``ingest.assert_public_url``):
+    reject a feed/enclosure URL whose host is private/loopback/link-local, on the
+    initial URL and every redirect target. Raises ``PodcastResolutionError``."""
+    from .ingest import SsrfError, assert_public_url
     try:
-        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
-    except socket.gaierror as exc:
-        raise PodcastResolutionError(
-            "feed_identity_unavailable", f"cannot resolve host {host!r}: {exc}"
-        ) from exc
-    for info in infos:
-        ip = ipaddress.ip_address(info[4][0])
-        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
-                or ip.is_multicast or ip.is_unspecified):
-            raise PodcastResolutionError(
-                "feed_identity_unavailable",
-                f"refusing to fetch a non-public host: {host} → {ip}",
-            )
+        assert_public_url(url)
+    except SsrfError as exc:
+        raise PodcastResolutionError("feed_identity_unavailable", str(exc)) from exc
 
 
 class _EnclosureTooLarge(Exception):
@@ -282,8 +255,10 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
 
     For a direct media-file enclosure this is exactly how a downloader fetches it,
     and owning the transfer is the only way to learn the *complete* downloaded
-    size (yt-dlp discards it). Best-effort: NEVER raises — any failure returns
-    ``ok=False`` so the caller falls back to the yt-dlp download path.
+    size. RAISES ``PodcastResolutionError`` for a policy violation that must fail
+    the job — an SSRF-blocked host (``feed_identity_unavailable``) or a size-cap
+    breach (``enclosure_too_large``). A best-effort NETWORK failure (refused/
+    timeout/parse) instead returns ``ok=False`` so the caller can decide.
     """
     import urllib.request
 

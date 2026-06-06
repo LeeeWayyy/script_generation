@@ -211,6 +211,17 @@ def test_unpack_accepts_a_zip_path_and_streams(tmp_path):
     assert (tmp_path / "o" / "assets" / "a.jpg").read_bytes() == data
 
 
+def test_unpack_rejects_malformed_envelope(tmp_path):
+    # A result.json missing required asset fields is a verification failure, not
+    # an uncaught KeyError.
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("result.json", json.dumps({"assets": [{"key": "assets/a.jpg"}]}))
+        zf.writestr("assets/a.jpg", b"x")
+    with pytest.raises(BundleVerificationError, match="malformed"):
+        unpack_and_verify(buf.getvalue(), tmp_path / "o")
+
+
 def test_unpack_requires_result_json(tmp_path):
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:

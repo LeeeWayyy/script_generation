@@ -20,6 +20,39 @@ def is_url(source: str) -> bool:
     return source.startswith(("http://", "https://"))
 
 
+class SsrfError(ValueError):
+    """A URL points at a non-public (private/loopback/link-local) host."""
+
+
+def assert_public_url(url: str) -> None:
+    """SSRF guard for a user-supplied fetch URL: require http(s) and reject a host
+    that resolves to a private / loopback / link-local / reserved / multicast
+    address (cloud metadata, localhost, the LAN). Opt out on a trusted intranet
+    with TRANSCRIPT_ALLOW_PRIVATE_FETCH=1. (Residual DNS-rebinding TOCTOU and any
+    redirects a downstream fetcher follows internally are out of scope here.)"""
+    import ipaddress
+    import socket
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https"):
+        raise SsrfError(f"URL scheme not allowed: {url!r}")
+    if os.environ.get("TRANSCRIPT_ALLOW_PRIVATE_FETCH") == "1":
+        return
+    host = parts.hostname
+    if not host:
+        raise SsrfError(f"no host in URL: {url!r}")
+    try:
+        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
+    except socket.gaierror as exc:
+        raise SsrfError(f"cannot resolve host {host!r}: {exc}") from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                or ip.is_multicast or ip.is_unspecified):
+            raise SsrfError(f"refusing to fetch a non-public host: {host} → {ip}")
+
+
 def resolve_source(source: str, work_dir: Path) -> Path:
     """Return a local file path for ``source``, downloading it first if it's a URL."""
     if is_url(source):

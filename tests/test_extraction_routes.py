@@ -113,6 +113,7 @@ def _poll_done(client, job_id):
 
 def test_audio_extraction_podcast_provenance(monkeypatch, tmp_path):
     monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    monkeypatch.setenv("TRANSCRIPT_ALLOW_PRIVATE_FETCH", "1")
     from transcript.types import Segment, Transcript
     from transcript.podcast import PodcastResolution
     import transcript.server as server
@@ -299,19 +300,23 @@ def test_audio_extraction_explicit_enclosure_is_user_supplied(monkeypatch, tmp_p
     # An explicit enclosure URL is the only no-feed path that's allowed — recorded
     # honestly as resolution_source=user_supplied (never a minted guid).
     monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    monkeypatch.setenv("TRANSCRIPT_ALLOW_PRIVATE_FETCH", "1")
     from transcript.types import Segment, Transcript
     import transcript.server as server
 
+    from pathlib import Path
+
     def fake_transcribe(source, *, engine=None, **kw):
-        assert source == "https://cdn.example.com/ep1.mp3"  # the enclosure, downloaded
+        # The owned download is authoritative now: ASR transcribes the local file.
+        assert source.endswith("enclosure.bin")
         return Transcript(segments=[Segment(text="hi")], language="en")
 
     from transcript.podcast import EnclosureDownload
     monkeypatch.setattr(server.Worker, "_get_engine", lambda self: "ENG")
     monkeypatch.setattr("transcript.transcribe", fake_transcribe)
-    # Direct download "fails" → fall back to transcribing the enclosure URL itself.
     monkeypatch.setattr("transcript.podcast.download_enclosure",
-                        lambda url, dest, **k: EnclosureDownload(ok=False))
+                        lambda url, dest, **k: EnclosureDownload(
+                            path=Path(dest) / "enclosure.bin", final_url=url, ok=True))
 
     from fastapi.testclient import TestClient
     with TestClient(server.create_app()) as client:
@@ -347,6 +352,28 @@ def test_video_with_feed_url_only_rejected_at_submit(monkeypatch, tmp_path):
         assert r.status_code == 400
 
 
+def test_video_private_url_rejected_at_submit_ssrf(monkeypatch, tmp_path):
+    # A video URL pointing at a private/loopback host is refused at submit (SSRF).
+    with _make_app(monkeypatch, tmp_path) as client:
+        r = client.post("/extractions", data={"kind": "video",
+                                              "url": "http://127.0.0.1/x.mp4"})
+        assert r.status_code == 400 and "non-public" in r.json()["detail"].lower()
+
+
+def test_audio_extraction_rejects_file_upload_at_submit(monkeypatch, tmp_path):
+    with _make_app(monkeypatch, tmp_path) as client:
+        r = client.post("/extractions",
+                        data={"kind": "audio_extraction", "feed_url": "https://f/rss"},
+                        files={"file": ("x.mp3", b"x")})
+        assert r.status_code == 400 and "file upload" in r.json()["detail"].lower()
+
+
+def test_extraction_invalid_job_id_is_404(monkeypatch, tmp_path):
+    with _make_app(monkeypatch, tmp_path) as client:
+        for bad in ("ZZZ", "../etc", "0123456789abc", "short"):
+            assert client.get(f"/extractions/{bad}").status_code == 404
+
+
 def test_cadence_below_floor_rejected_at_submit(monkeypatch, tmp_path):
     with _make_app(monkeypatch, tmp_path) as client:
         r = client.post("/extractions",
@@ -357,6 +384,7 @@ def test_cadence_below_floor_rejected_at_submit(monkeypatch, tmp_path):
 
 def test_audio_extraction_structured_error_reason_surfaced(monkeypatch, tmp_path):
     monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    monkeypatch.setenv("TRANSCRIPT_ALLOW_PRIVATE_FETCH", "1")
     from transcript.podcast import PodcastResolutionError
     import transcript.server as server
 

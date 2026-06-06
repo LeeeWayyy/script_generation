@@ -43,7 +43,13 @@ def poll_until_done(
     last_status = None
     while True:
         try:
-            s = requests_mod.get(status_url, headers=headers).json()
+            resp = requests_mod.get(status_url, headers=headers, timeout=(30, 60))
+            # A non-2xx status (401/404/500…) is a real server error — surface it
+            # instead of treating its JSON body as a job with status=None and
+            # looping until the overall timeout.
+            if not resp.ok:
+                raise RuntimeError(f"server returned {resp.status_code}: {resp.text[:200]}")
+            s = resp.json()
         except (requests_mod.RequestException, ValueError) as exc:
             # ValueError covers a non-JSON body (e.g. a proxy 502 HTML page) whose
             # .json() raises JSONDecodeError — surface it as a clean RuntimeError.

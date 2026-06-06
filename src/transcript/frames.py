@@ -39,6 +39,11 @@ FRAME_POLICY = {
     "timecode_round_dp": 3,  # seconds, fixed to 3 decimal places
     "max_frames": 2000,  # frame cap for long video
     "exif_handling": "none",  # extracted frames carry no EXIF
+    # The exact ffmpeg shape that selects frames + sources timestamps — recorded
+    # so the recipe fully explains how frame assets/timecodes were produced.
+    "selector": "select='isnan(prev_selected_t)+gte(t-prev_selected_t,{cadence_s})'",
+    "vsync": "0",  # passthrough — preserves source PTS
+    "timestamp_source": "showinfo:pts_time",  # frame timecodes come from showinfo
 }
 
 TIMECODE_ROUND_DP = FRAME_POLICY["timecode_round_dp"]

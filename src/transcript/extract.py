@@ -122,7 +122,6 @@ def extract_audio_extraction(
     *, feed_url: Optional[str], episode_guid: Optional[str] = None,
     episode_url: Optional[str] = None, episode_title: Optional[str] = None,
     episode_published: Optional[str] = None, enclosure_url: Optional[str] = None,
-    verify: bool = True,
     engine, transcribe_fn, **transcribe_kwargs,
 ) -> tuple[ExtractionResult, list[tuple[str, Path]]]:
     """Resolve a podcast enclosure, transcribe it, and wrap as ``audio_extraction``.
@@ -160,8 +159,9 @@ def extract_audio_extraction(
 
     # Own the enclosure download (plan §C) so we learn the COMPLETE downloaded
     # size + redirect chain + Content-Length and can run the authoritative length
-    # check. Best-effort: if the direct download fails we fall back to the opaque
-    # yt-dlp path (then the length is non-authoritative → observation only).
+    # check. We do NOT fall back to yt-dlp on failure: yt-dlp is an opaque fetcher
+    # that bypasses our SSRF host-block (a public enclosure could redirect to a
+    # private IP) and our size cap — so a failed/blocked download fails the job.
     import shutil
     import tempfile
 
@@ -169,21 +169,24 @@ def extract_audio_extraction(
                           length_is_authoritative)
 
     feed_len = resolution.enclosure_length
-    work = Path(tempfile.mkdtemp(prefix="enclosure-")) if verify else None
+    work = Path(tempfile.mkdtemp(prefix="enclosure-"))
     try:
-        dl = download_enclosure(resolution.enclosure_url, work) if work else None
-        asr_source = str(dl.path) if (dl and dl.ok and dl.path) else resolution.enclosure_url
-
-        transcript: Transcript = transcribe_fn(asr_source, engine=engine,
+        dl = download_enclosure(resolution.enclosure_url, work)
+        if not dl.ok or not dl.path:
+            raise _PRErr(
+                "feed_identity_unavailable",
+                f"could not download enclosure {resolution.enclosure_url!r}",
+            )
+        transcript: Transcript = transcribe_fn(str(dl.path), engine=engine,
                                                **transcribe_kwargs)
 
-        downloaded_size = dl.downloaded_size if (dl and dl.ok) else None
-        content_length = dl.content_length if dl else None
+        downloaded_size = dl.downloaded_size
+        content_length = dl.content_length
         # Authoritative only for a complete, non-ranged, non-redirected download —
         # exactly the case where a size mismatch is trustworthy (plan §C).
         authoritative = length_is_authoritative(
-            redirected=bool(dl and dl.redirect_chain), ranged=bool(dl and dl.ranged),
-            fully_downloaded=bool(dl and dl.ok),
+            redirected=bool(dl.redirect_chain), ranged=bool(dl.ranged),
+            fully_downloaded=True,
         )
         length_matches = (downloaded_size == feed_len) if (downloaded_size is not None
                                                           and feed_len is not None) else None
@@ -196,8 +199,7 @@ def extract_audio_extraction(
                 f"{feed_len}",
             )
     finally:
-        if work is not None:
-            shutil.rmtree(work, ignore_errors=True)
+        shutil.rmtree(work, ignore_errors=True)
 
     meta = dict(transcript.meta)  # lift ASR provenance onto the envelope
     # The legacy singular `selected_format` belongs only on Transcript.meta
