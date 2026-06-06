@@ -65,16 +65,30 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
         raise
 
 
+_STALE_TEMP_AGE_S = 6 * 3600  # only reap temp entries untouched for 6h+
+
+
 def _sweep_stale_temp_dirs() -> None:
-    """Remove crash-leaked worker temp dirs at startup. No jobs are in flight when
-    the server boots, so any leftover ``transcript-upload-*`` / ``transcript-
-    extract-*`` / ``enclosure-*`` dir under the system tempdir is an orphan from a
-    previous crash (the worker's ``finally`` cleanup didn't run)."""
+    """Reap crash-leaked worker temp entries at startup — the upload/extract/
+    enclosure dirs and the ``bundle-*.zip`` files whose ``finally`` /
+    BackgroundTask cleanup didn't run on a crash. Only entries untouched for
+    ``_STALE_TEMP_AGE_S`` are removed, so a *sibling* server process's currently-
+    active temp entries (on a shared host / rolling restart) are left alone."""
+    import time as _time
     tmp = Path(tempfile.gettempdir())
-    for pattern in ("transcript-upload-*", "transcript-extract-*", "enclosure-*"):
+    cutoff = _time.time() - _STALE_TEMP_AGE_S
+    for pattern in ("transcript-upload-*", "transcript-extract-*", "enclosure-*",
+                    "bundle-*.zip"):
         for child in tmp.glob(pattern):
+            try:
+                if child.stat().st_mtime > cutoff:
+                    continue  # recently active — could belong to a live sibling
+            except OSError:
+                continue
             if child.is_dir():
                 shutil.rmtree(child, ignore_errors=True)
+            else:
+                child.unlink(missing_ok=True)
 
 
 def _safe_upload_name(filename: Optional[str]) -> str:
@@ -684,9 +698,9 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
                         raise HTTPException(status_code=410, detail="Bundle was evicted or lost.")
                     raise HTTPException(status_code=404, detail="No such extraction bundle.")
                 tmp = tempfile.NamedTemporaryFile(prefix="bundle-", suffix=".zip", delete=False)
-                tmp.close()
-                manifest_path = job_dir / ExtractionStore.MANIFEST_NAME
                 try:
+                    tmp.close()
+                    manifest_path = job_dir / ExtractionStore.MANIFEST_NAME
                     with zipfile.ZipFile(tmp.name, "w", zipfile.ZIP_DEFLATED) as zf:
                         for path in sorted(job_dir.rglob("*")):
                             # Exclude the mutable side manifest by EXACT path (not

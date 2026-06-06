@@ -19,7 +19,10 @@ Hard boundaries enforced here:
   ``Transcript`` / ``Segment`` / the legacy ``/jobs/{id}/result`` route
   (normalizing there would change byte-stable ASR output).
 
-No heavy dependencies are imported at module top — this stays client-safe.
+No heavy dependencies (torch/whisperx/paddleocr/…) are imported here; the only
+module-top imports are the stdlib-only ``.formats`` and ``.types``. NOTE: the
+thin-client boundary is upheld by ``extract_remote.py`` NOT importing this module
+at all — it is not, itself, on the client import path.
 """
 
 from __future__ import annotations

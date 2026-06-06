@@ -93,7 +93,9 @@ def sort_reading_order(blocks: list[dict]) -> list[dict]:
     for b in ordered:
         placed = False
         for line in lines:
-            ref = line[-1]
+            # Anchor on the line's FIRST (leftmost/topmost) block, not the last —
+            # a more stable line centre when a rightmost block is vertically offset.
+            ref = line[0]
             ref_cy = (ref["bbox"][1] + ref["bbox"][3]) / 2
             b_cy = (b["bbox"][1] + b["bbox"][3]) / 2
             tol = _LINE_OVERLAP_RATIO * min(height(ref), height(b))

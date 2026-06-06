@@ -146,8 +146,10 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
         "--no-playlist",
         "-o", out_template,
         "--write-info-json",
+        # Only the post-move filepath on stdout (one reliable line); the selected
+        # format id is read from the info.json below, not parsed positionally from
+        # interleaved --print output.
         "--print", "after_move:filepath",
-        "--print", "format_id",
         "--no-simulate",
         "--",   # end of options: a URL starting with '-' can't be parsed as a flag
         url,
@@ -162,10 +164,8 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
 
     printed = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
     path = None
-    fmt_id = None
-    if printed and os.path.exists(printed[0]):
-        path = Path(printed[0])
-        fmt_id = printed[1] if len(printed) > 1 else None
+    if printed and os.path.exists(printed[-1]):
+        path = Path(printed[-1])
     if path is None:
         # Exclude the `.video.info.json` sidecar (--write-info-json), which yt-dlp
         # writes AFTER the media and would otherwise win the newest-file pick.
@@ -177,6 +177,17 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
             path = candidates[0]
     if path is None:
         raise RuntimeError(f"Frame-stream download produced no file in {frame_dir}.")
+
+    # Read the selected format id from the sidecar info.json (reliable, vs parsing
+    # interleaved --print stdout). info.json is `<stem-without-.video>.info.json`.
+    fmt_id = None
+    info_path = path.with_name(path.name.split(".video.")[0] + ".info.json")
+    if info_path.is_file():
+        import json as _json
+        try:
+            fmt_id = _json.loads(info_path.read_text(encoding="utf-8")).get("format_id")
+        except (OSError, ValueError):
+            fmt_id = None
     return path, fmt_id
 
 

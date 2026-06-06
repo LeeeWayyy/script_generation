@@ -229,7 +229,7 @@ class EnclosureDownload:
 MAX_ENCLOSURE_BYTES = 4 * 1024 * 1024 * 1024  # 4 GiB
 # Feed fetch bounds — a slow/hanging feed must not block the single worker.
 FEED_FETCH_TIMEOUT = 30.0
-MAX_FEED_BYTES = 64 * 1024 * 1024  # 64 MiB is enormous for an RSS feed
+MAX_FEED_BYTES = 16 * 1024 * 1024  # 16 MiB is already huge for an RSS feed
 
 
 def _assert_public_url(url: str) -> None:

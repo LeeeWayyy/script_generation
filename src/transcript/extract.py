@@ -177,6 +177,9 @@ def extract_audio_extraction(
                           length_is_authoritative)
 
     feed_len = resolution.enclosure_length
+    # NB temporal coupling: dl.path lives under `work`; transcribe_fn must finish
+    # reading it BEFORE the `finally` rmtree's `work`. Safe while transcribe_fn is
+    # synchronous (it is) — keep the rmtree after the transcribe call.
     work = Path(tempfile.mkdtemp(prefix="enclosure-"))
     try:
         dl = download_enclosure(resolution.enclosure_url, work)

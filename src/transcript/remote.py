@@ -116,7 +116,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     rr = requests.get(
-        f"{base}/jobs/{job_id}/result", params={"format": args.format}, headers=headers
+        f"{base}/jobs/{job_id}/result", params={"format": args.format}, headers=headers,
+        timeout=(30, args.timeout),  # don't hang forever on a stalled server
     )
     if not rr.ok:
         print(f"Error fetching result ({rr.status_code}): {rr.text}", file=sys.stderr)
