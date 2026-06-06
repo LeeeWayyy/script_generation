@@ -71,7 +71,9 @@ def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
     if "\\" in kp:  # keys/members are POSIX-relative; a backslash is never valid
         raise BundleVerificationError(f"non-POSIX {what} rejected: {key!r}")
     is_drive = len(kp) >= 2 and kp[0].isalpha() and kp[1] == ":"  # "C:/x" AND "C:x"
-    if kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in kp.split("/"):
+    parts = kp.split("/")
+    if (kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in parts
+            or "" in parts or "." in parts):  # incl. "a//b" / "a/./b" aliases
         raise BundleVerificationError(f"unsafe {what} rejected: {key!r}")
     if kp in reserved:
         raise BundleVerificationError(f"{what} collides with a reserved name: {key!r}")

@@ -33,6 +33,9 @@ from pathlib import Path
 from typing import Optional
 
 DEFAULT_TTL_S = 7 * 24 * 3600  # a completed bundle lives a week since last access
+# Bound the number of renames done under the store lock per janitor sweep so a
+# large eviction batch can't block concurrent /result and /bundle requests.
+MAX_EVICT_PER_SWEEP = 50
 
 
 def _fsync_dir(path: Path) -> None:
@@ -109,6 +112,8 @@ class ExtractionStore:
         parts = norm.split("/")
         if ".." in parts:
             raise ValueError(f"path-traversal asset key rejected: {key!r}")
+        if "" in parts or "." in parts:  # "a//b" / "a/./b" alias to the same path
+            raise ValueError(f"path-alias asset key rejected: {key!r}")
         if norm in (cls.RESULT_NAME, cls.MANIFEST_NAME):
             raise ValueError(f"asset key collides with a reserved bundle name: {key!r}")
         if norm in seen:
@@ -238,9 +243,9 @@ class ExtractionStore:
         with self._lock:
             if final.exists():
                 shutil.rmtree(final, ignore_errors=True)
-            os.rename(staging, final)
-            _fsync_dir(final.parent)  # persist the rename itself
+            os.rename(staging, final)  # the (fast, metadata-only) publish point
             self._index[job_id] = manifest
+        _fsync_dir(final.parent)  # persist the rename OUTSIDE the lock (slow on NFS)
 
     # -- read ----------------------------------------------------------------
 
@@ -354,7 +359,13 @@ class ExtractionStore:
     def evict_expired(self, *, running_ids: set[str], now: Optional[float] = None) -> list[str]:
         """Evict bundles whose TTL lapsed. Never evicts a running job or a leased
         (mid-stream) one. Uses evict-by-rename-then-delete so an in-flight reader
-        keeps a valid dir handle even as the sweep removes the published path."""
+        keeps a valid dir handle even as the sweep removes the published path.
+
+        The lease guarantee requires the ``_leases`` check and the rename to be
+        atomic (both under the lock), so the renames run under the lock. To bound
+        how long that blocks concurrent get/lease/read_result, at most
+        ``MAX_EVICT_PER_SWEEP`` bundles are evicted per call — the rest are caught
+        on the next janitor cycle."""
         now = time.time() if now is None else now
         evicting_root = self.root / self.EVICTING_DIR
         evicting_root.mkdir(exist_ok=True)
@@ -365,7 +376,7 @@ class ExtractionStore:
                 if jid not in running_ids
                 and jid not in self._leases
                 and (now - m.get("last_access", 0)) > self.ttl_s
-            ]
+            ][:MAX_EVICT_PER_SWEEP]
             for jid in candidates:
                 src = self._job_dir(jid)
                 tomb = evicting_root / jid

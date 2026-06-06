@@ -120,6 +120,12 @@ def _download_url(url: str, work_dir: Path) -> Path:
 def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> tuple[Path, str | None]:
     """Download a *capped video stream* for frame extraction (plan §B).
 
+    SSRF note: the caller validates ``url``'s host via :func:`assert_public_url`
+    at submit, but yt-dlp follows redirects with its own networking, so a public
+    URL that *redirects* to a private host is a residual SSRF risk that can't be
+    blocked here without reimplementing yt-dlp's transport. The deployment model
+    (auth-required, trusted/firewalled LAN) bounds this.
+
     This is SEPARATE from the ASR download: the audio for ASR is still taken from
     the same ``bestaudio`` stream the legacy path uses (via :func:`transcribe`),
     so a video job and an audio job for one URL yield the same transcript. A

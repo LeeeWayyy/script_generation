@@ -113,7 +113,8 @@ def test_record_rejects_unsafe_asset_keys(tmp_path):
     src = store.root / "_src.jpg"
     src.write_bytes(b"x")
     for bad in ("../escape.jpg", "/abs.jpg", "result.json", "manifest.json",
-                "a/../b.jpg", "C:/x.jpg", "assets\\card.jpg", ""):
+                "a/../b.jpg", "C:/x.jpg", "assets\\card.jpg", "",
+                "assets//x.jpg", "assets/./x.jpg"):  # path aliases
         with pytest.raises(ValueError):
             store.record("j", "image_note", "{}", [(bad, src)])
     # Duplicate keys are rejected too.

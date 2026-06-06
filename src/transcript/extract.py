@@ -62,7 +62,9 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
     asset_files: list[tuple[str, Path]] = []
 
     for idx, member in enumerate(members):
-        key = f"assets/card-{idx:03d}{Path(member.basename).suffix.lower()}"
+        # 5-digit pad covers MAX_MEMBERS (10_000) so keys stay lexicographically
+        # ordered with their numeric index (card-1000 must not sort before card-100).
+        key = f"assets/card-{idx:05d}{Path(member.basename).suffix.lower()}"
         try:
             ocr = run_ocr(member.path, engine=ocr_engine)
         except Exception as exc:  # noqa: BLE001 — record empty OCR, keep the card
@@ -84,18 +86,24 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
         asset_files.append((key, member.path))
 
     import os
+    _model_dir = os.environ.get("TRANSCRIPT_OCR_MODEL_DIR")
     meta: dict = {
         "ocr_engine": _ocr_engine_version(),
         # A model identifier (not just the raw lang, which ocr_params already has).
         "ocr_model": f"paddleocr-{OCR_PARAMS['lang']}",
-        # The pinned weights dir, if any — two hosts with different weights at
-        # different paths produce different ocr_text under identical params, so
-        # the recipe records which weights were used to explain divergence.
-        "ocr_model_dir": os.environ.get("TRANSCRIPT_OCR_MODEL_DIR"),
+        # The pinned weights folder NAME (basename only — don't leak the server's
+        # absolute fs layout into the vault-agnostic envelope) so the recipe can
+        # explain ocr_text divergence between hosts with different weights.
+        "ocr_model_dir": os.path.basename(_model_dir.rstrip("/")) if _model_dir else None,
+        # Device-affecting runtime (CPU/GPU) — OCR is only deterministic under a
+        # pinned device, so record the operator's declared device when set.
+        "ocr_device": os.environ.get("TRANSCRIPT_OCR_DEVICE"),
         "ocr_params": OCR_PARAMS,
     }
-    _tag_provenance(meta, recipe=["ocr_engine", "ocr_model", "ocr_model_dir", "ocr_params"],
-                    observation=["cards"])
+    _tag_provenance(
+        meta,
+        recipe=["ocr_engine", "ocr_model", "ocr_model_dir", "ocr_device", "ocr_params"],
+        observation=["cards"])
     result = ExtractionResult(
         kind="image_note",
         text=render_image_note_text(cards),
@@ -214,8 +222,8 @@ def extract_audio_extraction(
         "feed_url": resolution.feed_url,
         "episode_guid": resolution.episode_guid,
         "enclosure_url": resolution.enclosure_url,  # the feed's <enclosure>
-        "final_download_url": (dl.final_url if dl else None),  # post-redirect
-        "redirect_chain": (dl.redirect_chain if dl else []),
+        "final_download_url": dl.final_url,  # post-redirect (dl is always live here)
+        "redirect_chain": dl.redirect_chain,
         "enclosure_length": feed_len,  # from the feed (observation)
         "content_length": content_length,  # response header (observation)
         "downloaded_size": downloaded_size,  # bytes actually fetched (observation)

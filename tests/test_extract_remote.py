@@ -126,6 +126,16 @@ def test_unpack_rejects_drive_letter_bundle_member(tmp_path):
         unpack_and_verify(buf.getvalue(), tmp_path / "o")
 
 
+def test_unpack_rejects_path_alias_asset_key(tmp_path):
+    for bad in ("assets//a.jpg", "assets/./a.jpg"):
+        env = {"assets": [{"key": bad, "sha256": "0", "size": 0, "media_type": "x"}]}
+        buf = io.BytesIO()
+        with zipfile.ZipFile(buf, "w") as zf:
+            zf.writestr("result.json", json.dumps(env))
+        with pytest.raises(BundleVerificationError):
+            unpack_and_verify(buf.getvalue(), tmp_path / "o")
+
+
 def test_unpack_rejects_unsafe_asset_key_in_envelope(tmp_path):
     # The server-supplied envelope is untrusted: a `..` asset key must be rejected
     # before `out_dir / key` is ever used (zip members alone aren't enough).
