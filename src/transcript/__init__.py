@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from typing import Optional
@@ -36,6 +37,15 @@ __all__ = [
 __version__ = "0.1.0"
 
 log = logging.getLogger("transcript")
+
+
+def _ffmpeg_version() -> Optional[str]:
+    """ffmpeg version string for provenance (None if unavailable)."""
+    try:
+        out = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True).stdout.split()
+        return out[2] if len(out) >= 3 and out[0] == "ffmpeg" else None
+    except (OSError, IndexError):
+        return None
 
 
 def transcribe(
@@ -101,6 +111,36 @@ def transcribe(
                 "diarized": diarize,
             }
         )
+        # Download recipe (provenance): for a URL, merge yt-dlp's metadata
+        # (written to `<id>.info.json` by --write-info-json) + tool versions.
+        # No-op for local-file sources.
+        if source.startswith(("http://", "https://")):
+            from importlib.metadata import PackageNotFoundError, version
+            try:
+                ytdlp_ver = version("yt-dlp")
+            except PackageNotFoundError:
+                ytdlp_ver = None
+            rec = {
+                "video_id": Path(media).stem,
+                "downloader": "yt-dlp",
+                "yt_dlp_version": ytdlp_ver,
+                "ffmpeg_version": _ffmpeg_version(),
+            }
+            info_path = Path(media).with_name(f"{Path(media).stem}.info.json")
+            if info_path.is_file():
+                import json as _json
+                try:
+                    info = _json.loads(info_path.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    info = {}
+                for key, meta_key in (
+                    ("id", "video_id"), ("webpage_url", "resolved_url"),
+                    ("format_id", "selected_format"), ("channel", "channel"),
+                    ("uploader", "uploader"), ("upload_date", "upload_date"),
+                ):
+                    if info.get(key):
+                        rec[meta_key] = info[key]
+            result.meta.update(rec)
         return result
     finally:
         if own_work_dir and not keep_audio:
