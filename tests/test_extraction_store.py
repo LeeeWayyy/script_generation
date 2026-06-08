@@ -117,9 +117,12 @@ def test_record_rejects_unsafe_asset_keys(tmp_path):
                 "assets//x.jpg", "assets/./x.jpg"):  # path aliases
         with pytest.raises(ValueError):
             store.record("j", "image_note", "{}", [(bad, src)])
-    # Duplicate keys are rejected too.
+    # Duplicate keys are rejected too — including case-only variants (a.jpg/A.jpg
+    # collide on a case-insensitive FS).
     with pytest.raises(ValueError):
         store.record("j", "image_note", "{}", [("a.jpg", src), ("a.jpg", src)])
+    with pytest.raises(ValueError):
+        store.record("j", "image_note", "{}", [("assets/a.jpg", src), ("assets/A.jpg", src)])
     # A rejected key must not leave a partial staging dir behind.
     assert not (store.staging_dir("j")).exists()
 

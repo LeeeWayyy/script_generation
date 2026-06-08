@@ -99,17 +99,24 @@ def extract_images(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
 
 
 def _register(seen: dict, basename: str, source_member: str) -> str:
-    """NFC-normalize, enforce image-only, and reject basename collisions."""
+    """NFC-normalize, enforce image-only, and reject basename collisions.
+
+    Collisions are detected CASE-INSENSITIVELY (NFC + casefold): on a
+    case-insensitive filesystem (macOS/Windows) ``a.jpg`` and ``A.jpg`` would
+    flat-extract to the same file, silently overwriting and shifting every card
+    ``index`` — so we reject the pair regardless of host.
+    """
     nfc = _nfc(basename)
     if not _is_image(nfc):
         return ""  # non-image member: skip silently (exports carry stray files)
-    if nfc in seen:
+    folded = nfc.casefold()
+    if folded in seen:
         raise UnsafeArchiveError(
             f"basename collision after flat-extract: {nfc!r} "
-            f"(from {seen[nfc]!r} and {source_member!r}) — rejected to keep card "
-            f"index stable"
+            f"(from {seen[folded]!r} and {source_member!r}) — rejected to keep "
+            f"card index stable"
         )
-    seen[nfc] = source_member
+    seen[folded] = source_member
     return nfc
 
 

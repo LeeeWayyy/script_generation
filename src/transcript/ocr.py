@@ -189,9 +189,13 @@ def _decode_image(image_path: Path):
     from PIL import Image, ImageOps
 
     # Close the source descriptor promptly — Image.open is lazy and would
-    # otherwise leak FDs across thousands of video frames.
+    # otherwise leak FDs across thousands of video frames. exif_transpose returns
+    # the SAME object when there's no orientation tag, so detach with a copy (and
+    # force pixels into memory) before the `with` closes the file handle.
     with Image.open(image_path) as src:
-        img = ImageOps.exif_transpose(src) if OCR_PARAMS["exif_transpose"] else src.copy()
+        img = ImageOps.exif_transpose(src) if OCR_PARAMS["exif_transpose"] else src
+        if img is src:
+            img = src.copy()
     if img.mode in ("RGBA", "LA", "P"):
         img = img.convert("RGBA")
         bg = Image.new("RGBA", img.size, (255, 255, 255, 255))

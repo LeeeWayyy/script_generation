@@ -18,6 +18,7 @@ import hashlib
 import io
 import json
 import os
+import re as _re
 import sys
 import zipfile
 from pathlib import Path
@@ -91,9 +92,11 @@ def _safe_member_names(zf: zipfile.ZipFile) -> list[str]:
         name = _check_key(info.filename, "bundle member")
         if ((info.external_attr >> 16) & 0o170000) == 0o120000:
             raise BundleVerificationError(f"symlink bundle member rejected: {name!r}")
-        if name in seen:
+        # Dedup case-insensitively — on macOS/Windows two members differing only by
+        # case write the same file, silently overwriting one.
+        if name.casefold() in seen:
             raise BundleVerificationError(f"duplicate bundle member rejected: {name!r}")
-        seen.add(name)
+        seen.add(name.casefold())
         names.append(name)
     return names
 
@@ -142,11 +145,12 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
             asset_meta = [(a["sha256"], int(a["size"])) for a in assets]
         except (ValueError, KeyError, TypeError) as exc:
             raise BundleVerificationError(f"malformed result.json envelope: {exc}") from exc
-        if len(asset_keys) != len(set(asset_keys)):
+        # Dedup case-insensitively (matches the server + a case-insensitive client FS).
+        if len({k.casefold() for k in asset_keys}) != len(asset_keys):
             raise BundleVerificationError("duplicate asset key in envelope")
-        extra = names - {"result.json", *asset_keys}
+        extra = {n.casefold() for n in names} - {"result.json", *(k.casefold() for k in asset_keys)}
         if extra:
-            raise BundleVerificationError(f"bundle has unexpected members: {sorted(extra)}")
+            raise BundleVerificationError("bundle has unexpected members")
 
         # Pass 1 — verify every asset (streaming hash), writing NOTHING yet.
         for key, (want_sha, want_size) in zip(asset_keys, asset_meta):
@@ -160,14 +164,19 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
             if digest != want_sha:
                 raise BundleVerificationError(f"asset sha256 mismatch for {key}")
 
-        # Pass 2 — everything verified; stream each member to disk.
-        out_dir.mkdir(parents=True, exist_ok=True)
-        for name in ("result.json", *asset_keys):
-            dest = out_dir / name
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            with zf.open(name) as m, dest.open("wb") as o:
-                for chunk in iter(lambda: m.read(_CHUNK), b""):
-                    o.write(chunk)
+        # Pass 2 — everything verified; stream each member to disk. A filesystem
+        # error (disk full / permission) becomes a clean BundleVerificationError,
+        # not a raw traceback.
+        try:
+            out_dir.mkdir(parents=True, exist_ok=True)
+            for name in ("result.json", *asset_keys):
+                dest = out_dir / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                with zf.open(name) as m, dest.open("wb") as o:
+                    for chunk in iter(lambda: m.read(_CHUNK), b""):
+                        o.write(chunk)
+        except OSError as exc:
+            raise BundleVerificationError(f"failed writing bundle to disk: {exc}") from exc
     return envelope
 
 
@@ -274,7 +283,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: server rejected job ({r.status_code}): {r.text}", file=sys.stderr)
         return 1
 
-    job_id = r.json()["id"]
+    job_id = str(r.json().get("id", ""))
+    # The id becomes a URL path segment AND `out_dir / job_id` — never trust a
+    # compromised server to return a safe value.
+    if not _re.fullmatch(r"[0-9a-f]{12}", job_id):
+        print(f"Error: server returned an invalid job id: {job_id!r}", file=sys.stderr)
+        return 1
     note(f"Extraction {job_id} queued. Polling ...")
     try:
         poll_until_done(requests, f"{base}/extractions/{job_id}", headers,

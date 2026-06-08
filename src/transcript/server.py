@@ -60,7 +60,8 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
                 if written > max_bytes:
                     raise HTTPException(status_code=413, detail="Upload exceeds the size limit.")
                 fh.write(chunk)
-    except HTTPException:
+    except BaseException:
+        # Any failure (413, or an OSError like disk-full) must not leave a partial.
         dest.unlink(missing_ok=True)
         raise
 
@@ -103,7 +104,9 @@ def _safe_upload_name(filename: Optional[str]) -> str:
     if "\x00" in (filename or ""):  # embedded NUL — never a valid filename
         return "upload.bin"
     base = os.path.basename((filename or "").replace("\\", "/")).strip()
-    if not base or base in (".", "..") or "/" in base or "\\" in base:
+    # Reject separators AND ":" — a Windows drive-relative name like "C:foo" or
+    # "C:" would otherwise discard the temp dir when joined on a Windows host.
+    if not base or base in (".", "..") or "/" in base or "\\" in base or ":" in base:
         return "upload.bin"
     # Reject Windows reserved device names (CON/PRN/AUX/NUL/COM1-9/LPT1-9), which
     # can hang the process or write to a device on a Windows host.

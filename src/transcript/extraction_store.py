@@ -114,11 +114,13 @@ class ExtractionStore:
             raise ValueError(f"path-traversal asset key rejected: {key!r}")
         if "" in parts or "." in parts:  # "a//b" / "a/./b" alias to the same path
             raise ValueError(f"path-alias asset key rejected: {key!r}")
-        if norm in (cls.RESULT_NAME, cls.MANIFEST_NAME):
+        if norm.casefold() in (cls.RESULT_NAME, cls.MANIFEST_NAME):
             raise ValueError(f"asset key collides with a reserved bundle name: {key!r}")
-        if norm in seen:
+        # Dedup CASE-INSENSITIVELY: on a case-insensitive FS two keys differing only
+        # by case would write the same file, silently overwriting one asset.
+        if norm.casefold() in seen:
             raise ValueError(f"duplicate asset key: {key!r}")
-        seen.add(norm)
+        seen.add(norm.casefold())
 
     def __init__(self, root: Optional[Path] = None, ttl_s: float = DEFAULT_TTL_S):
         self.root = Path(root) if root else default_root()

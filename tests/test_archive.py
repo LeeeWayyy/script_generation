@@ -46,6 +46,13 @@ def test_basename_collision_rejected(tmp_path):
         extract_images(arc, tmp_path / "out")
 
 
+def test_case_insensitive_basename_collision_rejected(tmp_path):
+    # On macOS/Windows, a.jpg and A.jpg flat-extract to the same file → reject.
+    arc = _write_zip(tmp_path, {"x/a.jpg": b"x", "y/A.jpg": b"y"})
+    with pytest.raises(UnsafeArchiveError, match="collision"):
+        extract_images(arc, tmp_path / "out")
+
+
 def test_zip_slip_absolute_rejected(tmp_path):
     arc = _write_zip(tmp_path, {"/etc/evil.jpg": b"x"})
     with pytest.raises(UnsafeArchiveError):

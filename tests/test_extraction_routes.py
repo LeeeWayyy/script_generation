@@ -281,6 +281,9 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
         assert server._safe_upload_name(reserved) == "upload.bin"
     assert server._safe_upload_name("console.txt") == "console.txt"  # not reserved
     assert server._safe_upload_name("evil\x00.jpg") == "upload.bin"  # embedded NUL
+    # Windows drive-relative names (a colon) must not survive.
+    assert server._safe_upload_name("C:foo") == "upload.bin"
+    assert server._safe_upload_name("a:b.jpg") == "upload.bin"
 
 
 def test_upload_size_cap_rejects_oversized(monkeypatch, tmp_path):

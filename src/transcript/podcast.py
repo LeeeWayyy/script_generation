@@ -270,11 +270,10 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
 
     class _Track(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
-            # Re-validate every redirect target (scheme + host) before following.
-            try:
-                _assert_public_url(newurl)
-            except PodcastResolutionError:
-                return None  # block the redirect → urlopen fails → ok=False
+            # Re-validate every redirect target (scheme + host); let an SSRF block
+            # RAISE so it surfaces with the host detail (and fails the job) rather
+            # than being swallowed into a generic ok=False.
+            _assert_public_url(newurl)
             chain.append(newurl)
             return super().redirect_request(req, fp, code, msg, headers, newurl)
 
@@ -311,7 +310,15 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
             "enclosure_too_large",
             f"enclosure exceeds the {max_bytes}-byte download cap",
         ) from exc
-    except Exception:  # noqa: BLE001 — other failures are best-effort; fall back to yt-dlp
+    except PodcastResolutionError:
+        # A redirect SSRF block (raised from _Track) is a policy failure — keep its
+        # detailed host message instead of swallowing it into ok=False.
+        try:
+            dest.unlink()
+        except OSError:
+            pass
+        raise
+    except Exception:  # noqa: BLE001 — genuine network failure is best-effort
         try:
             dest.unlink()
         except OSError:
@@ -361,10 +368,7 @@ def _parse_feed(feed_url: str) -> tuple[list[Episode], bool]:
 
     class _Track(urllib.request.HTTPRedirectHandler):
         def redirect_request(self, req, fp, code, msg, headers, newurl):
-            try:
-                _assert_public_url(newurl)
-            except PodcastResolutionError:
-                return None
+            _assert_public_url(newurl)  # let an SSRF block raise (re-raised below)
             return super().redirect_request(req, fp, code, msg, headers, newurl)
 
     try:

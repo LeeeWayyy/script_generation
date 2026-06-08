@@ -126,6 +126,46 @@ def test_unpack_rejects_drive_letter_bundle_member(tmp_path):
         unpack_and_verify(buf.getvalue(), tmp_path / "o")
 
 
+def test_unpack_rejects_case_insensitive_duplicate_member(tmp_path):
+    # a.jpg / A.jpg as distinct zip members collide on macOS/Windows → rejected.
+    data = b"x"
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": hashlib.sha256(data).hexdigest(),
+                       "size": 1, "media_type": "image/jpeg"}]}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("result.json", json.dumps(env))
+        zf.writestr("assets/a.jpg", data)
+        zf.writestr("assets/A.jpg", data)
+    with pytest.raises(BundleVerificationError, match="duplicate"):
+        unpack_and_verify(buf.getvalue(), tmp_path / "o")
+
+
+def test_main_rejects_unsafe_server_job_id(monkeypatch, tmp_path):
+    # A compromised server returning a path-like id must not be used as out_dir/id.
+    from transcript import extract_remote
+
+    class _Resp:
+        status_code, ok = 200, True
+
+        @staticmethod
+        def json():
+            return {"id": "../evil"}
+
+    class _FakeRequests:
+        RequestException = Exception
+
+        @staticmethod
+        def post(url, data=None, files=None, headers=None):
+            return _Resp()
+
+    monkeypatch.setitem(__import__("sys").modules, "requests", _FakeRequests)
+    monkeypatch.setattr(extract_remote, "build_headers", lambda t: {})
+    rc = extract_remote.main(["--kind", "audio_extraction", "--feed-url",
+                              "https://feed/rss", "--out-dir", str(tmp_path)])
+    assert rc == 1  # rejected, nothing written
+    assert not (tmp_path / "..").joinpath("evil").exists()
+
+
 def test_unpack_rejects_path_alias_asset_key(tmp_path):
     for bad in ("assets//a.jpg", "assets/./a.jpg"):
         env = {"assets": [{"key": bad, "sha256": "0", "size": 0, "media_type": "x"}]}
