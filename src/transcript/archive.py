@@ -23,6 +23,7 @@ Pure stdlib (zipfile/tarfile/hashlib/unicodedata). Image *decoding* lives in
 from __future__ import annotations
 
 import hashlib
+import posixpath
 import tarfile
 import unicodedata
 import zipfile
@@ -149,7 +150,10 @@ def _extract_zip(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
                 raise UnsafeArchiveError(
                     f"non-regular zip member rejected (mode {oct(mode)}): {name!r}"
                 )
-            basename = _register(seen, Path(name.replace("\\", "/")).name, name)
+            # posixpath (NOT Path/os.path): member names are platform-neutral data
+            # already normalized to "/", and ntpath.basename would treat a leading
+            # "X:" as a drive and corrupt a legit POSIX name like "0:00.jpg".
+            basename = _register(seen, posixpath.basename(name.replace("\\", "/")), name)
             if not basename:
                 continue
             with zf.open(info) as fh:
@@ -176,7 +180,9 @@ def _extract_tar(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
                 raise UnsafeArchiveError(
                     f"non-regular tar member rejected ({_tar_kind(member)}): {name!r}"
                 )
-            basename = _register(seen, Path(name.replace("\\", "/")).name, name)
+            # posixpath (NOT Path/os.path): see the zip path's note — ntpath.basename
+            # would corrupt a legit POSIX name like "0:00.jpg" on a Windows host.
+            basename = _register(seen, posixpath.basename(name.replace("\\", "/")), name)
             if not basename:
                 continue
             fh = tf.extractfile(member)

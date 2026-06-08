@@ -103,10 +103,15 @@ def _safe_upload_name(filename: Optional[str]) -> str:
     """
     if "\x00" in (filename or ""):  # embedded NUL — never a valid filename
         return "upload.bin"
-    base = os.path.basename((filename or "").replace("\\", "/")).strip()
-    # Reject separators AND ":" — a Windows drive-relative name like "C:foo" or
-    # "C:" would otherwise discard the temp dir when joined on a Windows host.
-    if not base or base in (".", "..") or "/" in base or "\\" in base or ":" in base:
+    raw = (filename or "").replace("\\", "/")
+    # Reject ":" on the RAW name, before basename. A Windows drive-relative name
+    # like "C:foo" or "C:" would otherwise discard the temp dir when joined on a
+    # Windows host — and os.path.basename uses ntpath here, which strips the "C:"
+    # drive prefix first, so "C:foo" would survive as "foo" if checked post-basename.
+    if ":" in raw:
+        return "upload.bin"
+    base = os.path.basename(raw).strip()
+    if not base or base in (".", "..") or "/" in base or "\\" in base:
         return "upload.bin"
     # Reject Windows reserved device names (CON/PRN/AUX/NUL/COM1-9/LPT1-9), which
     # can hang the process or write to a device on a Windows host.
