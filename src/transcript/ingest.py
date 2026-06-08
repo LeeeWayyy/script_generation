@@ -179,9 +179,10 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
         raise RuntimeError(f"Frame-stream download produced no file in {frame_dir}.")
 
     # Read the selected format id from the sidecar info.json (reliable, vs parsing
-    # interleaved --print stdout). info.json is `<stem-without-.video>.info.json`.
+    # interleaved --print stdout). For media "<id>.video.<ext>", --write-info-json
+    # writes "<id>.video.info.json" (the media ext swapped for ".info.json").
     fmt_id = None
-    info_path = path.with_name(path.name.split(".video.")[0] + ".info.json")
+    info_path = path.with_suffix(".info.json")
     if info_path.is_file():
         import json as _json
         try:
