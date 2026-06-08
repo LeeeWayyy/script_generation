@@ -162,6 +162,15 @@ def _load_engine():
                 f"Pinned OCR weights missing under {model_dir!r}: expected "
                 f"{model_dir}/{{det,rec,cls}}. Pre-fetch them at deploy time."
             )
+    # Import torch BEFORE paddleocr. On Windows, paddle/albumentations load native
+    # DLLs that corrupt the loader's search state, so a later `import torch` fails
+    # with "[WinError 127] ... shm.dll". Forcing torch's DLLs to load first makes
+    # the order deterministic regardless of whether an ASR or OCR job ran first.
+    # Harmless (and skipped) on a host where torch isn't installed.
+    try:
+        import torch  # noqa: F401
+    except ImportError:
+        pass
     try:
         from paddleocr import PaddleOCR
     except ImportError as exc:

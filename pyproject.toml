@@ -47,8 +47,15 @@ server = [
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",
     # Media-extraction (image_note OCR, podcast RSS). All lazy-imported.
-    "paddleocr>=2.7",
-    "paddlepaddle>=2.6",
+    # Pinned <3: PaddleOCR 3.x renamed the constructor kwargs (show_log removed,
+    # use_angle_cls -> use_textline_orientation, det_limit_side_len ->
+    # text_det_limit_side_len, model-dir args) and changed the .ocr() result shape.
+    # ocr.py + OCR_PARAMS target the 2.x API; bumping needs a deliberate port.
+    "paddleocr>=2.7,<3",
+    # paddlepaddle pinned <3 to match paddleocr 2.x: the 2.x inference code crashes
+    # on the 3.x runtime ("OneDnnContext does not have the input Filter" in
+    # fused_conv2d). The pair must move together.
+    "paddlepaddle>=2.6,<3",
     "Pillow>=10.0",
     "numpy>=1.24",
     "feedparser>=6.0",
