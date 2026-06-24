@@ -28,12 +28,11 @@ at all — it is not, itself, on the client import path.
 from __future__ import annotations
 
 import json
-import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
 
 from .formats import to_txt
-from .types import Segment, Transcript
+from .types import Segment, Transcript, nfc as _nfc
 
 # The three extraction kinds. Plain ASR ``audio`` is deliberately NOT a kind:
 # it stays on the legacy Transcript route. ``audio_extraction`` (podcast/RSS) is
@@ -119,10 +118,6 @@ class ExtractionResult:
 # Per-modality text renderers (NFC) — named, tested, pinned. The consumer
 # hashes `text`, so these are contract.
 # ---------------------------------------------------------------------------
-
-
-def _nfc(s: str) -> str:
-    return unicodedata.normalize("NFC", s)
 
 
 def render_audio_text(transcript: Transcript) -> str:

@@ -1,7 +1,6 @@
 """Pure OCR ordering/confidence + frame cadence/naming logic. No heavy deps."""
 
-from transcript.frames import (frame_name, parse_showinfo_pts, planned_timecodes,
-                               round_timecode)
+from transcript.frames import frame_name, parse_showinfo_pts, round_timecode
 from transcript.ocr import (aggregate_confidence, blocks_to_text,
                             sort_reading_order)
 
@@ -80,12 +79,6 @@ def test_frame_name_zero_padded():
 
 def test_round_timecode_3dp():
     assert round_timecode(1.23456) == 1.235
-
-
-def test_planned_timecodes_fixed_grid_and_cap():
-    assert planned_timecodes(10.0, 5.0, 100) == [0.0, 5.0, 10.0]
-    # Cap stops emission rather than widening the interval.
-    assert planned_timecodes(100.0, 5.0, 3) == [0.0, 5.0, 10.0]
 
 
 def test_extract_frames_rejects_below_cadence_floor(tmp_path):

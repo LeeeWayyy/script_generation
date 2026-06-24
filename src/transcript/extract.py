@@ -86,9 +86,12 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
         asset_files.append((key, member.path))
 
     import os
+
+    from .engine import _pkg_version
     _model_dir = os.environ.get("TRANSCRIPT_OCR_MODEL_DIR")
+    _ocr_v = _pkg_version("paddleocr")
     meta: dict = {
-        "ocr_engine": _ocr_engine_version(),
+        "ocr_engine": f"paddleocr@{_ocr_v}" if _ocr_v else None,
         # A model identifier (not just the raw lang, which ocr_params already has).
         "ocr_model": f"paddleocr-{OCR_PARAMS['lang']}",
         # The pinned weights folder NAME (basename only — don't leak the server's
@@ -113,12 +116,6 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
         meta=meta,
     )
     return result, asset_files
-
-
-def _ocr_engine_version() -> Optional[str]:
-    from .engine import _pkg_version
-    v = _pkg_version("paddleocr")
-    return f"paddleocr@{v}" if v else None
 
 
 # ---------------------------------------------------------------------------

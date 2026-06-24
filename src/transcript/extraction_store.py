@@ -32,15 +32,17 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
+from .types import has_windows_drive_prefix
+
 DEFAULT_TTL_S = 7 * 24 * 3600  # a completed bundle lives a week since last access
 # Bound the number of renames done under the store lock per janitor sweep so a
 # large eviction batch can't block concurrent /result and /bundle requests.
 MAX_EVICT_PER_SWEEP = 50
 
 
-def _fsync_dir(path: Path) -> None:
-    """Best-effort fsync of a directory (persists renames/creates within it).
-    No-op on platforms/filesystems that reject directory fds."""
+def _fsync_path(path: Path) -> None:
+    """Best-effort fsync of a file or directory (persists its data / its
+    renames+creates). No-op on platforms/filesystems that reject the fd."""
     try:
         fd = os.open(str(path), os.O_RDONLY)
         try:
@@ -51,23 +53,18 @@ def _fsync_dir(path: Path) -> None:
         pass
 
 
+# Directory fsync is just _fsync_path on a dir — kept as a name for call-site clarity.
+_fsync_dir = _fsync_path
+
+
 def _fsync_tree(root: Path) -> None:
     """fsync every regular file AND directory under ``root``, then ``root`` —
     so a power loss can't lose a freshly-written file whose containing subdir
     entry (e.g. ``assets/``) was not itself made durable."""
     for p in root.rglob("*"):
-        if p.is_file():
-            try:
-                fd = os.open(str(p), os.O_RDONLY)
-                try:
-                    os.fsync(fd)
-                finally:
-                    os.close(fd)
-            except OSError:
-                pass
-        elif p.is_dir():
-            _fsync_dir(p)
-    _fsync_dir(root)
+        if p.is_file() or p.is_dir():
+            _fsync_path(p)
+    _fsync_path(root)
 
 
 def default_root() -> Path:
@@ -106,8 +103,7 @@ class ExtractionStore:
         # Reject POSIX-absolute and Windows drive paths — absolute ("C:/x") AND
         # drive-relative ("C:x") — but not a stray colon in a POSIX name
         # ("0:00.jpg", whose first char isn't a letter).
-        is_drive = len(norm) >= 2 and norm[0].isalpha() and norm[1] == ":"
-        if norm.startswith("/") or is_drive:
+        if norm.startswith("/") or has_windows_drive_prefix(norm):
             raise ValueError(f"absolute asset key rejected: {key!r}")
         parts = norm.split("/")
         if ".." in parts:

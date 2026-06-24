@@ -18,11 +18,8 @@ import os
 import sys
 from pathlib import Path
 
-from ._remote_http import build_headers, poll_until_done
-
-
-def _is_url(s: str) -> bool:
-    return s.startswith(("http://", "https://"))
+from ._remote_http import build_headers, poll_until_done, stderr_note
+from .ingest import is_url
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,10 +56,7 @@ def main(argv: list[str] | None = None) -> int:
 
     base = args.server.rstrip("/")
     headers = build_headers(args.token)
-
-    def note(msg: str) -> None:
-        if not args.quiet:
-            print(msg, file=sys.stderr)
+    note = stderr_note(args.quiet)
 
     # Build the multipart form (works for both upload and URL).
     data = {"diarize": str(args.diarize).lower()}
@@ -76,7 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     files = None
     fh = None
     try:
-        if _is_url(args.source):
+        if is_url(args.source):
             data["url"] = args.source
             note(f"Submitting URL to {base} ...")
         else:

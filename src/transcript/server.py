@@ -584,9 +584,9 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         # SSRF guard at submit for any user-supplied fetch URL (video/podcast). The
         # downstream fetcher (yt-dlp) is opaque, so reject obvious private targets
         # here; the podcast urllib path additionally re-checks every redirect.
-        from .ingest import SsrfError, assert_public_url
+        from .ingest import SsrfError, assert_public_url, is_url
         for candidate in (url if kind == "video" else None, feed_url, enclosure_url):
-            if candidate and candidate.startswith(("http://", "https://")):
+            if candidate and is_url(candidate):
                 try:
                     assert_public_url(candidate)
                 except SsrfError as exc:

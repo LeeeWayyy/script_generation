@@ -25,10 +25,11 @@ from __future__ import annotations
 import hashlib
 import posixpath
 import tarfile
-import unicodedata
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
+
+from .types import has_windows_drive_prefix, nfc as _nfc
 
 # Conservative defaults; a zip bomb or a runaway export trips these clearly.
 MAX_TOTAL_UNCOMPRESSED = 2 * 1024 * 1024 * 1024  # 2 GiB across the whole archive
@@ -52,10 +53,6 @@ class ExtractedMember:
     size: int
 
 
-def _nfc(s: str) -> str:
-    return unicodedata.normalize("NFC", s)
-
-
 def _reject_path(name: str) -> None:
     p = name.replace("\\", "/")
     if not p:
@@ -66,10 +63,8 @@ def _reject_path(name: str) -> None:
     stripped = p.rstrip("/")
     # Reject POSIX-absolute AND Windows drive paths — both absolute ("C:/x") and
     # drive-RELATIVE ("C:x", which still escapes the dest on a Windows host). The
-    # latter is not is_absolute() on Linux/macOS, so check it explicitly. A POSIX
-    # name like "0:00.jpg" is fine because its first char isn't a letter.
-    is_drive = len(stripped) >= 2 and stripped[0].isalpha() and stripped[1] == ":"
-    if p.startswith("/") or Path(stripped).is_absolute() or is_drive:
+    # latter is not is_absolute() on Linux/macOS, so check it explicitly.
+    if p.startswith("/") or Path(stripped).is_absolute() or has_windows_drive_prefix(stripped):
         raise UnsafeArchiveError(f"absolute member path rejected: {name!r}")
     if ".." in stripped.split("/"):
         raise UnsafeArchiveError(f"path-traversal member rejected: {name!r}")

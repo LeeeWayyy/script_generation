@@ -22,7 +22,7 @@ from typing import Optional
 
 from .audio import extract_audio
 from .engine import DEFAULT_MODEL, TranscriptionEngine
-from .ingest import resolve_source
+from .ingest import is_url, resolve_source
 from .types import Segment, Transcript, Word
 
 __all__ = [
@@ -114,7 +114,7 @@ def transcribe(
         # Download recipe (provenance): for a URL, merge yt-dlp's metadata
         # (written to `<id>.info.json` by --write-info-json) + tool versions.
         # No-op for local-file sources.
-        if source.startswith(("http://", "https://")):
+        if is_url(source):
             from importlib.metadata import PackageNotFoundError, version
             try:
                 ytdlp_ver = version("yt-dlp")

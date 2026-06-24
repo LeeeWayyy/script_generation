@@ -24,6 +24,8 @@ import zipfile
 from pathlib import Path
 
 from ._remote_http import build_headers, poll_until_done, stderr_note
+from .ingest import is_url
+from .types import has_windows_drive_prefix
 
 KINDS = ("video", "audio_extraction", "image_note")
 # Note: plain audio extensions are deliberately NOT mapped. `audio_extraction`
@@ -71,7 +73,7 @@ def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
         raise BundleVerificationError(f"empty/invalid {what}: {key!r}")
     if "\\" in kp:  # keys/members are POSIX-relative; a backslash is never valid
         raise BundleVerificationError(f"non-POSIX {what} rejected: {key!r}")
-    is_drive = len(kp) >= 2 and kp[0].isalpha() and kp[1] == ":"  # "C:/x" AND "C:x"
+    is_drive = has_windows_drive_prefix(kp)  # "C:/x" AND "C:x"
     parts = kp.split("/")
     if (kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in parts
             or "" in parts or "." in parts):  # incl. "a//b" / "a/./b" aliases
@@ -224,8 +226,7 @@ def main(argv: list[str] | None = None) -> int:
     # For audio_extraction (podcast-only), a positional URL source is the feed URL
     # (the server ignores `url` for this kind) — route it so the documented
     # `extract-remote --kind audio_extraction <feed-url> ...` form works.
-    if kind == "audio_extraction" and args.source \
-            and args.source.startswith(("http://", "https://")) \
+    if kind == "audio_extraction" and args.source and is_url(args.source) \
             and not feed_url and not enclosure_url:
         feed_url = args.source
     if kind == "audio_extraction" and not feed_url and not enclosure_url:
@@ -249,11 +250,11 @@ def main(argv: list[str] | None = None) -> int:
     fh = None
     # audio_extraction submits no url/file (provenance comes from feed/enclosure).
     submit_source = args.source if kind != "audio_extraction" else None
-    is_url = bool(submit_source) and submit_source.startswith(("http://", "https://"))
+    source_is_url = bool(submit_source) and is_url(submit_source)
     try:
         if kind == "audio_extraction":
             note(f"Submitting {kind} (feed/enclosure) to {base} ...")
-        elif is_url:
+        elif source_is_url:
             data["url"] = submit_source
             note(f"Submitting {kind} URL to {base} ...")
         elif submit_source:

@@ -21,10 +21,11 @@ units, origin **top-left**.
 
 from __future__ import annotations
 
-import unicodedata
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+from .types import nfc as _nfc
 
 # The pinned preprocessing + engine params — recorded on meta so divergent
 # ``ocr_text`` across libraries/devices is explainable. OCR sees *decoded pixels*,
@@ -54,10 +55,6 @@ class OcrResult:
     width: Optional[int]
     height: Optional[int]
     blocks: list[dict]  # [{text, bbox:[x0,y0,x1,y1], score}] in reading order
-
-
-def _nfc(s: str) -> str:
-    return unicodedata.normalize("NFC", s)
 
 
 def aggregate_confidence(scores: list[float]) -> Optional[float]:

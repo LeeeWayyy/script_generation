@@ -66,30 +66,29 @@ def resolve_source(source: str, work_dir: Path) -> Path:
     return path
 
 
-def _download_url(url: str, work_dir: Path) -> Path:
-    """Download best-audio for ``url`` using yt-dlp; return the downloaded file path."""
-    work_dir.mkdir(parents=True, exist_ok=True)
-    # %(id)s keeps the name predictable and filesystem-safe.
-    out_template = str(work_dir / "%(id)s.%(ext)s")
+def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
+                 fallback_glob: str, fail_action: str, nofile_msg: str) -> Path:
+    """Run yt-dlp for ``url`` and return the produced file path.
 
+    Shared by the audio (`_download_url`) and frame-video (`download_frame_video`)
+    paths: identical invocation (best stream of ``fmt`` → ``out_template`` with
+    ``--write-info-json``), the same ``after_move:filepath`` stdout parse, and the
+    same newest-file fallback that EXCLUDES the ``.info.json`` sidecar (written
+    AFTER the media, so a naive newest-file pick would wrongly return the JSON).
+    ``fail_action`` (e.g. "download") and ``nofile_msg`` only shape the two
+    error messages, kept verbatim per caller.
+    """
     cmd = [
-        sys.executable,
-        "-m",
-        "yt_dlp",
-        "-f",
-        "bestaudio/best",
+        sys.executable, "-m", "yt_dlp",
+        "-f", fmt,
         "--no-playlist",
-        "-o",
-        out_template,
-        "--write-info-json",   # full provenance metadata → <id>.info.json (read by transcribe())
-        "--print",
-        "after_move:filepath",
+        "-o", out_template,
+        "--write-info-json",   # full provenance metadata → <id>.info.json
+        "--print", "after_move:filepath",
         "--no-simulate",
         "--",   # end of options: a URL starting with '-' can't be parsed as a flag
         url,
     ]
-
-    log.info("Downloading %s with yt-dlp ...", url)
     try:
         result = subprocess.run(cmd, check=True, capture_output=True, text=True)
     except FileNotFoundError as exc:
@@ -97,24 +96,32 @@ def _download_url(url: str, work_dir: Path) -> Path:
             "yt-dlp is not available. Install it with `pip install yt-dlp`."
         ) from exc
     except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"yt-dlp failed to download {url}:\n{exc.stderr}") from exc
+        raise RuntimeError(f"yt-dlp failed to {fail_action} {url}:\n{exc.stderr}") from exc
 
     # The last non-empty stdout line is the final file path (after_move:filepath).
     printed = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
     if printed and os.path.exists(printed[-1]):
         return Path(printed[-1])
-
-    # Fallback: pick the newest file in work_dir, excluding the sidecar
-    # `<id>.info.json` (written by --write-info-json) — it is typically NEWER than
-    # the media, so a naive newest-file pick would wrongly return the JSON.
     candidates = sorted(
-        (p for p in work_dir.glob("*") if p.suffix.lower() != ".json"),
+        (p for p in search_dir.glob(fallback_glob) if p.suffix.lower() != ".json"),
         key=lambda p: p.stat().st_mtime, reverse=True,
     )
     if candidates:
         return candidates[0]
+    raise RuntimeError(nofile_msg)
 
-    raise RuntimeError(f"Download appeared to succeed but no file was found in {work_dir}.")
+
+def _download_url(url: str, work_dir: Path) -> Path:
+    """Download best-audio for ``url`` using yt-dlp; return the downloaded file path."""
+    work_dir.mkdir(parents=True, exist_ok=True)
+    log.info("Downloading %s with yt-dlp ...", url)
+    # %(id)s keeps the name predictable and filesystem-safe. The info.json sidecar
+    # is read back by transcribe() for provenance.
+    return _ytdlp_fetch(
+        url, fmt="bestaudio/best", out_template=str(work_dir / "%(id)s.%(ext)s"),
+        search_dir=work_dir, fallback_glob="*", fail_action="download",
+        nofile_msg=f"Download appeared to succeed but no file was found in {work_dir}.",
+    )
 
 
 def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> tuple[Path, str | None]:
@@ -137,46 +144,16 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
     """
     frame_dir = work_dir / "frame-stream"
     frame_dir.mkdir(parents=True, exist_ok=True)
-    out_template = str(frame_dir / "%(id)s.video.%(ext)s")
     fmt = f"bestvideo[height<={height_cap}]/best[height<={height_cap}]/best"
-
-    cmd = [
-        sys.executable, "-m", "yt_dlp",
-        "-f", fmt,
-        "--no-playlist",
-        "-o", out_template,
-        "--write-info-json",
-        # Only the post-move filepath on stdout (one reliable line); the selected
-        # format id is read from the info.json below, not parsed positionally from
-        # interleaved --print output.
-        "--print", "after_move:filepath",
-        "--no-simulate",
-        "--",   # end of options: a URL starting with '-' can't be parsed as a flag
-        url,
-    ]
     log.info("Downloading capped video stream for frames: %s", url)
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except FileNotFoundError as exc:
-        raise RuntimeError("yt-dlp is not available. Install it with `pip install yt-dlp`.") from exc
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"yt-dlp failed to download video for {url}:\n{exc.stderr}") from exc
-
-    printed = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
-    path = None
-    if printed and os.path.exists(printed[-1]):
-        path = Path(printed[-1])
-    if path is None:
-        # Exclude the `.video.info.json` sidecar (--write-info-json), which yt-dlp
-        # writes AFTER the media and would otherwise win the newest-file pick.
-        candidates = sorted(
-            (p for p in frame_dir.glob("*.video.*") if p.suffix.lower() != ".json"),
-            key=lambda p: p.stat().st_mtime, reverse=True,
-        )
-        if candidates:
-            path = candidates[0]
-    if path is None:
-        raise RuntimeError(f"Frame-stream download produced no file in {frame_dir}.")
+    # Distinct output template + subdir + glob so this download can't overwrite /
+    # ambiguate the ASR `bestaudio` download's info.json. The selected format id is
+    # read from the info.json below, never parsed positionally from --print output.
+    path = _ytdlp_fetch(
+        url, fmt=fmt, out_template=str(frame_dir / "%(id)s.video.%(ext)s"),
+        search_dir=frame_dir, fallback_glob="*.video.*", fail_action="download video for",
+        nofile_msg=f"Frame-stream download produced no file in {frame_dir}.",
+    )
 
     # Read the selected format id from the sidecar info.json (reliable, vs parsing
     # interleaved --print stdout). For media "<id>.video.<ext>", --write-info-json

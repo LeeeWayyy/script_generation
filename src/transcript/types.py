@@ -6,8 +6,22 @@ and inspected without loading torch/whisperx.
 
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass, field, asdict
 from typing import Optional
+
+
+def nfc(s: str) -> str:
+    """NFC-normalize a string (the extraction/OCR text contract)."""
+    return unicodedata.normalize("NFC", s)
+
+
+def has_windows_drive_prefix(p: str) -> bool:
+    """True if ``p`` starts with a Windows drive prefix — absolute (``C:/x``) or
+    drive-relative (``C:x``). Both escape a destination dir on a Windows host, so
+    the path-safety guards reject them even though only the former is
+    ``os.path``-absolute. A leading ``0:00.jpg`` is fine (first char isn't alpha)."""
+    return len(p) >= 2 and p[0].isalpha() and p[1] == ":"
 
 
 @dataclass

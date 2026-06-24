@@ -72,23 +72,6 @@ def round_timecode(seconds: float) -> float:
     return round(seconds, TIMECODE_ROUND_DP)
 
 
-def planned_timecodes(duration_s: float, cadence_s: float, max_frames: int) -> list[float]:
-    """The deterministic list of frame timecodes for a fixed-cadence pass.
-
-    A frame at t=0, then every ``cadence_s`` up to ``duration_s``, capped at
-    ``max_frames`` (the cadence floor for long video — we stop emitting rather
-    than silently widen the interval, and the caller logs the cap).
-    """
-    if cadence_s <= 0:
-        raise ValueError("cadence_s must be positive")
-    times: list[float] = []
-    t = 0.0
-    while t <= duration_s + 1e-9 and len(times) < max_frames:
-        times.append(round_timecode(t))
-        t += cadence_s
-    return times
-
-
 def extract_frames(
     video_path: Path,
     dest_dir: Path,
