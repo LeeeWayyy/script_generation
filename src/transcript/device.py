@@ -41,12 +41,10 @@ def detect_device(prefer: str | None = None) -> str:
     return "cpu"
 
 
-def default_compute_type(device: str, override: str | None = None) -> str:
+def default_compute_type(device: str) -> str:
     """Pick a sensible CTranslate2 compute type for the device.
 
     - CUDA  -> float16 (fast, accurate on modern GPUs)
     - CPU   -> int8    (only practical option for reasonable speed)
     """
-    if override:
-        return override
     return "float16" if device == "cuda" else "int8"

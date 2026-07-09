@@ -37,17 +37,11 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"Whisper model name (default: {DEFAULT_MODEL}). e.g. large-v3, medium, small.",
     )
     p.add_argument(
-        "--diarize",
-        dest="diarize",
-        action="store_true",
-        default=True,
-        help="Identify speakers (default: on). Needs a Hugging Face token.",
-    )
-    p.add_argument(
         "--no-diarize",
         dest="diarize",
         action="store_false",
-        help="Disable speaker identification.",
+        default=True,
+        help="Disable speaker identification (default: on). Needs a Hugging Face token.",
     )
     p.add_argument("--language", help="Force language code (e.g. en). Default: auto-detect.")
     p.add_argument(

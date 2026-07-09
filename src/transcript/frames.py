@@ -23,7 +23,6 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 log = logging.getLogger("transcript.frames")
 
@@ -78,7 +77,6 @@ def extract_frames(
     *,
     cadence_s: float = FRAME_POLICY["cadence_s"],
     max_frames: int = FRAME_POLICY["max_frames"],
-    ffmpeg_version: Optional[str] = None,
 ) -> list[FrameAsset]:
     """Extract frames at a fixed cadence into ``dest_dir`` via ffmpeg.
 

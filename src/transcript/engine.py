@@ -36,7 +36,7 @@ class TranscriptionEngine:
         hf_token: Optional[str] = None,
     ):
         self.device = detect_device(device)
-        self.compute_type = default_compute_type(self.device, compute_type)
+        self.compute_type = compute_type or default_compute_type(self.device)
         self.model_name = model
         self.batch_size = batch_size
         self.hf_token = hf_token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")

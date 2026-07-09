@@ -243,6 +243,22 @@ def _assert_public_url(url: str) -> None:
         raise PodcastResolutionError("feed_identity_unavailable", str(exc)) from exc
 
 
+def _ssrf_redirect_handler(chain: "Optional[list[str]]" = None):
+    """HTTPRedirectHandler that re-validates every redirect target against the SSRF
+    guard — letting a blocked host RAISE (so it surfaces with the host detail and
+    fails the job, rather than being swallowed) — and optionally records the chain."""
+    import urllib.request
+
+    class _Guard(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            _assert_public_url(newurl)
+            if chain is not None:
+                chain.append(newurl)
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    return _Guard()
+
+
 class _EnclosureTooLarge(Exception):
     """Internal sentinel: the download exceeded the byte cap (fatal, no fallback)."""
 
@@ -268,18 +284,9 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
 
     chain: list[str] = []
 
-    class _Track(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, req, fp, code, msg, headers, newurl):
-            # Re-validate every redirect target (scheme + host); let an SSRF block
-            # RAISE so it surfaces with the host detail (and fails the job) rather
-            # than being swallowed into a generic ok=False.
-            _assert_public_url(newurl)
-            chain.append(newurl)
-            return super().redirect_request(req, fp, code, msg, headers, newurl)
-
     dest = dest_dir / "enclosure.bin"
     try:
-        opener = urllib.request.build_opener(_Track())
+        opener = urllib.request.build_opener(_ssrf_redirect_handler(chain))
         req = urllib.request.Request(url, headers={"User-Agent": "transcript/0.1"})
         with opener.open(req, timeout=timeout) as resp:
             cl = resp.headers.get("Content-Length")
@@ -366,13 +373,8 @@ def _parse_feed(feed_url: str) -> tuple[list[Episode], bool]:
     # then hand the bytes to feedparser. Redirects are re-validated for SSRF.
     import urllib.request
 
-    class _Track(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, req, fp, code, msg, headers, newurl):
-            _assert_public_url(newurl)  # let an SSRF block raise (re-raised below)
-            return super().redirect_request(req, fp, code, msg, headers, newurl)
-
     try:
-        opener = urllib.request.build_opener(_Track())
+        opener = urllib.request.build_opener(_ssrf_redirect_handler())
         req = urllib.request.Request(feed_url, headers={"User-Agent": "transcript/0.1"})
         with opener.open(req, timeout=FEED_FETCH_TIMEOUT) as resp:
             raw = resp.read(MAX_FEED_BYTES + 1)

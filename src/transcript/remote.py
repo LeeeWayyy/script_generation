@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 from ._remote_http import build_headers, poll_until_done, stderr_note
+from .formats import FORMATS
 from .ingest import is_url
 
 
@@ -30,7 +31,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Submit a file/URL to a remote transcript-server and fetch the transcript.",
     )
     p.add_argument("source", help="Local media file path or http(s) URL.")
-    p.add_argument("-f", "--format", default="txt", choices=["txt", "srt", "vtt", "json"])
+    p.add_argument("-f", "--format", default="txt", choices=FORMATS)
     p.add_argument("-o", "--output", help="Write result to this file instead of stdout.")
     p.add_argument(
         "--server",

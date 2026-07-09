@@ -53,8 +53,6 @@ def _fsync_path(path: Path) -> None:
         pass
 
 
-# Directory fsync is just _fsync_path on a dir — kept as a name for call-site clarity.
-_fsync_dir = _fsync_path
 
 
 def _fsync_tree(root: Path) -> None:
@@ -243,7 +241,7 @@ class ExtractionStore:
                 shutil.rmtree(final, ignore_errors=True)
             os.rename(staging, final)  # the (fast, metadata-only) publish point
             self._index[job_id] = manifest
-        _fsync_dir(final.parent)  # persist the rename OUTSIDE the lock (slow on NFS)
+        _fsync_path(final.parent)  # persist the rename OUTSIDE the lock (slow on NFS)
 
     # -- read ----------------------------------------------------------------
 

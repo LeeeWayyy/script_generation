@@ -46,8 +46,6 @@ MAX_UPLOAD_BYTES = int(os.environ.get("TRANSCRIPT_MAX_UPLOAD_BYTES", 8 * 1024 * 
 def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
     """Stream an UploadFile to ``dest`` in chunks, aborting (HTTPException 413) if
     it exceeds ``max_bytes`` — never trusts a client-declared length."""
-    from fastapi import HTTPException
-
     max_bytes = MAX_UPLOAD_BYTES if max_bytes is None else max_bytes
     written = 0
     try:
@@ -64,6 +62,19 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
         # Any failure (413, or an OSError like disk-full) must not leave a partial.
         dest.unlink(missing_ok=True)
         raise
+
+
+def _stage_upload(file) -> "tuple[str, str, str]":
+    """Save an upload to a fresh temp dir; return (local_path, source, tmp_dir).
+    Cleans up the temp dir on any failure (e.g. a 413) before re-raising."""
+    tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
+    try:
+        dest = Path(tmp_dir) / _safe_upload_name(file.filename)
+        _save_upload(file.file, dest)
+    except BaseException:
+        shutil.rmtree(tmp_dir, ignore_errors=True)  # don't leak on 413
+        raise
+    return str(dest), f"upload:{file.filename}", tmp_dir
 
 
 _STALE_TEMP_AGE_S = 6 * 3600  # only reap temp entries untouched for 6h+
@@ -473,14 +484,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
 
         upload_tmp_dir = None
         if file is not None:
-            upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
-            try:
-                dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
-                _save_upload(file.file, dest)
-            except BaseException:
-                shutil.rmtree(upload_tmp_dir, ignore_errors=True)  # don't leak on 413
-                raise
-            local_path, source = str(dest), f"upload:{file.filename}"
+            local_path, source, upload_tmp_dir = _stage_upload(file)
         else:
             local_path, source = url, url
 
@@ -595,14 +599,7 @@ def create_app(model: str = "large-v3", device: Optional[str] = None):
         job_id = uuid.uuid4().hex[:12]
         upload_tmp_dir = None
         if file is not None:
-            upload_tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
-            try:
-                dest = Path(upload_tmp_dir) / _safe_upload_name(file.filename)
-                _save_upload(file.file, dest)
-            except BaseException:
-                shutil.rmtree(upload_tmp_dir, ignore_errors=True)  # don't leak on 413
-                raise
-            local_path, source = str(dest), f"upload:{file.filename}"
+            local_path, source, upload_tmp_dir = _stage_upload(file)
         else:
             local_path = source = url or feed_url or enclosure_url
 

@@ -15,7 +15,3 @@ def test_mps_is_never_returned():
 def test_compute_type_defaults():
     assert default_compute_type("cuda") == "float16"
     assert default_compute_type("cpu") == "int8"
-
-
-def test_compute_type_override():
-    assert default_compute_type("cuda", "int8") == "int8"
