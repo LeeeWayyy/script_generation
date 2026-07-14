@@ -22,7 +22,13 @@ from typing import Optional
 
 from .audio import extract_audio
 from .engine import DEFAULT_MODEL, TranscriptionEngine
-from .ingest import is_url, resolve_source
+from .ingest import (
+    download_manual_caption,
+    is_url,
+    is_youtube_url,
+    parse_json3_caption,
+    resolve_source,
+)
 from .types import Segment, Transcript, Word
 
 __all__ = [
@@ -83,8 +89,25 @@ def transcribe(
     work_path = Path(work_dir) if work_dir else Path(tempfile.mkdtemp(prefix="transcript-"))
 
     try:
-        media = resolve_source(source, work_path)
-        audio = extract_audio(media, work_path)
+        caption_download = (
+            download_manual_caption(
+                source, work_path, language=language, with_audio=diarize,
+            )
+            if is_youtube_url(source) else None
+        )
+        caption_path = caption_download[0] if caption_download else None
+        caption_language = caption_download[1] if caption_download else None
+        media = caption_download[2] if caption_download else None
+        caption_info = caption_download[3] if caption_download else None
+
+        captions = None
+        if caption_path is not None:
+            try:
+                captions = parse_json3_caption(caption_path)
+            except (OSError, TypeError, ValueError) as exc:
+                log.warning("Could not parse manual captions (%s); falling back to ASR.", exc)
+            if not captions:
+                log.warning("Manual caption track was empty; falling back to ASR.")
 
         eng = engine or TranscriptionEngine(
             model=model,
@@ -94,14 +117,33 @@ def transcribe(
             hf_token=hf_token,
         )
 
-        result = eng.run(
-            str(audio),
-            diarize=diarize,
-            language=language,
-            min_speakers=min_speakers,
-            max_speakers=max_speakers,
-            align=align,
-        )
+        if captions:
+            audio = extract_audio(media, work_path) if diarize else None
+            alignment_language = caption_language.split("-", 1)[0]
+            result = eng.run_captions(
+                str(audio) if audio else None,
+                captions,
+                diarize=diarize,
+                language=alignment_language,
+                min_speakers=min_speakers,
+                max_speakers=max_speakers,
+                align=align,
+            )
+            result.meta.update({
+                "transcript_source": "youtube_manual_captions",
+                "caption_language": caption_language,
+            })
+        else:
+            media = media or resolve_source(source, work_path)
+            audio = extract_audio(media, work_path)
+            result = eng.run(
+                str(audio),
+                diarize=diarize,
+                language=language,
+                min_speakers=min_speakers,
+                max_speakers=max_speakers,
+                align=align,
+            )
         result.meta.update(
             {
                 "source": source,
@@ -121,25 +163,30 @@ def transcribe(
             except PackageNotFoundError:
                 ytdlp_ver = None
             rec = {
-                "video_id": Path(media).stem,
+                "video_id": ((caption_info or {}).get("id")
+                             or (Path(media).stem if media is not None else "")),
                 "downloader": "yt-dlp",
                 "yt_dlp_version": ytdlp_ver,
                 "ffmpeg_version": _ffmpeg_version(),
             }
-            info_path = Path(media).with_name(f"{Path(media).stem}.info.json")
-            if info_path.is_file():
+            info = {}
+            info_path = (Path(media).with_name(f"{Path(media).stem}.info.json")
+                         if media is not None else None)
+            if info_path is not None and info_path.is_file():
                 import json as _json
                 try:
                     info = _json.loads(info_path.read_text(encoding="utf-8"))
                 except (OSError, ValueError):
                     info = {}
-                for key, meta_key in (
-                    ("id", "video_id"), ("webpage_url", "resolved_url"),
-                    ("format_id", "selected_format"), ("channel", "channel"),
-                    ("uploader", "uploader"), ("upload_date", "upload_date"),
-                ):
-                    if info.get(key):
-                        rec[meta_key] = info[key]
+            if not info and captions:
+                info = caption_info or {}
+            for key, meta_key in (
+                ("id", "video_id"), ("webpage_url", "resolved_url"),
+                ("format_id", "selected_format"), ("channel", "channel"),
+                ("uploader", "uploader"), ("upload_date", "upload_date"),
+            ):
+                if info.get(key):
+                    rec[meta_key] = info[key]
             result.meta.update(rec)
         return result
     finally:

@@ -14,13 +14,17 @@ diarization all run locally on your machine — nothing is uploaded.
 ## Pipeline
 
 ```
-source ──► audio (16kHz mono wav) ──► transcribe ──► align ──► diarize ──► format
-(file/URL)      (ffmpeg)               (WhisperX)   (words)  (who spoke)  (txt/srt/vtt/json)
+YouTube ──► human captions ──► [align + diarize when enabled] ──► format
+other/no captions ──► audio ──► WhisperX ──► align ──► diarize ──► format
 ```
+
+YouTube auto-generated captions are ignored. When human captions exist, their
+text is preserved and ASR is skipped; without diarization, audio is skipped too.
 
 | Stage      | Tool                                   |
 |------------|----------------------------------------|
 | Download   | `yt-dlp`                               |
+| Captions   | YouTube creator-supplied subtitles only |
 | Audio      | `ffmpeg`                               |
 | Transcribe | [WhisperX](https://github.com/m-bain/whisperX) (`large-v3`) |
 | Speakers   | `pyannote` (bundled via WhisperX)      |

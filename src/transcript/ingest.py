@@ -11,13 +11,25 @@ import os
 import shutil
 import subprocess
 import sys
+import json
 from pathlib import Path
+
+from .types import Segment
 
 log = logging.getLogger("transcript.ingest")
 
 
 def is_url(source: str) -> bool:
     return source.startswith(("http://", "https://"))
+
+
+def is_youtube_url(source: str) -> bool:
+    if not is_url(source):
+        return False
+    from urllib.parse import urlsplit
+
+    host = (urlsplit(source).hostname or "").lower()
+    return host == "youtu.be" or host == "youtube.com" or host.endswith(".youtube.com")
 
 
 class SsrfError(ValueError):
@@ -67,7 +79,8 @@ def resolve_source(source: str, work_dir: Path) -> Path:
 
 
 def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
-                 fallback_glob: str, fail_action: str, nofile_msg: str) -> Path:
+                 fallback_glob: str, fail_action: str, nofile_msg: str,
+                 extra_args: tuple[str, ...] = ()) -> Path:
     """Run yt-dlp for ``url`` and return the produced file path.
 
     Shared by the audio (`_download_url`) and frame-video (`download_frame_video`)
@@ -86,6 +99,7 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
         "--write-info-json",   # full provenance metadata → <id>.info.json
         "--print", "after_move:filepath",
         "--no-simulate",
+        *extra_args,
         "--",   # end of options: a URL starting with '-' can't be parsed as a flag
         url,
     ]
@@ -103,7 +117,8 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
     if printed and os.path.exists(printed[-1]):
         return Path(printed[-1])
     candidates = sorted(
-        (p for p in search_dir.glob(fallback_glob) if p.suffix.lower() != ".json"),
+        (p for p in search_dir.glob(fallback_glob)
+         if p.suffix.lower() not in {".json", ".json3"}),
         key=lambda p: p.stat().st_mtime, reverse=True,
     )
     if candidates:
@@ -111,17 +126,113 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
     raise RuntimeError(nofile_msg)
 
 
-def _download_url(url: str, work_dir: Path) -> Path:
+def _download_url(url: str, work_dir: Path, *, subtitle_language: str | None = None) -> Path:
     """Download best-audio for ``url`` using yt-dlp; return the downloaded file path."""
     work_dir.mkdir(parents=True, exist_ok=True)
     log.info("Downloading %s with yt-dlp ...", url)
     # %(id)s keeps the name predictable and filesystem-safe. The info.json sidecar
     # is read back by transcribe() for provenance.
+    subtitle_args = (() if subtitle_language is None else (
+        "--write-subs", "--no-write-auto-subs", "--sub-langs", subtitle_language,
+        "--sub-format", "json3",
+    ))
     return _ytdlp_fetch(
         url, fmt="bestaudio/best", out_template=str(work_dir / "%(id)s.%(ext)s"),
         search_dir=work_dir, fallback_glob="*", fail_action="download",
         nofile_msg=f"Download appeared to succeed but no file was found in {work_dir}.",
+        extra_args=subtitle_args,
     )
+
+
+def _manual_caption_language(info: dict, preferred: str | None) -> str | None:
+    """Choose a creator-supplied JSON3 subtitle track; auto captions are separate."""
+    tracks = {
+        lang: formats for lang, formats in (info.get("subtitles") or {}).items()
+        if lang != "live_chat" and any(f.get("ext") == "json3" for f in formats)
+    }
+    if not tracks:
+        return None
+
+    def match(wanted: str | None) -> str | None:
+        if not wanted:
+            return None
+        wanted = wanted.lower()
+        return next((lang for lang in tracks if lang.lower() == wanted), None) or next(
+            (lang for lang in tracks
+             if lang.lower().split("-", 1)[0] == wanted.split("-", 1)[0]), None
+        )
+
+    if preferred:
+        return match(preferred)
+    return match(info.get("language")) or match(info.get("original_language")) or next(iter(tracks))
+
+
+def download_manual_caption(
+    url: str, work_dir: Path, *, language: str | None = None, with_audio: bool = False,
+) -> tuple[Path | None, str, Path | None, dict] | None:
+    """Download a human YouTube caption, optionally with the audio needed for diarization.
+
+    Returns ``(caption_path, caption_language, media_path, info)``. Absence means
+    there is no matching manual track; ``automatic_captions`` is never inspected.
+    """
+    probe = [
+        sys.executable, "-m", "yt_dlp", "--dump-single-json", "--skip-download",
+        "--no-playlist", "--no-warnings", "--", url,
+    ]
+    try:
+        info = json.loads(subprocess.run(
+            probe, check=True, capture_output=True, text=True,
+        ).stdout)
+    except (OSError, subprocess.CalledProcessError, ValueError) as exc:
+        log.warning("Could not inspect YouTube captions (%s); falling back to ASR.", exc)
+        return None
+
+    caption_language = _manual_caption_language(info, language)
+    if caption_language is None:
+        return None
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+    media = None
+    if with_audio:
+        media = _download_url(url, work_dir, subtitle_language=caption_language)
+    else:
+        cmd = [
+            sys.executable, "-m", "yt_dlp", "--skip-download", "--write-subs",
+            "--no-write-auto-subs", "--sub-langs", caption_language,
+            "--sub-format", "json3", "--write-info-json", "--no-playlist",
+            "-o", str(work_dir / "%(id)s.%(ext)s"), "--", url,
+        ]
+        try:
+            subprocess.run(cmd, check=True, capture_output=True, text=True)
+        except (OSError, subprocess.CalledProcessError) as exc:
+            log.warning("Could not download manual captions (%s); falling back to ASR.", exc)
+            return None, caption_language, None, info
+
+    video_id = str(info.get("id") or "")
+    suffix = f".{caption_language}.json3"
+    candidates = [
+        p for p in work_dir.glob("*.json3")
+        if p.name.endswith(suffix) and (not video_id or p.name.startswith(f"{video_id}."))
+    ]
+    caption = max(candidates, key=lambda p: p.stat().st_mtime) if candidates else None
+    return caption, caption_language, media, info
+
+
+def parse_json3_caption(path: Path) -> list[Segment]:
+    """Parse the timing/text subset of YouTube's JSON3 subtitle format."""
+    from html import unescape
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    segments: list[Segment] = []
+    for event in data.get("events", []):
+        text = unescape("".join(part.get("utf8", "") for part in event.get("segs", [])))
+        text = " ".join(text.split())
+        if not text:
+            continue
+        start = event.get("tStartMs", 0) / 1000
+        duration = event.get("dDurationMs", 0) / 1000
+        segments.append(Segment(text=text, start=start, end=start + duration))
+    return segments
 
 
 def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> tuple[Path, str | None]:

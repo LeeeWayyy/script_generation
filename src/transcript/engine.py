@@ -123,12 +123,54 @@ class TranscriptionEngine:
         result = asr.transcribe(audio, batch_size=self.batch_size, language=language)
         detected_language = result.get("language", language)
 
+        return self._align_and_diarize(
+            audio, result, language=detected_language, diarize=diarize,
+            min_speakers=min_speakers, max_speakers=max_speakers, align=align,
+        )
+
+    def run_captions(
+        self,
+        audio_path: str | None,
+        captions: list[Segment],
+        *,
+        language: str,
+        diarize: bool,
+        min_speakers: Optional[int] = None,
+        max_speakers: Optional[int] = None,
+        align: bool = True,
+    ) -> Transcript:
+        """Use human caption text, running only alignment/diarization when requested."""
+        result = {
+            "segments": [
+                {"text": segment.text, "start": segment.start, "end": segment.end}
+                for segment in captions
+            ],
+            "language": language,
+        }
+        if audio_path is None:
+            return _stamp(_to_transcript(result, language=language), align=False,
+                          align_ok=None, diarize=False)
+
+        import whisperx
+
+        audio = whisperx.load_audio(audio_path)
+        return self._align_and_diarize(
+            audio, result, language=language, diarize=diarize,
+            min_speakers=min_speakers, max_speakers=max_speakers, align=align,
+        )
+
+    def _align_and_diarize(
+        self, audio, result: dict, *, language: Optional[str], diarize: bool,
+        min_speakers: Optional[int], max_speakers: Optional[int], align: bool,
+    ) -> Transcript:
+        import whisperx
+
         align_ok: Optional[bool] = None
-        if align and detected_language:
+        if align and language:
             align_ok = False
             try:
-                log.info("Aligning words (language=%s) ...", detected_language)
-                model_a, metadata = self._load_align(detected_language)
+                log.info("Aligning words (language=%s) ...", language)
+                model_a, metadata = self._load_align(language)
                 result = whisperx.align(
                     result["segments"], model_a, metadata, audio, self.device, return_char_alignments=False
                 )
@@ -142,23 +184,8 @@ class TranscriptionEngine:
             diarize_segments = diarizer(audio, min_speakers=min_speakers, max_speakers=max_speakers)
             result = whisperx.assign_word_speakers(diarize_segments, result)
 
-        t = _to_transcript(result, language=detected_language)
-        # Provenance recipe (engine-side; merged into Transcript.meta so DailyNotes
-        # records it honestly, never hardcoded). Success flags distinguish
-        # "requested" from "actually applied".
-        ends = [s.end for s in t.segments if s.end is not None]
-        t.meta.update(
-            {
-                "align_requested": align,
-                "align_succeeded": align_ok,
-                "diarize_requested": diarize,
-                "diarize_succeeded": (any(s.speaker for s in t.segments) if diarize else None),
-                "duration_s": (max(ends) if ends else None),
-                "whisperx_version": _pkg_version("whisperx"),
-                "pyannote_version": _pkg_version("pyannote.audio"),
-            }
-        )
-        return t
+        return _stamp(_to_transcript(result, language=language), align=align,
+                      align_ok=align_ok, diarize=diarize)
 
 
 def _pkg_version(name: str) -> Optional[str]:
@@ -170,10 +197,78 @@ def _pkg_version(name: str) -> Optional[str]:
         return None
 
 
+def _stamp(t: Transcript, *, align: bool, align_ok: Optional[bool], diarize: bool) -> Transcript:
+    """Attach the engine provenance shared by ASR and human-caption paths."""
+    ends = [s.end for s in t.segments if s.end is not None]
+    t.meta.update(
+        {
+            "align_requested": align,
+            "align_succeeded": align_ok,
+            "diarize_requested": diarize,
+            "diarize_succeeded": (any(s.speaker for s in t.segments) if diarize else None),
+            "duration_s": (max(ends) if ends else None),
+            "whisperx_version": _pkg_version("whisperx"),
+            "pyannote_version": _pkg_version("pyannote.audio"),
+        }
+    )
+    return t
+
+
+def _split_speaker_turns(raw: dict) -> list[dict]:
+    """Split an aligned segment at word-level speaker changes without rewriting text."""
+    text = raw.get("text", "")
+    words = raw.get("words", [])
+    if not text or not words:
+        return [raw]
+
+    speakers = [word.get("speaker") or raw.get("speaker") for word in words]
+    if len({speaker for speaker in speakers if speaker}) < 2:
+        return [raw]
+
+    positions = []
+    cursor = 0
+    for word in words:
+        token = word.get("word", "")
+        position = text.find(token, cursor)
+        if not token or position < 0:
+            return [raw]
+        positions.append(position)
+        cursor = position + len(token)
+
+    groups: list[tuple[int, int, Optional[str]]] = []
+    start = 0
+    for index in range(1, len(words)):
+        if speakers[index] != speakers[index - 1]:
+            groups.append((start, index, speakers[index - 1]))
+            start = index
+    groups.append((start, len(words), speakers[-1]))
+
+    split = []
+    for group_index, (word_start, word_end, speaker) in enumerate(groups):
+        char_start = 0 if group_index == 0 else positions[word_start]
+        char_end = len(text) if group_index == len(groups) - 1 else positions[word_end]
+        group_words = words[word_start:word_end]
+        piece = dict(raw)
+        piece.update({
+            "text": text[char_start:char_end].strip(),
+            "start": next((word.get("start") for word in group_words
+                           if word.get("start") is not None), raw.get("start")),
+            "end": next((word.get("end") for word in reversed(group_words)
+                         if word.get("end") is not None), raw.get("end")),
+            "speaker": speaker,
+            "words": group_words,
+        })
+        split.append(piece)
+    return split
+
+
 def _to_transcript(result: dict, *, language: Optional[str]) -> Transcript:
     """Convert a raw whisperx result dict into our Transcript dataclass."""
     segments: list[Segment] = []
-    for raw in result.get("segments", []):
+    raw_segments = [
+        split for raw in result.get("segments", []) for split in _split_speaker_turns(raw)
+    ]
+    for raw in raw_segments:
         words = [
             Word(
                 word=w.get("word", ""),

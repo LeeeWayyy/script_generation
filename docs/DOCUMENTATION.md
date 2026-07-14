@@ -39,8 +39,9 @@ requirements:
 
 - **Any source** — local files (mp4, mov, mp3, wav, m4a, …) or URLs (downloaded
   with `yt-dlp`).
-- **Accurate, timestamped text** — via [WhisperX](https://github.com/m-bain/whisperX)
-  (`large-v3` by default), including word-level timestamps.
+- **Accurate, timestamped text** — creator-supplied YouTube captions when
+  available, otherwise [WhisperX](https://github.com/m-bain/whisperX)
+  (`large-v3` by default), including word-level timestamps after alignment.
 - **Speaker labels** — "who said what", via `pyannote` diarization (bundled with
   WhisperX).
 
@@ -56,16 +57,18 @@ It ships in three usable shapes from one codebase:
 
 ## 2. How it works (pipeline)
 
-Every source flows through the same stages:
+YouTube uses creator-supplied captions when available; auto-generated captions
+are ignored. Other sources, and YouTube videos without matching human captions,
+use ASR:
 
 ```
-source ──► audio (16kHz mono wav) ──► transcribe ──► align ──► diarize ──► format
-(file/URL)      (ffmpeg)               (WhisperX)   (words)  (who spoke)  (txt/srt/vtt/json)
+YouTube ──► human captions ──► [align + diarize when enabled] ──► format
+other/no captions ──► audio ──► WhisperX ──► align ──► diarize ──► format
 ```
 
 | Stage | Module | Tool | Notes |
 |-------|--------|------|-------|
-| Ingest | `ingest.py` | `yt-dlp` | Local path passes through; URL is downloaded (best audio). |
+| Ingest | `ingest.py` | `yt-dlp` | Uses matching human YouTube captions; otherwise downloads best audio. |
 | Audio  | `audio.py` | `ffmpeg` | Normalizes anything to 16 kHz mono PCM WAV. |
 | Transcribe | `engine.py` | WhisperX (CTranslate2) | Batched Whisper inference with timestamps. |
 | Align | `engine.py` | WhisperX align model | Word-level timing; per-language model, cached. |
