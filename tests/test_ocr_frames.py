@@ -157,18 +157,22 @@ def test_parse_showinfo_pts_accepts_signed_and_scientific_values():
 
 
 def test_ffmpeg_command_is_derived_from_policy_and_caps_dimensions(monkeypatch, tmp_path):
-    import subprocess
-
     import transcript.frames as frames
 
     captured = {}
     monkeypatch.setattr("transcript.ingest.ensure_tool", lambda _name: None)
 
-    def run(cmd, **_kwargs):
-        captured["cmd"] = cmd
-        return subprocess.CompletedProcess(cmd, 0, stderr="")
+    class Process:
+        returncode = 0
 
-    monkeypatch.setattr(frames.subprocess, "run", run)
+        def __init__(self, cmd, **kwargs):
+            captured["cmd"] = cmd
+            captured["kwargs"] = kwargs
+
+        def communicate(self, *, timeout):
+            return None, ""
+
+    monkeypatch.setattr(frames.subprocess, "Popen", Process)
     frames.extract_frames(tmp_path / "video.mp4", tmp_path / "out", cadence_s=7.5)
 
     cmd = captured["cmd"]
@@ -177,3 +181,52 @@ def test_ffmpeg_command_is_derived_from_policy_and_caps_dimensions(monkeypatch, 
     assert frames.FRAME_POLICY["scale"] in vf
     assert "1280" in vf and "720" in vf
     assert cmd[cmd.index("-vsync") + 1] == frames.FRAME_POLICY["vsync"]
+    assert captured["kwargs"]["stderr"] is frames.subprocess.PIPE
+    assert captured["kwargs"]["text"] is True
+
+
+def test_frame_asset_cap_kills_ffmpeg_and_cleans_partial_frames(monkeypatch, tmp_path):
+    import subprocess
+
+    import pytest
+
+    import transcript.frames as frames
+    from transcript.ingest import PROCESS_STOP_TIMEOUT_S
+
+    out_dir = tmp_path / "out"
+    captured = {}
+    monkeypatch.setattr("transcript.ingest.ensure_tool", lambda _name: None)
+    monkeypatch.setattr(frames, "MAX_TOTAL_ASSET_BYTES", 3)
+
+    class Process:
+        returncode = None
+        pid = None
+        stdout = None
+        stderr = None
+
+        def __init__(self, cmd, **kwargs):
+            self.cmd = cmd
+            self.killed = False
+            self.stop_timeout = None
+            captured["process"] = self
+
+        def communicate(self, *, timeout):
+            if self.killed:
+                self.stop_timeout = timeout
+                self.returncode = -9
+                return None, ""
+            (out_dir / "frame-000001.jpg").write_bytes(b"1234")
+            raise subprocess.TimeoutExpired(self.cmd, timeout)
+
+        def kill(self):
+            self.killed = True
+
+    monkeypatch.setattr(frames.subprocess, "Popen", Process)
+
+    with pytest.raises(ValueError, match="3-byte total cap"):
+        frames.extract_frames(tmp_path / "video.mp4", out_dir)
+
+    process = captured["process"]
+    assert process.killed is True
+    assert process.stop_timeout == PROCESS_STOP_TIMEOUT_S
+    assert list(out_dir.glob("frame-*.jpg")) == []

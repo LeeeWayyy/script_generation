@@ -19,10 +19,13 @@ from __future__ import annotations
 
 import logging
 import math
+import os
 import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+from .extraction import MAX_TOTAL_ASSET_BYTES
 
 log = logging.getLogger("transcript.frames")
 
@@ -88,7 +91,7 @@ def extract_frames(
     from ffmpeg ``showinfo`` source PTS, with the cadence grid used only as a
     fallback when a corresponding PTS is unavailable.
     """
-    from .ingest import ensure_tool
+    from .ingest import _stop_process_tree, ensure_tool
 
     # A non-positive (or absurdly tiny) cadence would make the ffmpeg select filter
     # emit every frame and then run OCR on each — a resource-exhaustion vector.
@@ -114,13 +117,66 @@ def extract_frames(
         out_template,
     ]
     log.info("Extracting frames (cadence=%ss) from %s", cadence_s, video_path.name)
+
+    def frame_bytes() -> int:
+        total = 0
+        for path in dest_dir.glob("frame-*.jpg"):
+            try:
+                total += path.stat().st_size
+            except OSError:
+                pass
+        return total
+
+    def cleanup_frames() -> None:
+        for path in dest_dir.glob("frame-*.jpg"):
+            try:
+                path.unlink()
+            except OSError:
+                pass
+
+    popen_kwargs = {
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.PIPE,
+        "text": True,
+    }
+    if os.name == "posix":
+        popen_kwargs["start_new_session"] = True
+    elif os.name == "nt":
+        popen_kwargs["creationflags"] = getattr(
+            subprocess, "CREATE_NEW_PROCESS_GROUP", 0
+        )
+
+    proc = subprocess.Popen(cmd, **popen_kwargs)
+
     try:
-        proc = subprocess.run(cmd, check=True, capture_output=True, text=True)
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"ffmpeg failed to extract frames:\n{exc.stderr}") from exc
+        while True:
+            try:
+                _, stderr = proc.communicate(timeout=0.1)
+                break
+            except subprocess.TimeoutExpired as exc:
+                if frame_bytes() <= MAX_TOTAL_ASSET_BYTES:
+                    continue
+                raise ValueError(
+                    "video frame assets exceed the "
+                    f"{MAX_TOTAL_ASSET_BYTES}-byte total cap"
+                ) from exc
+    except BaseException:
+        if proc.returncode is None:
+            _stop_process_tree(proc)
+        cleanup_frames()
+        raise
+
+    if frame_bytes() > MAX_TOTAL_ASSET_BYTES:
+        cleanup_frames()
+        raise ValueError(
+            f"video frame assets exceed the {MAX_TOTAL_ASSET_BYTES}-byte total cap"
+        )
+    if proc.returncode:
+        cleanup_frames()
+        raise RuntimeError(f"ffmpeg failed to extract frames:\n{stderr}")
 
     produced = sorted(dest_dir.glob("frame-*.jpg"))
-    pts_times = parse_showinfo_pts(proc.stderr)
+    pts_times = parse_showinfo_pts(stderr)
     frames: list[FrameAsset] = []
     for i, src in enumerate(produced):
         dest = dest_dir / frame_name(i)
