@@ -1180,25 +1180,36 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
             bundle_sem.release()
             raise
 
-        def _stream():
-            with open(tmp.name, "rb") as fh:
-                while True:
-                    chunk = fh.read(1024 * 1024)
-                    if not chunk:
-                        break
-                    yield chunk
+        cleanup_lock = threading.Lock()
+        cleaned = False
 
         def _cleanup():
-            with _ACTIVE_BUNDLE_TEMPS_LOCK:
-                _ACTIVE_BUNDLE_TEMPS.discard(tmp.name)
-            try:
-                _os.unlink(tmp.name)
-            except OSError:
-                pass
-            bundle_sem.release()  # held across the whole stream; released when done
+            nonlocal cleaned
+            with cleanup_lock:
+                if cleaned:
+                    return
+                with _ACTIVE_BUNDLE_TEMPS_LOCK:
+                    _ACTIVE_BUNDLE_TEMPS.discard(tmp.name)
+                try:
+                    _os.unlink(tmp.name)
+                except OSError:
+                    pass
+                bundle_sem.release()  # held across the whole stream; released when done
+                cleaned = True
 
-        # A BackgroundTask runs after the response finishes (incl. a dropped
-        # connection) without relying on generator-finalizer GC timing.
+        def _stream():
+            try:
+                with open(tmp.name, "rb") as fh:
+                    while True:
+                        chunk = fh.read(1024 * 1024)
+                        if not chunk:
+                            break
+                        yield chunk
+            finally:
+                _cleanup()
+
+        # Both paths are intentional: the generator owns open/read/yield failures;
+        # BackgroundTask covers normal completion and responses canceled before it starts.
         try:
             size = _os.path.getsize(tmp.name)
         except OSError:
