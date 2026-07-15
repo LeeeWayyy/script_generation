@@ -39,6 +39,7 @@ GOLDEN_URL = """{
       "start": 0.0,
       "end": 1.5,
       "speaker": null,
+      "music": false,
       "words": [
         {
           "word": "Hello",
@@ -54,6 +55,7 @@ GOLDEN_URL = """{
       "start": 1.6,
       "end": 3.2,
       "speaker": null,
+      "music": false,
       "words": []
     }
   ],
@@ -92,6 +94,7 @@ GOLDEN_LOCAL = """{
       "start": 0.0,
       "end": 1.5,
       "speaker": null,
+      "music": false,
       "words": [
         {
           "word": "Hello",
@@ -107,6 +110,7 @@ GOLDEN_LOCAL = """{
       "start": 1.6,
       "end": 3.2,
       "speaker": null,
+      "music": false,
       "words": []
     }
   ],

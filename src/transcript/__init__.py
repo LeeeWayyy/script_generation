@@ -144,6 +144,11 @@ def transcribe(
                 max_speakers=max_speakers,
                 align=align,
             )
+        # ponytail: captions path with diarize=False never extracts audio, so it
+        # skips music tagging; extract audio there too if that combo matters.
+        if audio is not None:
+            from .music import detect_and_tag
+            detect_and_tag(result, str(audio))
         result.meta.update(
             {
                 "source": source,

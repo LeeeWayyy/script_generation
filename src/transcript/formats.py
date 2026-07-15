@@ -30,6 +30,8 @@ def to_txt(transcript: Transcript) -> str:
         text = seg.text.strip()
         if not text:
             continue
+        if seg.music:
+            text = f"[MUSIC] {text}"
         if seg.speaker:
             lines.append(f"{seg.speaker}: {text}")
         else:
@@ -63,6 +65,8 @@ def to_json(transcript: Transcript) -> str:
 
 def _label(seg) -> str:
     text = seg.text.strip()
+    if seg.music:
+        text = f"[MUSIC] {text}"
     return f"[{seg.speaker}] {text}" if seg.speaker else text
 
 

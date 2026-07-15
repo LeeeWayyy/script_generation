@@ -43,6 +43,9 @@ class Segment:
     start: Optional[float] = None
     end: Optional[float] = None
     speaker: Optional[str] = None
+    # True when the segment overlaps detected music (sung lyrics or a song
+    # playing under speech) — treat text/speaker as unreliable there.
+    music: bool = False
     words: list[Word] = field(default_factory=list)
 
 
