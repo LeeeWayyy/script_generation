@@ -24,6 +24,17 @@ def has_windows_drive_prefix(p: str) -> bool:
     return len(p) >= 2 and p[0].isalpha() and p[1] == ":"
 
 
+def is_windows_reserved_basename(name: str) -> bool:
+    """True when a basename resolves to a Windows device rather than a file."""
+    # Windows ignores suffixes after a device stem and normalizes trailing dots /
+    # spaces. A colon can introduce a device stream (``CON:x``).
+    stem = name.rstrip(" .").split(".", 1)[0].rstrip(" ").split(":", 1)[0].upper()
+    if stem in {"CON", "PRN", "AUX", "NUL", "CLOCK$", "CONIN$", "CONOUT$"}:
+        return True
+    return (len(stem) > 3 and stem[:3] in {"COM", "LPT"}
+            and stem[3:].isdigit())
+
+
 @dataclass
 class Word:
     """A single word with its timing and (optionally) the speaker who said it."""
