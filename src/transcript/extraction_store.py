@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import collections
 import json
+import math
 import os
 import shutil
 import threading
@@ -53,6 +54,20 @@ def _fsync_path(path: Path) -> None:
         pass
 
 
+def _write_json_atomic(path: Path, value: dict) -> None:
+    """Replace a JSON side file without exposing a truncated intermediate."""
+    tmp = path.with_name(
+        f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp"
+    )
+    try:
+        tmp.write_text(json.dumps(value), encoding="utf-8")
+        _fsync_path(tmp)
+        os.replace(tmp, path)
+        _fsync_path(path.parent)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
 
 
 def _fsync_tree(root: Path) -> None:
@@ -70,6 +85,23 @@ def default_root() -> Path:
     env = os.environ.get("TRANSCRIPT_DATA_DIR")
     base = Path(env) if env else Path.home() / ".cache" / "transcript" / "extractions"
     return base
+
+
+def _valid_manifest(value, job_id: str) -> bool:
+    def finite_number(item) -> bool:
+        return (isinstance(item, (int, float)) and not isinstance(item, bool)
+                and math.isfinite(item))
+
+    return (
+        isinstance(value, dict)
+        and value.get("id") == job_id
+        and isinstance(value.get("kind"), str)
+        and bool(value["kind"])
+        and value.get("status") == "done"
+        and finite_number(value.get("created_at"))
+        and finite_number(value.get("last_access"))
+        and ("detect_music" not in value or isinstance(value["detect_music"], bool))
+    )
 
 
 class ExtractionStore:
@@ -167,20 +199,52 @@ class ExtractionStore:
                     continue
                 result = child / self.RESULT_NAME
                 manifest = child / self.MANIFEST_NAME
+                for leftover in child.glob(f".{self.MANIFEST_NAME}.*.tmp"):
+                    leftover.unlink(missing_ok=True)
                 if not result.is_file() or not manifest.is_file():
                     # A final dir missing its immutable result.json / manifest is a
                     # partial publish — unrecoverable, GC it.
                     shutil.rmtree(child, ignore_errors=True)
                     continue
                 try:
-                    self._index[child.name] = json.loads(manifest.read_text(encoding="utf-8"))
+                    loaded = json.loads(manifest.read_text(encoding="utf-8"))
+                    if not _valid_manifest(loaded, child.name):
+                        raise ValueError("invalid manifest")
+                    self._index[child.name] = loaded
                 except (OSError, ValueError):
-                    shutil.rmtree(child, ignore_errors=True)
+                    try:
+                        result_data = json.loads(result.read_text(encoding="utf-8"))
+                        if not isinstance(result_data, dict):
+                            raise ValueError("result envelope is not an object")
+                        timestamp = result.stat().st_mtime
+                    except (OSError, ValueError):
+                        shutil.rmtree(child, ignore_errors=True)
+                        continue
+                    result_meta = result_data.get("meta", {})
+                    recovered = {
+                        "id": child.name,
+                        "kind": result_data.get("kind"),
+                        "status": "done",
+                        "detect_music": bool(
+                            isinstance(result_meta, dict)
+                            and result_meta.get("music_detection_requested")
+                        ),
+                        "created_at": timestamp,
+                        "last_access": timestamp,
+                    }
+                    if not _valid_manifest(recovered, child.name):
+                        shutil.rmtree(child, ignore_errors=True)
+                        continue
+                    self._index[child.name] = recovered
+                    try:
+                        _write_json_atomic(manifest, recovered)
+                    except OSError:
+                        pass
 
     # -- publish (atomic) ----------------------------------------------------
 
     def record(self, job_id: str, kind: str, result_json: str, assets: list[tuple[str, Path]],
-               *, now: Optional[float] = None) -> None:
+               *, now: Optional[float] = None, detect_music: bool = False) -> None:
         """Atomically publish a completed extraction.
 
         ``assets`` is a list of ``(AssetRef.key, local_source_path)``. The bundle
@@ -201,12 +265,12 @@ class ExtractionStore:
         with self._lock:
             self._staging_active.add(job_id)
         try:
-            self._record_staging(job_id, kind, result_json, assets, now)
+            self._record_staging(job_id, kind, result_json, assets, now, detect_music)
         finally:
             with self._lock:
                 self._staging_active.discard(job_id)
 
-    def _record_staging(self, job_id, kind, result_json, assets, now) -> None:
+    def _record_staging(self, job_id, kind, result_json, assets, now, detect_music) -> None:
         staging = self.staging_dir(job_id)
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
@@ -224,6 +288,7 @@ class ExtractionStore:
             "id": job_id,
             "kind": kind,
             "status": "done",
+            "detect_music": detect_music,
             "created_at": now,
             "last_access": now,
         }
@@ -254,6 +319,14 @@ class ExtractionStore:
         so the routes can answer 410 (gone), not 404 (unknown)."""
         with self._lock:
             return job_id in self._tombstone_set
+
+    def _remember_gone(self, job_id: str) -> None:
+        if job_id in self._tombstone_set:
+            return
+        if len(self._tombstones) == self._tombstones.maxlen:
+            self._tombstone_set.discard(self._tombstones[0])
+        self._tombstones.append(job_id)
+        self._tombstone_set.add(job_id)
 
     def read_result(self, job_id: str, *, bump: bool = True) -> Optional[str]:
         """Return the immutable ``result.json`` text.
@@ -295,9 +368,7 @@ class ExtractionStore:
             manifest["last_access"] = now
             snapshot = dict(manifest)
         try:
-            (self._job_dir(job_id) / self.MANIFEST_NAME).write_text(
-                json.dumps(snapshot), encoding="utf-8"
-            )
+            _write_json_atomic(self._job_dir(job_id) / self.MANIFEST_NAME, snapshot)
         except OSError:
             pass
 
@@ -332,6 +403,27 @@ class ExtractionStore:
                     self._leases[job_id] = n
 
     # -- eviction ------------------------------------------------------------
+
+    def delete(self, job_id: str) -> str:
+        """Delete a completed bundle. Returns deleted, leased, or missing."""
+        evicting_root = self.root / self.EVICTING_DIR
+        evicting_root.mkdir(exist_ok=True)
+        tomb = evicting_root / job_id
+        with self._lock:
+            if job_id not in self._index:
+                return "missing"
+            if job_id in self._leases:
+                return "leased"
+            try:
+                os.rename(self._job_dir(job_id), tomb)
+            except FileNotFoundError:
+                self._index.pop(job_id, None)
+                self._remember_gone(job_id)
+                return "deleted"
+            self._index.pop(job_id, None)
+            self._remember_gone(job_id)
+        shutil.rmtree(tomb, ignore_errors=True)
+        return "deleted"
 
     def gc_staging(self, *, running_ids: set[str]) -> int:
         """Remove orphaned staging dirs (a failed ``record`` leaves one behind).
@@ -381,11 +473,7 @@ class ExtractionStore:
                 except OSError:
                     continue
                 self._index.pop(jid, None)
-                if jid not in self._tombstone_set:
-                    if len(self._tombstones) == self._tombstones.maxlen:
-                        self._tombstone_set.discard(self._tombstones[0])
-                    self._tombstones.append(jid)
-                    self._tombstone_set.add(jid)
+                self._remember_gone(jid)
                 tombstones.append((jid, tomb))
         # Delete tombstones outside the lock.
         evicted_ids: list[str] = []

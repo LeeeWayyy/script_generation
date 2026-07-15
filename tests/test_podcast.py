@@ -132,6 +132,7 @@ def test_ranged_download_size_mismatch_is_not_fatal(monkeypatch):
         path=Path("/tmp/x"), downloaded_size=200, ranged=True, ok=True))  # ranged → not authoritative
 
     def fake_transcribe(source, **k):
+        assert Path(k["work_dir"]).is_dir()
         t = Transcript()
         t.meta["source"] = source  # the temp file path
         return t

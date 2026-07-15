@@ -96,6 +96,25 @@ def test_startup_scan_rebuilds_index(tmp_path):
     assert store2.read_result("survivor", bump=False) == "{}"
 
 
+def test_startup_recovers_valid_bundle_with_invalid_manifest(tmp_path):
+    store = ExtractionStore(root=tmp_path, ttl_s=100)
+    _publish(store, "survivor", text='{"kind":"image_note"}', now=5.0)
+    _publish(store, "scalar", text='{"kind":"image_note"}', now=5.0)
+    _publish(store, "bad-time", text='{"kind":"image_note"}', now=5.0)
+    (store.root / "survivor" / "manifest.json").write_text("{")
+    (store.root / "scalar" / "manifest.json").write_text("[]")
+    (store.root / "bad-time" / "manifest.json").write_text(
+        '{"id":"bad-time","kind":"image_note","status":"done",'
+        '"created_at":5,"last_access":"later"}'
+    )
+
+    store2 = ExtractionStore(root=tmp_path, ttl_s=100)
+    for job_id in ("survivor", "scalar", "bad-time"):
+        assert store2.read_result(job_id, bump=False) == '{"kind":"image_note"}'
+        assert store2.get(job_id)["kind"] == "image_note"
+    assert (store2.root / "survivor" / "assets" / "card-000.jpg").is_file()
+
+
 def test_startup_gcs_partial_publish(tmp_path):
     store = ExtractionStore(root=tmp_path, ttl_s=100)
     # A final dir with no result.json (a crash before/around the rename).
