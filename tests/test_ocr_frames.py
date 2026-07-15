@@ -69,6 +69,29 @@ def test_ocr_model_dir_missing_subdirs_fails_clearly(monkeypatch, tmp_path):
         _load_engine()
 
 
+def test_ocr_native_import_failure_is_reported_as_unavailable(monkeypatch):
+    import builtins
+    import sys
+    import types
+
+    import pytest
+    from transcript.ocr import OcrUnavailableError, _load_engine
+
+    monkeypatch.delenv("TRANSCRIPT_OCR_MODEL_DIR", raising=False)
+    monkeypatch.setenv("TRANSCRIPT_OCR_ALLOW_DOWNLOAD", "1")
+    monkeypatch.setitem(sys.modules, "torch", types.ModuleType("torch"))
+    real_import = builtins.__import__
+
+    def broken_paddle(name, *args, **kwargs):
+        if name == "paddleocr":
+            raise OSError("native library failed")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", broken_paddle)
+    with pytest.raises(OcrUnavailableError, match="failed to import"):
+        _load_engine()
+
+
 # --- frame cadence / naming --------------------------------------------------
 
 
@@ -88,6 +111,14 @@ def test_extract_frames_rejects_below_cadence_floor(tmp_path):
         extract_frames(tmp_path / "v.mp4", tmp_path / "f", cadence_s=0.0)
     with pytest.raises(ValueError):
         extract_frames(tmp_path / "v.mp4", tmp_path / "f", cadence_s=MIN_CADENCE_S / 2)
+
+
+def test_extract_frames_rejects_non_finite_cadence(tmp_path):
+    import pytest
+    from transcript.frames import extract_frames
+    for cadence in (float("nan"), float("inf"), float("-inf")):
+        with pytest.raises(ValueError, match="cadence_s"):
+            extract_frames(tmp_path / "v.mp4", tmp_path / "f", cadence_s=cadence)
 
 
 def test_parse_showinfo_pts_extracts_source_timecodes_in_order():

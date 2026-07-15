@@ -168,6 +168,8 @@ def _load_engine():
         import torch  # noqa: F401
     except ImportError:
         pass
+    except Exception as exc:  # native-library/import failures must degrade cleanly
+        raise OcrUnavailableError("PyTorch failed to initialize before PaddleOCR.") from exc
     try:
         from paddleocr import PaddleOCR
     except ImportError as exc:
@@ -175,6 +177,8 @@ def _load_engine():
             "PaddleOCR is not installed. Install the server extra "
             "(`pip install -e \".[server]\"`) on the OCR host."
         ) from exc
+    except Exception as exc:
+        raise OcrUnavailableError("PaddleOCR failed to import on this host.") from exc
     kwargs = dict(
         lang=OCR_PARAMS["lang"],
         use_angle_cls=OCR_PARAMS["use_angle_cls"],

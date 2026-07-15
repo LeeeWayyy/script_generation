@@ -19,6 +19,7 @@ and neutral naming are pure and unit-tested.
 from __future__ import annotations
 
 import logging
+import math
 import re
 import subprocess
 from dataclasses import dataclass
@@ -88,7 +89,7 @@ def extract_frames(
 
     # A non-positive (or absurdly tiny) cadence would make the ffmpeg select filter
     # emit every frame and then run OCR on each — a resource-exhaustion vector.
-    if cadence_s < MIN_CADENCE_S:
+    if not math.isfinite(cadence_s) or cadence_s < MIN_CADENCE_S:
         raise ValueError(f"cadence_s must be >= {MIN_CADENCE_S} (got {cadence_s})")
     ensure_tool("ffmpeg")
     dest_dir.mkdir(parents=True, exist_ok=True)
