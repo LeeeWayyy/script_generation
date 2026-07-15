@@ -9,14 +9,15 @@ Run:
     transcript-server --host 0.0.0.0 --port 8000
 
 Auth: every request (except /health) must send `Authorization: Bearer <token>`
-when TRANSCRIPT_TOKEN is set. If it is unset the server runs OPEN and logs a
-loud warning — only acceptable on a trusted, firewalled LAN.
+when TRANSCRIPT_TOKEN is set. Without a token, the CLI binds only to loopback
+unless ``--allow-open`` explicitly opts into an unauthenticated network bind.
 """
 
 from __future__ import annotations
 
 import argparse
 import hmac
+import ipaddress
 import logging
 import math
 import os
@@ -37,7 +38,7 @@ from typing import Optional
 # server.py is only ever imported on the server host (or in tests), both of which
 # have FastAPI; importing ``transcript`` itself stays cheap (it never imports this
 # module).
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
 from . import __version__
@@ -274,6 +275,7 @@ class Job:
     id: str
     source: str  # "upload:<name>" or the URL
     status: str = "queued"  # queued | running | done | error
+    stage: str = "queued"
     error: Optional[str] = None
     # Structured failure reason (e.g. a PodcastResolutionError.reason like
     # "ambiguous" vs "stale_selector") so consumers can tell error classes apart.
@@ -284,6 +286,7 @@ class Job:
     kind: Optional[str] = None
     # Pipeline options
     diarize: bool = True
+    align: bool = True
     detect_music: bool = False
     language: Optional[str] = None
     min_speakers: Optional[int] = None
@@ -307,6 +310,7 @@ class Job:
     _upload_tmp_dir: Optional[str] = field(default=None, repr=False)
     _work_tmp_dir: Optional[str] = field(default=None, repr=False)
     created_at: float = field(default_factory=time.time, repr=False)
+    started_at: Optional[float] = field(default=None, repr=False)
     finished_at: Optional[float] = field(default=None, repr=False)
 
     def public(self, queue_position: Optional[int] = None) -> dict:
@@ -314,9 +318,14 @@ class Job:
             "id": self.id,
             "source": self.source,
             "status": self.status,
+            "stage": self.stage,
             "diarize": self.diarize,
+            "align": self.align,
             "detect_music": self.detect_music,
             "language": self.language,
+            "created_at": self.created_at,
+            "started_at": self.started_at,
+            "finished_at": self.finished_at,
         }
         if queue_position is not None:
             d["queue_position"] = queue_position
@@ -333,7 +342,10 @@ class Job:
         completed extractions are served from the durable ExtractionStore)."""
         d = {
             "id": self.id, "kind": self.kind, "source": self.source,
-            "status": self.status, "detect_music": self.detect_music,
+            "status": self.status, "stage": self.stage,
+            "align": self.align, "detect_music": self.detect_music,
+            "created_at": self.created_at, "started_at": self.started_at,
+            "finished_at": self.finished_at,
         }
         if queue_position is not None:
             d["queue_position"] = queue_position
@@ -366,6 +378,8 @@ class JobStore:
             if job is None or job.status != "queued":
                 return None
             job.status = "running"
+            job.stage = "starting"
+            job.started_at = time.time()
             return job
 
     def remove(self, job_id: str, *, statuses: Optional[set[str]] = None) -> Optional[Job]:
@@ -507,24 +521,29 @@ class Worker(threading.Thread):
                 if job is None:
                     continue
                 log.info("Job %s: running (kind=%s, %s)", job.id, job.kind, job.source)
+                terminal_status = "error"
                 try:
                     if job.kind is None:
                         self._run_asr(job)
                     else:
                         self._run_extraction(job)
                 except Exception as exc:  # noqa: BLE001 — surface to client
-                    job.status = "error"
                     job.error = str(exc)
                     # Preserve a structured reason (e.g. PodcastResolutionError.reason)
                     # so /extractions consumers can distinguish ambiguous vs stale, etc.
                     job.error_reason = getattr(exc, "reason", None)
                     log.exception("Job %s failed", job.id)
+                    terminal_status = "error"
+                else:
+                    terminal_status = "done"
                 finally:
-                    job.finished_at = time.time()
                     # Clean up the upload temp dir WE created (URLs/feeds have none).
                     if job._upload_tmp_dir:
                         shutil.rmtree(job._upload_tmp_dir, ignore_errors=True)
                         job._upload_tmp_dir = None
+                    job.finished_at = time.time()
+                    job.stage = terminal_status
+                    job.status = terminal_status
                     self.store.prune()
             finally:
                 self.q.task_done()
@@ -534,7 +553,9 @@ class Worker(threading.Thread):
     def _run_asr(self, job: Job) -> None:
         from . import transcribe
 
+        job.stage = "loading_model"
         engine = self._get_engine()
+        job.stage = "transcribing"
         work = Path(tempfile.mkdtemp(prefix="transcript-extract-"))
         job._work_tmp_dir = str(work)
         try:
@@ -544,6 +565,7 @@ class Worker(threading.Thread):
                 language=job.language,
                 min_speakers=job.min_speakers,
                 max_speakers=job.max_speakers,
+                align=job.align,
                 engine=engine,
                 detect_music=job.detect_music,
                 work_dir=str(work),
@@ -558,7 +580,6 @@ class Worker(threading.Thread):
         # merged here to reach `-f json`).
         from . import __version__ as _ver
         job.transcript.meta.update({"job_id": job.id, "server_version": _ver})
-        job.status = "done"
         log.info("Job %s: done (%d segments)", job.id, len(job.transcript.segments))
 
     # -- extraction (separate envelope; durable bundle; staging→rename→done) --
@@ -575,6 +596,7 @@ class Worker(threading.Thread):
                 if job.kind != "audio_extraction" else None)
         job._work_tmp_dir = str(work) if work is not None else None
         try:
+            job.stage = "extracting"
             if job.kind == "image_note":
                 result, asset_files = extract_image_note(
                     Path(job._local_path), work, ocr_engine=self._get_ocr_engine()
@@ -587,7 +609,7 @@ class Worker(threading.Thread):
                     engine=self._get_engine(), transcribe_fn=transcribe,
                     diarize=job.diarize, language=job.language,
                     min_speakers=job.min_speakers, max_speakers=job.max_speakers,
-                    detect_music=job.detect_music,
+                    align=job.align, detect_music=job.detect_music,
                 )
             elif job.kind == "video":
                 result, asset_files = self._run_video(job, work, transcribe)
@@ -597,11 +619,11 @@ class Worker(threading.Thread):
             # Identity → ExtractionResult.meta (NEVER Transcript.meta — leak #2).
             result.meta.update({"job_id": job.id, "server_version": _ver})
             # Publish atomically: build staging bundle, rename into place, THEN done.
+            job.stage = "persisting"
             self.extraction_store.record(
                 job.id, job.kind, serialize(result), asset_files,
                 detect_music=job.detect_music,
             )
-            job.status = "done"
             log.info("Job %s: extraction done (%d assets)", job.id, len(asset_files))
         finally:
             if work is not None:
@@ -618,14 +640,17 @@ class Worker(threading.Thread):
         # media — identical to an audio job for this source.
         transcribe_work = work / "transcribe"
         transcribe_work.mkdir()
+        job.stage = "transcribing"
         transcript = transcribe(
             job._local_path, diarize=job.diarize, language=job.language,
             min_speakers=job.min_speakers, max_speakers=job.max_speakers,
+            align=job.align,
             engine=self._get_engine(),
             detect_music=job.detect_music,
             work_dir=str(transcribe_work),
         )
         selected_audio_format = transcript.meta.get("selected_format")
+        job.stage = "extracting"
 
         # Frame extraction is the orthogonal opt-in --frames switch. Only download
         # the separate capped video stream / run OCR when frames are requested.
@@ -714,10 +739,14 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         )
 
     from .extraction import KINDS as EXTRACTION_KINDS
+    from .extraction_store import DEFAULT_TTL_S as DEFAULT_EXTRACTION_TTL_S
     from .extraction_store import ExtractionStore
 
     max_queue_size = int(os.environ.get("TRANSCRIPT_MAX_QUEUE_SIZE", DEFAULT_MAX_QUEUE_SIZE))
     job_ttl_s = float(os.environ.get("TRANSCRIPT_JOB_TTL_SECONDS", DEFAULT_JOB_TTL_S))
+    extraction_ttl_s = float(os.environ.get(
+        "TRANSCRIPT_EXTRACTION_TTL_SECONDS", DEFAULT_EXTRACTION_TTL_S
+    ))
     max_terminal_jobs = int(os.environ.get(
         "TRANSCRIPT_MAX_TERMINAL_JOBS", DEFAULT_MAX_TERMINAL_JOBS
     ))
@@ -728,13 +757,16 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
     if (MAX_UPLOAD_BYTES <= 0 or max_queue_size <= 0 or max_terminal_jobs <= 0
             or max_concurrent_bundles <= 0
             or not math.isfinite(job_ttl_s) or job_ttl_s <= 0
+            or not math.isfinite(extraction_ttl_s) or extraction_ttl_s <= 0
             or not math.isfinite(janitor_interval_s) or janitor_interval_s <= 0):
         raise ValueError("server queue/retention/janitor limits must be positive")
 
     store = JobStore(
         max_terminal_jobs=max_terminal_jobs, terminal_ttl_s=job_ttl_s,
     )
-    extraction_store = ExtractionStore()  # scans existing bundles on construction
+    extraction_store = ExtractionStore(
+        ttl_s=extraction_ttl_s,
+    )  # scans existing bundles on construction
     worker = Worker(
         store, model=model, device=device, extraction_store=extraction_store,
         max_queue_size=max_queue_size,
@@ -768,13 +800,6 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
     app.state.worker = worker
     app.state.extraction_store = extraction_store
 
-    def auth(authorization: str | None = Header(default=None)) -> None:
-        if not token:
-            return
-        expected = f"Bearer {token}"
-        if authorization is None or not hmac.compare_digest(authorization, expected):
-            raise HTTPException(status_code=401, detail="Missing or invalid bearer token.")
-
     def _public(job: Job) -> dict:
         position = worker.queue_position(job.id) if job.status == "queued" else None
         return job.public_extraction(position) if job.kind else job.public(position)
@@ -800,10 +825,10 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
 
     @app.post("/jobs")
     def create_job(
-        _: None = Depends(auth),
         url: Optional[str] = Form(default=None),
         file: Optional[UploadFile] = File(default=None),
         diarize: bool = Form(default=True),
+        align: bool = Form(default=True),
         detect_music: bool = Form(default=False),
         language: Optional[str] = Form(default=None),
         min_speakers: Optional[int] = Form(default=None),
@@ -824,6 +849,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
             id=job_id,
             source=source,
             diarize=diarize,
+            align=align,
             detect_music=detect_music,
             language=language,
             min_speakers=min_speakers,
@@ -841,18 +867,18 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         return job if (job is not None and job.kind is None) else None
 
     @app.get("/jobs")
-    def list_jobs(_: None = Depends(auth)):
+    def list_jobs():
         return [_public(j) for j in store.all() if j.kind is None]
 
     @app.get("/jobs/{job_id}")
-    def get_job(job_id: str, _: None = Depends(auth)):
+    def get_job(job_id: str):
         job = _asr_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="No such job.")
         return _public(job)
 
     @app.get("/jobs/{job_id}/result", response_class=PlainTextResponse)
-    def get_result(job_id: str, format: str = "txt", _: None = Depends(auth)):
+    def get_result(job_id: str, format: str = "txt"):
         job = _asr_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="No such job.")
@@ -865,7 +891,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         return render(job.transcript, format)
 
     @app.delete("/jobs/{job_id}", status_code=204)
-    def delete_job(job_id: str, _: None = Depends(auth)):
+    def delete_job(job_id: str):
         if _asr_job(job_id) is None:
             raise HTTPException(status_code=404, detail="No such job.")
         removed = store.remove(job_id, statuses={"queued", "done", "error"})
@@ -883,11 +909,11 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
 
     @app.post("/extractions")
     def create_extraction(
-        _: None = Depends(auth),
         kind: str = Form(...),
         url: Optional[str] = Form(default=None),
         file: Optional[UploadFile] = File(default=None),
         diarize: bool = Form(default=True),
+        align: bool = Form(default=True),
         detect_music: bool = Form(default=False),
         language: Optional[str] = Form(default=None),
         min_speakers: Optional[int] = Form(default=None),
@@ -916,7 +942,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
                 raise HTTPException(
                     status_code=400, detail="kind=image_note accepts only a file upload."
                 )
-            if (not diarize or detect_music
+            if (not diarize or not align or detect_music
                     or min_speakers is not None or max_speakers is not None
                     or frames or cadence_s is not None or language is not None):
                 raise HTTPException(
@@ -994,7 +1020,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
 
         job = Job(
             id=job_id, source=source, kind=kind, diarize=diarize,
-            detect_music=detect_music, language=language,
+            align=align, detect_music=detect_music, language=language,
             min_speakers=min_speakers, max_speakers=max_speakers,
             frames=frames, cadence_s=cadence_s, feed_url=feed_url,
             episode_guid=episode_guid, episode_url=episode_url,
@@ -1015,7 +1041,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
             raise HTTPException(status_code=404, detail="No such extraction.")
 
     @app.get("/extractions/{job_id}")
-    def get_extraction(job_id: str, _: None = Depends(auth)):
+    def get_extraction(job_id: str):
         _valid_job_id(job_id)
         rec = extraction_store.get(job_id)
         job = store.get(job_id)
@@ -1040,7 +1066,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         raise HTTPException(status_code=404, detail="No such extraction.")
 
     @app.get("/extractions/{job_id}/result", response_class=PlainTextResponse)
-    def get_extraction_result(job_id: str, _: None = Depends(auth)):
+    def get_extraction_result(job_id: str):
         _valid_job_id(job_id)
         # Durable, completed result (also bumps last-access — /result shares the
         # bundle read-lease so a client doesn't lose /bundle to TTL between calls).
@@ -1066,7 +1092,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         raise HTTPException(status_code=410, detail="Bundle was evicted or lost on restart.")
 
     @app.delete("/extractions/{job_id}", status_code=204)
-    def delete_extraction(job_id: str, _: None = Depends(auth)):
+    def delete_extraction(job_id: str):
         _valid_job_id(job_id)
         job = store.get(job_id)
         if job is not None and job.kind is None:
@@ -1096,7 +1122,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         raise HTTPException(status_code=404, detail="No such extraction.")
 
     @app.get("/extractions/{job_id}/bundle")
-    def get_extraction_bundle(job_id: str, _: None = Depends(auth)):
+    def get_extraction_bundle(job_id: str):
         _valid_job_id(job_id)
         import os as _os
         import tempfile
@@ -1186,16 +1212,35 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
     return app
 
 
+def _is_loopback_host(host: str) -> bool:
+    if host.lower() == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host.removeprefix("[").removesuffix("]")).is_loopback
+    except ValueError:
+        return False
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="transcript-server", description="Transcription HTTP API.")
-    parser.add_argument("--host", default="0.0.0.0", help="Bind host (default: 0.0.0.0).")
+    parser.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1).")
     parser.add_argument("--port", type=int, default=8000, help="Bind port (default: 8000).")
+    parser.add_argument(
+        "--allow-open", action="store_true",
+        help="Allow an unauthenticated bind beyond loopback.",
+    )
     parser.add_argument(
         "--model", default=DEFAULT_MODEL,
         help=f"Whisper model (default: {DEFAULT_MODEL}).",
     )
     parser.add_argument("--device", choices=["cuda", "cpu"], help="Force device (default: auto).")
     args = parser.parse_args(argv)
+
+    if (not _is_loopback_host(args.host) and not os.environ.get("TRANSCRIPT_TOKEN")
+            and not args.allow_open):
+        parser.error(
+            "a non-loopback --host requires TRANSCRIPT_TOKEN or explicit --allow-open"
+        )
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
