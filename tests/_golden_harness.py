@@ -95,7 +95,13 @@ def run_job_get_json(monkeypatch, *, source, info_json):
 
     app = server.create_app()
     with TestClient(app) as client:
-        r = client.post("/jobs", data={"url": source, "diarize": "false"})
+        if source.startswith("/"):
+            r = client.post(
+                "/jobs", data={"diarize": "false"},
+                files={"file": (Path(source).name, b"")},
+            )
+        else:
+            r = client.post("/jobs", data={"url": source, "diarize": "false"})
         assert r.status_code == 200, r.text
         job_id = r.json()["id"]
         for _ in range(200):

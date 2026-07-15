@@ -20,7 +20,12 @@ log = logging.getLogger("transcript.ingest")
 
 
 def is_url(source: str) -> bool:
-    return source.startswith(("http://", "https://"))
+    from urllib.parse import urlsplit
+
+    try:
+        return urlsplit(source).scheme.lower() in ("http", "https")
+    except ValueError:
+        return False
 
 
 def is_youtube_url(source: str) -> bool:
@@ -46,22 +51,25 @@ def assert_public_url(url: str) -> None:
     import socket
     from urllib.parse import urlsplit
 
-    parts = urlsplit(url)
-    if parts.scheme not in ("http", "https"):
+    try:
+        parts = urlsplit(url)
+        port = parts.port or (443 if parts.scheme.lower() == "https" else 80)
+    except ValueError as exc:
+        raise SsrfError(f"invalid URL: {url!r}") from exc
+    if parts.scheme.lower() not in ("http", "https"):
         raise SsrfError(f"URL scheme not allowed: {url!r}")
-    if os.environ.get("TRANSCRIPT_ALLOW_PRIVATE_FETCH") == "1":
-        return
     host = parts.hostname
     if not host:
         raise SsrfError(f"no host in URL: {url!r}")
+    if os.environ.get("TRANSCRIPT_ALLOW_PRIVATE_FETCH") == "1":
+        return
     try:
-        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80))
+        infos = socket.getaddrinfo(host, port)
     except socket.gaierror as exc:
         raise SsrfError(f"cannot resolve host {host!r}: {exc}") from exc
     for info in infos:
         ip = ipaddress.ip_address(info[4][0])
-        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
-                or ip.is_multicast or ip.is_unspecified):
+        if not ip.is_global or getattr(ip, "is_site_local", False):
             raise SsrfError(f"refusing to fetch a non-public host: {host} → {ip}")
 
 

@@ -68,6 +68,10 @@ def test_image_note_end_to_end(monkeypatch, tmp_path):
         # /bundle streams a verifiable zip whose result.json == the /result bytes.
         rb = client.get(f"/extractions/{job_id}/bundle")
         assert rb.status_code == 200
+        with zipfile.ZipFile(io.BytesIO(rb.content)) as zf:
+            image_infos = [i for i in zf.infolist() if i.filename.endswith(".jpg")]
+            assert image_infos and all(i.compress_type == zipfile.ZIP_STORED for i in image_infos)
+            assert zf.getinfo("result.json").compress_type == zipfile.ZIP_DEFLATED
         out = unpack_and_verify(rb.content, tmp_path / "unpacked")
         assert out == envelope
         bundle_result = (tmp_path / "unpacked" / "result.json").read_text()
@@ -277,7 +281,9 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
     assert server._safe_upload_name("") == "upload.bin"
     assert server._safe_upload_name("ok.zip") == "ok.zip"
     # Windows reserved device names (any case / extension / 2-digit) are rejected.
-    for reserved in ("CON", "nul.txt", "COM1", "lpt9.bin", "AUX", "COM10", "LPT12.x"):
+    for reserved in (
+        "CON", "CON .txt", "nul.txt", "COM1", "lpt9.bin", "AUX", "COM10", "LPT12.x",
+    ):
         assert server._safe_upload_name(reserved) == "upload.bin"
     assert server._safe_upload_name("console.txt") == "console.txt"  # not reserved
     assert server._safe_upload_name("evil\x00.jpg") == "upload.bin"  # embedded NUL
@@ -286,7 +292,7 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
     assert server._safe_upload_name("a:b.jpg") == "upload.bin"
 
 
-def test_upload_size_cap_rejects_oversized(monkeypatch, tmp_path):
+def test_upload_and_request_size_caps_preserve_exact_file_limit(monkeypatch, tmp_path):
     import transcript.server as server
     monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
     monkeypatch.setattr(server, "MAX_UPLOAD_BYTES", 16)  # tiny cap for the test
@@ -294,9 +300,16 @@ def test_upload_size_cap_rejects_oversized(monkeypatch, tmp_path):
     monkeypatch.setattr("transcript.ocr.run_ocr", _fake_ocr)
     from fastapi.testclient import TestClient
     with TestClient(server.create_app()) as client:
-        r = client.post("/extractions", data={"kind": "image_note"},
-                        files={"file": ("big.zip", b"x" * 64)})  # > 16-byte cap
-        assert r.status_code == 413
+        exact = client.post("/extractions", data={"kind": "image_note"},
+                            files={"file": ("exact.zip", b"x" * 16)})
+        assert exact.status_code == 200  # multipart framing does not consume the file allowance
+        over = client.post("/extractions", data={"kind": "image_note"},
+                           files={"file": ("over.zip", b"x" * 17)})
+        assert over.status_code == 413  # authoritative file-byte cap
+        huge = client.post("/extractions", data={"kind": "image_note"}, files={
+            "file": ("huge.zip", b"x" * (server.MAX_MULTIPART_OVERHEAD_BYTES + 17)),
+        })
+        assert huge.status_code == 413  # ASGI cap rejects before multipart can spool unboundedly
 
 
 def test_audio_extraction_explicit_enclosure_is_user_supplied(monkeypatch, tmp_path):

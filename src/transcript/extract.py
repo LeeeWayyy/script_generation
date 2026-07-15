@@ -222,8 +222,12 @@ def extract_audio_extraction(
                 "feed_identity_unavailable",
                 f"could not download enclosure {resolution.enclosure_url!r}",
             )
-        transcript: Transcript = transcribe_fn(str(dl.path), engine=engine,
-                                               **transcribe_kwargs)
+        transcribe_work = work / "transcribe"
+        transcribe_work.mkdir()
+        transcript: Transcript = transcribe_fn(
+            str(dl.path), engine=engine, work_dir=str(transcribe_work),
+            **transcribe_kwargs,
+        )
 
         downloaded_size = dl.downloaded_size
         content_length = dl.content_length

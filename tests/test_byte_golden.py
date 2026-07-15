@@ -119,7 +119,7 @@ GOLDEN_LOCAL = """{
     "duration_s": 3.2,
     "whisperx_version": null,
     "pyannote_version": null,
-    "source": "/data/fixed-local-file.mp4",
+    "source": "upload:fixed-local-file.mp4",
     "model": "large-v3",
     "device": "cpu",
     "compute_type": "int8",
