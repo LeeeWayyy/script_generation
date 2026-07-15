@@ -1,4 +1,4 @@
-"""Unit tests for music tagging (pure overlap logic — no inaSpeechSegmenter)."""
+"""Unit tests for explicit music tagging (no inaSpeechSegmenter needed)."""
 
 from transcript.music import detect_and_tag, tag_music
 from transcript.types import Segment, Transcript
@@ -34,5 +34,12 @@ def test_ignores_segments_without_timing():
 def test_detect_and_tag_survives_missing_dependency():
     # In the dev env inaSpeechSegmenter isn't installed; the pipeline must not fail.
     t = _t(Segment(text="hi", start=0.0, end=1.0))
-    detect_and_tag(t, "/nonexistent.wav")
+    assert detect_and_tag(t, "/nonexistent.wav") is None
     assert t.segments[0].music is False
+
+
+def test_cli_music_detection_is_explicit_opt_in():
+    from transcript.cli import build_parser
+
+    assert build_parser().parse_args(["input.mp4"]).detect_music is False
+    assert build_parser().parse_args(["input.mp4", "--detect-music"]).detect_music is True

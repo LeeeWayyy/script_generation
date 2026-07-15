@@ -67,6 +67,7 @@ def transcribe(
     max_speakers: Optional[int] = None,
     batch_size: int = 16,
     align: bool = True,
+    detect_music: bool = False,
     work_dir: Optional[str] = None,
     keep_audio: bool = False,
     engine: Optional[TranscriptionEngine] = None,
@@ -83,6 +84,7 @@ def transcribe(
     compute_type  CTranslate2 compute type; None picks float16 (CUDA) / int8 (CPU).
     hf_token      Hugging Face token for diarization; falls back to $HF_TOKEN.
     min/max_speakers  Optional hints to the diarizer.
+    detect_music  Opt in to music-overlap tagging (requires inaSpeechSegmenter).
     engine        Reuse a pre-built TranscriptionEngine (avoids reloading models).
     """
     own_work_dir = work_dir is None
@@ -91,7 +93,7 @@ def transcribe(
     try:
         caption_download = (
             download_manual_caption(
-                source, work_path, language=language, with_audio=diarize,
+                source, work_path, language=language, with_audio=diarize or detect_music,
             )
             if is_youtube_url(source) else None
         )
@@ -118,7 +120,7 @@ def transcribe(
         )
 
         if captions:
-            audio = extract_audio(media, work_path) if diarize else None
+            audio = extract_audio(media, work_path) if diarize or detect_music else None
             alignment_language = caption_language.split("-", 1)[0]
             result = eng.run_captions(
                 str(audio) if audio else None,
@@ -144,11 +146,16 @@ def transcribe(
                 max_speakers=max_speakers,
                 align=align,
             )
-        # ponytail: captions path with diarize=False never extracts audio, so it
-        # skips music tagging; extract audio there too if that combo matters.
-        if audio is not None:
-            from .music import detect_and_tag
-            detect_and_tag(result, str(audio))
+        if detect_music:
+            from .music import MIN_OVERLAP, detect_and_tag, detector_version
+            flagged = detect_and_tag(result, str(audio))
+            result.meta.update({
+                "music_detection_requested": True,
+                "music_detection_succeeded": flagged is not None,
+                "music_detector_version": detector_version(),
+                "music_overlap_threshold": MIN_OVERLAP,
+                "music_segments_flagged": flagged,
+            })
         result.meta.update(
             {
                 "source": source,

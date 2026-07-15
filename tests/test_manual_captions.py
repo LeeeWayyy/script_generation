@@ -7,7 +7,7 @@ from transcript.ingest import (
     download_manual_caption,
     parse_json3_caption,
 )
-from transcript.types import Transcript
+from transcript.types import Segment, Transcript
 
 
 def test_auto_captions_are_ignored(monkeypatch, tmp_path):
@@ -97,3 +97,83 @@ def test_manual_caption_path_skips_asr_and_audio(monkeypatch, tmp_path):
     )
     assert result.text == "Authored text."
     assert result.meta["transcript_source"] == "youtube_manual_captions"
+    assert "music_detection_requested" not in result.meta
+
+
+def test_manual_caption_music_opt_in_acquires_audio_and_stamps_provenance(
+    monkeypatch, tmp_path,
+):
+    import transcript
+
+    caption = tmp_path / "video.en.json3"
+    caption.write_text(json.dumps({"events": [
+        {"tStartMs": 0, "dDurationMs": 1000, "segs": [{"utf8": "Song."}]}
+    ]}), encoding="utf-8")
+    media = tmp_path / "video.webm"
+    audio = tmp_path / "video.wav"
+
+    def download(*args, **kwargs):
+        assert kwargs["with_audio"] is True
+        return caption, "en", media, {"id": "video"}
+
+    monkeypatch.setattr(transcript, "download_manual_caption", download)
+    monkeypatch.setattr(transcript, "extract_audio", lambda *a, **k: audio)
+    monkeypatch.setattr(transcript, "_ffmpeg_version", lambda: "6.0")
+    monkeypatch.setattr("transcript.music.detect_and_tag", lambda result, path: 1)
+    monkeypatch.setattr("transcript.music.detector_version", lambda: "0.8.0")
+
+    class Engine:
+        model_name = "large-v3"
+        device = "cpu"
+        compute_type = "int8"
+
+        def run_captions(self, audio_path, captions, **kwargs):
+            assert audio_path == str(audio)
+            assert kwargs["diarize"] is False
+            return Transcript(segments=captions, language="en")
+
+    result = transcript.transcribe(
+        "https://youtube.com/watch?v=video", diarize=False, detect_music=True,
+        engine=Engine(), work_dir=str(tmp_path),
+    )
+    assert result.meta["music_detection_requested"] is True
+    assert result.meta["music_detection_succeeded"] is True
+    assert result.meta["music_detector_version"] == "0.8.0"
+    assert result.meta["music_overlap_threshold"] == 0.5
+    assert result.meta["music_segments_flagged"] == 1
+
+
+def test_caption_without_audio_preserves_alignment_request_metadata():
+    from transcript.engine import TranscriptionEngine
+
+    engine = object.__new__(TranscriptionEngine)
+    result = engine.run_captions(
+        None, [Segment(text="caption", start=0.0, end=1.0)], language="en",
+        diarize=False, align=True,
+    )
+    assert result.meta["align_requested"] is True
+    assert result.meta["align_succeeded"] is None
+
+
+def test_alignment_cache_retains_only_the_last_language(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    from transcript.engine import TranscriptionEngine
+
+    calls = []
+
+    def load_align_model(*, language_code, device):
+        calls.append(language_code)
+        return (f"model-{language_code}", {"language": language_code})
+
+    monkeypatch.setitem(sys.modules, "whisperx", SimpleNamespace(load_align_model=load_align_model))
+    engine = object.__new__(TranscriptionEngine)
+    engine.device = "cpu"
+    engine._align_cache = None
+
+    assert engine._load_align("en") == engine._load_align("en")
+    engine._load_align("fr")
+    engine._load_align("en")
+    assert calls == ["en", "fr", "en"]
+    assert engine._align_cache[0] == "en"

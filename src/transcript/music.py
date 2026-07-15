@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 from functools import lru_cache
+from typing import Optional
 
 from .types import Transcript
 
@@ -40,6 +41,16 @@ def detect_music(audio_path: str) -> list[tuple[float, float]]:
     ]
 
 
+def detector_version() -> Optional[str]:
+    """Installed inaSpeechSegmenter version, if available."""
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        return version("inaSpeechSegmenter")
+    except PackageNotFoundError:
+        return None
+
+
 def tag_music(transcript: Transcript, ranges: list[tuple[float, float]]) -> int:
     """Set ``segment.music = True`` where a segment overlaps a music range.
 
@@ -59,15 +70,16 @@ def tag_music(transcript: Transcript, ranges: list[tuple[float, float]]) -> int:
     return flagged
 
 
-def detect_and_tag(transcript: Transcript, audio_path: str) -> None:
-    """Best-effort music tagging: never fails the transcription pipeline."""
+def detect_and_tag(transcript: Transcript, audio_path: str) -> Optional[int]:
+    """Best-effort tagging; return flagged count, or ``None`` on failure."""
     try:
         ranges = detect_music(audio_path)
     except ImportError:
-        log.info("inaSpeechSegmenter not installed; skipping music tagging.")
-        return
+        log.warning("Music detection was requested but inaSpeechSegmenter is unavailable.")
+        return None
     except Exception as exc:
         log.warning("Music detection failed (%s); continuing without music tags.", exc)
-        return
+        return None
     flagged = tag_music(transcript, ranges)
     log.info("Music: %d range(s), %d segment(s) flagged.", len(ranges), flagged)
+    return flagged
