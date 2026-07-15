@@ -93,6 +93,7 @@ def test_submit_validation_rejects_paths_conflicts_and_bad_speakers(monkeypatch,
         for option in (
             {"diarize": "false"}, {"detect_music": "true"}, {"min_speakers": "1"},
             {"frames": "true"}, {"cadence_s": "5"}, {"language": "en"},
+            {"align": "false"},
         ):
             rejected = client.post(
                 "/extractions", data={"kind": "image_note", **option},
@@ -120,6 +121,7 @@ def test_submit_validation_rejects_paths_conflicts_and_bad_speakers(monkeypatch,
     ("TRANSCRIPT_MAX_TERMINAL_JOBS", "0"),
     ("TRANSCRIPT_MAX_CONCURRENT_BUNDLES", "0"),
     ("TRANSCRIPT_JOB_TTL_SECONDS", "nan"),
+    ("TRANSCRIPT_EXTRACTION_TTL_SECONDS", "nan"),
     ("TRANSCRIPT_JANITOR_INTERVAL_SECONDS", "inf"),
 ])
 def test_server_limits_must_be_finite_and_positive(monkeypatch, tmp_path, name, value):
@@ -138,6 +140,14 @@ def test_upload_limit_must_be_positive(monkeypatch, tmp_path):
     monkeypatch.setattr(server, "MAX_UPLOAD_BYTES", 0)
     with pytest.raises(ValueError, match="must be positive"):
         server.create_app()
+
+
+def test_extraction_ttl_reaches_store(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    monkeypatch.setenv("TRANSCRIPT_EXTRACTION_TTL_SECONDS", "123")
+    import transcript.server as server
+
+    assert server.create_app().state.extraction_store.ttl_s == 123
 
 
 def test_request_body_limit_counts_streamed_chunks_without_content_length():
@@ -261,6 +271,10 @@ def test_bounded_queue_reports_position_and_cleans_rejected_upload(
             job_id = first.json()["id"]
             status = client.get(f"/extractions/{job_id}").json()
             assert status["queue_position"] == 1
+            assert status["stage"] == "queued"
+            assert status["align"] is True
+            assert isinstance(status["created_at"], float)
+            assert status["started_at"] is status["finished_at"] is None
             assert status["detect_music"] is True
             job = app.state.job_store.get(job_id)
             assert (job.min_speakers, job.max_speakers) == (2, 3)
@@ -398,10 +412,11 @@ def test_music_and_speaker_options_reach_both_extraction_transcribe_paths(
     job = server.Job(
         "333333333333", "https://example.com/feed", kind="audio_extraction",
         feed_url="https://example.com/feed", episode_guid="g", detect_music=True,
-        min_speakers=2, max_speakers=4,
+        min_speakers=2, max_speakers=4, align=False,
     )
     worker._run_extraction(job)
     assert captured[0]["detect_music"] is True
+    assert captured[0]["align"] is False
     assert (captured[0]["min_speakers"], captured[0]["max_speakers"]) == (2, 4)
     assert published
 
@@ -418,9 +433,57 @@ def test_music_and_speaker_options_reach_both_extraction_transcribe_paths(
     )
     video = server.Job(
         "444444444444", "upload:clip.mp4", kind="video", detect_music=True,
-        min_speakers=3, max_speakers=5,
+        min_speakers=3, max_speakers=5, align=False,
     )
     video._local_path = str(tmp_path / "clip.mp4")
     worker._run_video(video, tmp_path, fake_transcribe)
     assert video_calls[0]["detect_music"] is True
+    assert video_calls[0]["align"] is False
     assert (video_calls[0]["min_speakers"], video_calls[0]["max_speakers"]) == (3, 5)
+
+
+def test_asr_align_and_lifecycle_are_public(monkeypatch, tmp_path):
+    import transcript.server as server
+
+    monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    seen = []
+
+    def fake_run_asr(_worker, job):
+        seen.append(job.align)
+        job.transcript = Transcript()
+
+    monkeypatch.setattr(server.Worker, "_run_asr", fake_run_asr)
+    with TestClient(server.create_app()) as client:
+        response = client.post(
+            "/jobs", data={"align": "false"}, files={"file": ("x.mp3", b"x")},
+        )
+        job_id = response.json()["id"]
+        for _ in range(100):
+            status = client.get(f"/jobs/{job_id}").json()
+            if status["status"] == "done":
+                break
+            threading.Event().wait(0.01)
+
+    assert seen == [False]
+    assert status["align"] is False
+    assert status["stage"] == "done"
+    assert status["created_at"] <= status["started_at"] <= status["finished_at"]
+
+
+def test_cli_requires_auth_or_opt_in_for_network_bind(monkeypatch):
+    import transcript.server as server
+
+    monkeypatch.delenv("TRANSCRIPT_TOKEN", raising=False)
+    monkeypatch.setattr(server, "create_app", lambda **_kwargs: "app")
+    calls = []
+    monkeypatch.setattr(
+        "uvicorn.run", lambda app, **kwargs: calls.append((app, kwargs)),
+    )
+
+    with pytest.raises(SystemExit):
+        server.main(["--host", "0.0.0.0"])
+    assert server.main([]) == 0
+    assert calls[-1] == ("app", {"host": "127.0.0.1", "port": 8000})
+    assert server.main(["--host", "0.0.0.0", "--allow-open"]) == 0
+    monkeypatch.setenv("TRANSCRIPT_TOKEN", "secret")
+    assert server.main(["--host", "0.0.0.0"]) == 0
