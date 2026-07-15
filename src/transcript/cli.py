@@ -125,7 +125,13 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     out_dir = Path(args.out_dir).expanduser() if args.out_dir else None
     if out_dir:
-        out_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            out_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            if args.verbose:
+                raise
+            print(f"Error: could not create output directory {out_dir}: {exc}", file=sys.stderr)
+            return 1
 
     for index, source in enumerate(args.source, start=1):
         try:
@@ -159,7 +165,13 @@ def main(argv: list[str] | None = None) -> int:
             out_dir / _batch_name(source, index, args.format) if out_dir else None
         )
         if output_path:
-            output_path.write_text(output, encoding="utf-8")
+            try:
+                output_path.write_text(output, encoding="utf-8")
+            except OSError as exc:
+                if args.verbose:
+                    raise
+                print(f"Error: could not write {output_path}: {exc}", file=sys.stderr)
+                return 1
             speakers = f" | speakers: {', '.join(result.speakers)}" if result.speakers else ""
             print(
                 f"Wrote {args.format} -> {output_path} "

@@ -29,3 +29,13 @@ def test_single_source_keeps_stdout_and_does_not_build_engine(monkeypatch, capsy
 
     assert cli.main(["one.mp3", "--no-diarize"]) == 0
     assert capsys.readouterr().out == "ok\n"
+
+
+def test_output_write_failure_is_clean(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(
+        cli, "transcribe", lambda source, **kwargs: Transcript(segments=[Segment(text="ok")])
+    )
+
+    output = tmp_path / "missing" / "out.txt"
+    assert cli.main(["one.mp3", "--no-diarize", "-o", str(output)]) == 1
+    assert f"Error: could not write {output}:" in capsys.readouterr().err
