@@ -188,6 +188,11 @@ def extract_audio_extraction(
     Provenance lands on ``ExtractionResult.meta`` — its only byte-safe home —
     never on ``Transcript.meta``.
     """
+    from .engine import TranscriptionEngine
+
+    if transcribe_kwargs.get("diarize", True) and type(engine) is TranscriptionEngine:
+        engine.require_diarization_token()
+
     from .podcast import PodcastResolution, PodcastResolutionError, resolve_podcast
 
     if feed_url:

@@ -94,6 +94,32 @@ def test_enclosure_too_large_is_fatal_not_fallback(monkeypatch):
     assert ei.value.reason == "enclosure_too_large"
 
 
+def test_missing_hf_token_fails_before_podcast_resolution_or_download(monkeypatch):
+    import transcript.podcast as podcast
+    from transcript.engine import TranscriptionEngine
+    from transcript.extract import extract_audio_extraction
+
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("HUGGINGFACE_TOKEN", raising=False)
+    monkeypatch.setattr(
+        podcast, "resolve_podcast",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("resolution started")),
+    )
+    monkeypatch.setattr(
+        podcast, "download_enclosure",
+        lambda *_a, **_k: (_ for _ in ()).throw(AssertionError("download started")),
+    )
+
+    with pytest.raises(RuntimeError, match="Hugging Face token"):
+        extract_audio_extraction(
+            feed_url="https://example.com/feed", engine=TranscriptionEngine(device="cpu"),
+            transcribe_fn=lambda *_a, **_k: (_ for _ in ()).throw(
+                AssertionError("transcription started")
+            ),
+            diarize=True,
+        )
+
+
 def test_authoritative_length_mismatch_is_fatal(monkeypatch):
     # A COMPLETE, non-ranged, non-redirected download whose size disagrees with
     # the feed <enclosure length> is fatal (plan §C); otherwise it's observation.
