@@ -86,6 +86,9 @@ Diarization uses gated pyannote models. One-time setup:
    Accepting access is usually instant. If you're unsure, accept both.
 3. Expose it: `export HF_TOKEN=hf_xxx` (or pass `--hf-token` / `hf_token=`).
 
+Music tagging is deliberately opt-in because it changes output. Install the
+optional detector (`pip install -e ".[local,music]"`) and pass `--detect-music`.
+
 ## CLI usage
 
 ```bash
@@ -103,11 +106,14 @@ transcript interview.wav -f json -o interview.json -v
 
 # Give the diarizer hints when you know the speaker count
 transcript panel.mp4 --min-speakers 2 --max-speakers 4
+
+# Batch files with one warm model; deterministic collision-safe names in the directory
+transcript a.mp4 b.mp4 --out-dir ./transcripts -f srt
 ```
 
-Key flags: `-f/--format {txt,srt,vtt,json}`, `-o/--output`, `--model`,
-`--no-diarize`, `--language`, `--device {cuda,cpu}`, `--min/--max-speakers`,
-`-v/--verbose`.
+Key flags: `-f/--format {txt,srt,vtt,json}`, `-o/--output`, `--out-dir`, `--model`,
+`--no-diarize`, `--language`, `--device {cuda,cpu}`, `--min-speakers`, `--max-speakers`,
+`--detect-music`, `-v/--verbose`.
 
 ## Library usage
 
@@ -141,8 +147,8 @@ for f in ["a.mp4", "b.mp4", "c.mp4"]:
 ## Remote: GPU server + thin client
 
 Run the heavy work on your GPU box (e.g. a Windows PC with an RTX 5090) and call
-it from a laptop (e.g. a Mac) on the same LAN. The client needs only `requests`
-— no torch, no whisperx.
+it from a laptop (e.g. a Mac) on the same LAN. The client extra needs only
+`requests` — no torch or WhisperX.
 
 ```
 Mac (client)  ──HTTP/LAN──►  5090 PC (server + GPU)
@@ -155,25 +161,36 @@ Mac (client)  ──HTTP/LAN──►  5090 PC (server + GPU)
 ```bash
 pip install -e ".[server]"
 export HF_TOKEN=hf_xxx                  # for speaker labels
-export TRANSCRIPT_TOKEN=$(python -c "import secrets;print(secrets.token_urlsafe(24))")
-transcript-server --host 0.0.0.0 --port 8000
+./deploy/run-server.sh                   # generates/persists auth token once
 ```
 
 **On the Mac** (client):
 
 ```bash
-pip install requests
+pip install -e ".[client]"
 export TRANSCRIPT_SERVER=http://<gpu-lan-ip>:8000
 export TRANSCRIPT_TOKEN=<token printed by the server>
 
 transcript-remote meeting.mp4 -f srt -o meeting.srt   # uploads the file
 transcript-remote "https://youtube.com/watch?v=..." -f txt   # host downloads it
+
+# extraction envelopes + verified assets
+extract-remote slides.zip --kind image_note --out-dir ./extractions
+extract-remote talk.mp4 --kind video --frames --cadence 10 --out-dir ./extractions
+extract-remote --kind audio_extraction --feed-url https://example.com/feed.xml \
+  --episode-guid episode-42 --out-dir ./extractions
 ```
 
-The server keeps the model warm in memory and runs jobs one at a time on the GPU.
-Endpoints: `GET /health`, `POST /jobs` (file upload or `url=`), `GET /jobs/{id}`,
-`GET /jobs/{id}/result?format=srt`. All but `/health` require the bearer token
-when `TRANSCRIPT_TOKEN` is set.
+`transcript-remote` uses the legacy transcript routes. `extract-remote` uses the
+separate `/extractions` routes, downloads one zip, verifies its exact member set,
+sizes, and SHA-256 hashes, then atomically publishes `<out-dir>/<job-id>`.
+Completed extraction bundles live for seven days since last access under
+`$TRANSCRIPT_DATA_DIR` (default `~/.cache/transcript/extractions`). See the full
+documentation for the API, OCR model setup, cancellation, and cleanup controls.
+
+Both clients accept `--detect-music`; it is off by default. When requested,
+metadata records whether detection succeeded, detector version, the `0.5`
+overlap threshold, and the number of segments flagged.
 
 > Security: this is built for a trusted LAN with a shared token. Don't expose the
 > port to the public internet — put it behind Tailscale/WireGuard or a TLS reverse
@@ -194,18 +211,4 @@ on CPU.
 pip install -e ".[dev]"
 pytest          # formatter + device tests run without the ML stack
 ruff check .
-```
-
-## Layout
-
-```
-src/transcript/
-  __init__.py    # public API: transcribe(...)
-  ingest.py      # local path | URL (yt-dlp) -> media file
-  audio.py       # ffmpeg -> 16kHz mono wav
-  engine.py      # WhisperX: transcribe -> align -> diarize
-  formats.py     # -> txt / srt / vtt / json
-  types.py       # Transcript / Segment / Word dataclasses
-  device.py      # CUDA/CPU auto-detection
-  cli.py         # `transcript` command
 ```

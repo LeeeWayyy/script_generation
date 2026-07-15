@@ -15,9 +15,30 @@ $Model    = if ($env:TRANSCRIPT_MODEL) { $env:TRANSCRIPT_MODEL } else { "large-v
 
 # --- auth token ------------------------------------------------------------
 if (-not $env:TRANSCRIPT_TOKEN) {
-    $env:TRANSCRIPT_TOKEN = python -c "import secrets; print(secrets.token_urlsafe(24))"
-    Write-Host "Generated TRANSCRIPT_TOKEN = $($env:TRANSCRIPT_TOKEN)" -ForegroundColor Yellow
-    Write-Host "On your Mac, run:  export TRANSCRIPT_TOKEN=$($env:TRANSCRIPT_TOKEN)" -ForegroundColor Yellow
+    $TokenFile = if ($env:TRANSCRIPT_TOKEN_FILE) {
+        $env:TRANSCRIPT_TOKEN_FILE
+    } else {
+        Join-Path ([Environment]::GetFolderPath("LocalApplicationData")) "transcript\server.token"
+    }
+    $TokenFile = [IO.Path]::GetFullPath($TokenFile)
+    $TokenDir = Split-Path -Parent $TokenFile
+    New-Item -ItemType Directory -Force -Path $TokenDir | Out-Null
+    if (Test-Path $TokenFile) {
+        $env:TRANSCRIPT_TOKEN = (Get-Content -Raw $TokenFile).Trim()
+    } else {
+        $env:TRANSCRIPT_TOKEN = python -c "import secrets; print(secrets.token_urlsafe(24))"
+        Set-Content -Path $TokenFile -Value $env:TRANSCRIPT_TOKEN -Encoding ASCII
+        Write-Host "Saved TRANSCRIPT_TOKEN to $TokenFile" -ForegroundColor Yellow
+        Write-Host "On your Mac, run:  export TRANSCRIPT_TOKEN=$($env:TRANSCRIPT_TOKEN)" -ForegroundColor Yellow
+    }
+    if (-not $env:TRANSCRIPT_TOKEN) {
+        throw "Token file is empty: $TokenFile"
+    }
+    $CurrentUser = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+    & icacls.exe $TokenFile /inheritance:r /grant:r "${CurrentUser}:(F)" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not restrict token file permissions: $TokenFile"
+    }
 }
 
 # --- HF token reminder -----------------------------------------------------

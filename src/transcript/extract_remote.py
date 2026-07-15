@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import io
 import json
+import math
 import os
 import shutil
 import sys
@@ -32,6 +33,7 @@ from ._remote_http import (
     stderr_note,
     validate_common_options,
 )
+from .frames import MIN_CADENCE_S
 from .ingest import is_url
 from .types import has_windows_drive_prefix
 
@@ -72,6 +74,10 @@ class BundleVerificationError(Exception):
 
 _CHUNK = 1024 * 1024
 _MAX_RESULT_JSON_BYTES = 64 * 1024 * 1024  # the envelope is text; 64 MiB is enormous
+_MAX_TOTAL_ASSET_BYTES = 2 * 1024 * 1024 * 1024
+# ponytail: mirrors the server's archive ceiling; expose a flag if legitimate
+# video-frame bundles need more than 2 GiB of uncompressed assets.
+_MAX_BUNDLE_BYTES = _MAX_TOTAL_ASSET_BYTES + 128 * 1024 * 1024
 
 
 def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
@@ -124,9 +130,12 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
     Returns the parsed ``result.json`` envelope.
     """
     def _open():
-        if isinstance(zip_source, (bytes, bytearray)):
-            return zipfile.ZipFile(io.BytesIO(zip_source))
-        return zipfile.ZipFile(zip_source)
+        try:
+            if isinstance(zip_source, (bytes, bytearray)):
+                return zipfile.ZipFile(io.BytesIO(zip_source))
+            return zipfile.ZipFile(zip_source)
+        except (OSError, zipfile.BadZipFile) as exc:
+            raise BundleVerificationError(f"invalid zip bundle: {exc}") from exc
 
     with _open() as zf:
         names = set(_safe_member_names(zf))
@@ -140,18 +149,33 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
         try:
             result_json = zf.read("result.json")
             envelope = json.loads(result_json.decode("utf-8"))
+            if not isinstance(envelope, dict) or not isinstance(envelope.get("text", ""), str):
+                raise TypeError("envelope/text has the wrong type")
             assets = envelope.get("assets", [])
             asset_keys = [_check_key(a["key"], "asset key", reserved=("result.json",))
                           for a in assets]
             asset_meta = [(a["sha256"], int(a["size"])) for a in assets]
-        except (ValueError, KeyError, TypeError) as exc:
+        except (ValueError, KeyError, TypeError, AttributeError, OSError,
+                zipfile.BadZipFile) as exc:
             raise BundleVerificationError(f"malformed result.json envelope: {exc}") from exc
         # Dedup case-insensitively (matches the server + a case-insensitive client FS).
         if len({k.casefold() for k in asset_keys}) != len(asset_keys):
             raise BundleVerificationError("duplicate asset key in envelope")
+        if any(size < 0 for _, size in asset_meta):
+            raise BundleVerificationError("asset size cannot be negative")
+        if sum(size for _, size in asset_meta) > _MAX_TOTAL_ASSET_BYTES:
+            raise BundleVerificationError("bundle assets exceed the 2 GiB safety limit")
         extra = {n.casefold() for n in names} - {"result.json", *(k.casefold() for k in asset_keys)}
         if extra:
             raise BundleVerificationError("bundle has unexpected members")
+        for key, (_, want_size) in zip(asset_keys, asset_meta):
+            if key not in names:
+                raise BundleVerificationError(f"asset listed but missing from bundle: {key}")
+            if zf.getinfo(key).file_size != want_size:
+                raise BundleVerificationError(
+                    f"asset size mismatch for {key}: "
+                    f"{zf.getinfo(key).file_size} != {want_size}"
+                )
 
         # Unpack each asset exactly once while hashing. The sibling staging dir is
         # cleaned on every failure and published with one atomic rename only after
@@ -165,10 +189,6 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
             staging = Path(tempfile.mkdtemp(prefix=f".{out_dir.name}-", dir=out_dir.parent))
             (staging / "result.json").write_bytes(result_json)
             for key, (want_sha, want_size) in zip(asset_keys, asset_meta):
-                if key not in names:
-                    raise BundleVerificationError(
-                        f"asset listed but missing from bundle: {key}"
-                    )
                 dest = staging / key
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 hasher = hashlib.sha256()
@@ -177,6 +197,10 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
                     for chunk in iter(lambda: m.read(_CHUNK), b""):
                         hasher.update(chunk)
                         size += len(chunk)
+                        if size > want_size:
+                            raise BundleVerificationError(
+                                f"asset size exceeds declared size for {key}"
+                            )
                         o.write(chunk)
                 if size != want_size:
                     raise BundleVerificationError(
@@ -270,16 +294,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.cadence is not None and not args.frames:
         print("Error: --cadence requires --frames.", file=sys.stderr)
         return 1
+    if args.cadence is not None and (
+        not math.isfinite(args.cadence) or args.cadence < MIN_CADENCE_S
+    ):
+        print(f"Error: --cadence must be at least {MIN_CADENCE_S} seconds.", file=sys.stderr)
+        return 1
     if kind == "image_note" and args.source and is_url(args.source):
         print("Error: image_note requires a local archive upload.", file=sys.stderr)
         return 1
     if kind == "image_note" and (
-        args.min_speakers is not None
+        not args.diarize
+        or args.language is not None
+        or args.min_speakers is not None
         or args.max_speakers is not None
         or args.detect_music
     ):
         print(
-            "Error: speaker hints and music detection do not apply to image_note.",
+            "Error: ASR/diarization/music options do not apply to image_note.",
             file=sys.stderr,
         )
         return 1
@@ -313,6 +344,24 @@ def main(argv: list[str] | None = None) -> int:
     )
     if enclosure_url and any(selectors):
         print("Error: episode selectors cannot be used with --enclosure-url.", file=sys.stderr)
+        return 1
+    if bool(args.episode_title) != bool(args.episode_published):
+        print("Error: --episode-title and --episode-published must be used together.",
+              file=sys.stderr)
+        return 1
+    fallback_selector = bool(args.episode_title and args.episode_published)
+    if fallback_selector and (args.episode_guid or args.episode_url):
+        print(
+            "Error: title/published fallback cannot be combined with GUID or episode URL.",
+            file=sys.stderr,
+        )
+        return 1
+    if feed_url and not (args.episode_guid or args.episode_url or fallback_selector):
+        print(
+            "Error: --feed-url needs --episode-guid, "
+            "--episode-url, or --episode-title plus --episode-published.",
+            file=sys.stderr,
+        )
         return 1
     if kind == "audio_extraction" and not feed_url and not enclosure_url:
         print("Error: audio_extraction needs --feed-url (+selector) or --enclosure-url "
@@ -408,7 +457,19 @@ def main(argv: list[str] | None = None) -> int:
             if not rr.ok:
                 print(f"Error fetching bundle ({rr.status_code})", file=sys.stderr)
                 return 1
+            try:
+                content_length = int(rr.headers.get("Content-Length", 0))
+            except (TypeError, ValueError):
+                content_length = 0
+            if content_length > _MAX_BUNDLE_BYTES:
+                print("Error: bundle exceeds the client safety limit", file=sys.stderr)
+                return 1
+            downloaded = 0
             for chunk in rr.iter_content(chunk_size=1024 * 1024):
+                downloaded += len(chunk)
+                if downloaded > _MAX_BUNDLE_BYTES:
+                    print("Error: bundle exceeds the client safety limit", file=sys.stderr)
+                    return 1
                 tmp.write(chunk)
         tmp.close()
 

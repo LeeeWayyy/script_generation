@@ -111,6 +111,24 @@ def test_unpack_rejects_size_mismatch(tmp_path):
         unpack_and_verify(_bundle(env, {"assets/a.jpg": data}), tmp_path / "o")
 
 
+def test_unpack_rejects_oversized_member_before_publish(tmp_path):
+    data = b"x" * (2 * 1024 * 1024)
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": "ignored", "size": 1,
+                       "media_type": "image/jpeg"}]}
+    out = tmp_path / "o"
+    with pytest.raises(BundleVerificationError, match="size"):
+        unpack_and_verify(_bundle(env, {"assets/a.jpg": data}), out)
+    assert not out.exists()
+    assert not list(tmp_path.glob(".o-*"))
+
+
+def test_unpack_rejects_negative_declared_size(tmp_path):
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": "ignored", "size": -1,
+                       "media_type": "image/jpeg"}]}
+    with pytest.raises(BundleVerificationError, match="negative"):
+        unpack_and_verify(_bundle(env, {"assets/a.jpg": b""}), tmp_path / "o")
+
+
 def test_unpack_rejects_zip_slip_member(tmp_path):
     env = {"assets": []}
     with pytest.raises(BundleVerificationError):

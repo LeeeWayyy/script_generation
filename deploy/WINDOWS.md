@@ -34,6 +34,22 @@ setx HF_TOKEN "hf_xxxxx"
 # (reopen the terminal so setx takes effect)
 ```
 
+For extraction OCR, explicitly allow PaddleOCR's first download on a trusted
+connected host, or point at a pinned cache containing `det`, `rec`, and `cls`
+subdirectories:
+
+```powershell
+setx TRANSCRIPT_OCR_ALLOW_DOWNLOAD "1"
+# offline/pinned alternative:
+# setx TRANSCRIPT_OCR_MODEL_DIR "D:\transcript-data\ocr"
+
+# optional durable bundle location (default is the user's cache directory)
+setx TRANSCRIPT_DATA_DIR "D:\transcript-data\extractions"
+```
+
+See [`docs/DOCUMENTATION.md`](../docs/DOCUMENTATION.md) for OCR metadata, bundle
+TTL/cleanup, and every server setting.
+
 ## 2. Start the server
 
 ```powershell
@@ -41,7 +57,8 @@ setx HF_TOKEN "hf_xxxxx"
 ```
 
 On first run it will:
-- generate a `TRANSCRIPT_TOKEN` and print it (copy it to the Mac),
+- generate a `TRANSCRIPT_TOKEN`, save it owner-only under Local AppData, and
+  print it once (copy it to the Mac),
 - open the Windows Firewall for the port on **Private** networks,
 - print the exact `http://<lan-ip>:8000` URL to use from the Mac.
 
@@ -71,17 +88,24 @@ environment variables.
 
 ## 4. Use it from the Mac
 
-On the Mac you only need `requests` — no torch, no whisperx:
+On the Mac install this project's client extra — no torch or WhisperX:
 
 ```bash
-pip install requests        # or: pip install -e ".[client]"
+git clone <this-repository-url>
+cd transcript
+pip install -e ".[client]"
 
 export TRANSCRIPT_SERVER=http://<windows-lan-ip>:8000
 export TRANSCRIPT_TOKEN=<token-from-step-2>
 
 transcript-remote meeting.mp4 -f srt -o meeting.srt
 transcript-remote "https://youtube.com/watch?v=..." -f txt
+extract-remote slides.zip --kind image_note --out-dir ./extractions
 ```
+
+The console scripts come from this package; installing `requests` alone does not
+install `transcript-remote` or `extract-remote`. Override the persisted token
+location with `TRANSCRIPT_TOKEN_FILE` if needed.
 
 Test connectivity first:
 

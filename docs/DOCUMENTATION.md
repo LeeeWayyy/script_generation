@@ -26,9 +26,7 @@ is uploaded to a third party.
 11. [Performance & hardware](#11-performance--hardware)
 12. [Security](#12-security)
 13. [Troubleshooting](#13-troubleshooting)
-14. [Project layout](#14-project-layout)
-15. [Development](#15-development)
-16. [Roadmap](#16-roadmap)
+14. [Development](#14-development)
 
 ---
 
@@ -45,13 +43,14 @@ requirements:
 - **Speaker labels** — "who said what", via `pyannote` diarization (bundled with
   WhisperX).
 
-It ships in three usable shapes from one codebase:
+It ships in four usable shapes from one codebase:
 
 | Shape | Entry point | Who uses it |
 |-------|-------------|-------------|
 | Python library | `from transcript import transcribe` | other code / notebooks |
 | Local CLI | `transcript <source>` | run on the machine with the GPU |
-| Remote client/server | `transcript-server` + `transcript-remote` | GPU host + laptop on a LAN |
+| Remote transcript | `transcript-server` + `transcript-remote` | rendered txt/srt/vtt/json |
+| Remote extraction | `transcript-server` + `extract-remote` | provenance envelope + verified assets |
 
 ---
 
@@ -75,8 +74,16 @@ other/no captions ──► audio ──► WhisperX ──► align ──► d
 | Diarize | `engine.py` | `pyannote` | Detects speakers; assigns each word a speaker. |
 | Format | `formats.py` | — | Renders txt / srt / vtt / json. |
 
+The separate extraction pipeline handles three explicit kinds:
+
+- `video`: ASR plus optional sampled frames and OCR.
+- `image_note`: ordered images from a zip/tar manual export plus OCR.
+- `audio_extraction`: a podcast episode selected from RSS provenance, then ASR.
+
 The result is a `Transcript` dataclass (`types.py`): a list of `Segment`s, each
 with text, start/end, an optional `speaker`, and a list of `Word`s.
+Extraction results instead use their own `ExtractionResult` JSON envelope and
+never pass through the legacy transcript serializer.
 
 ---
 
@@ -96,6 +103,11 @@ src/transcript/
   cli.py         `transcript` command (runs locally, on the GPU machine).
   server.py      `transcript-server` HTTP API (runs on the GPU host).
   remote.py      `transcript-remote` thin client (runs on the laptop).
+  extraction.py  ExtractionResult envelope + canonical extraction renderer.
+  extract.py     Video, image-note, and podcast extraction orchestration.
+  extract_remote.py  `extract-remote` client + verified atomic bundle unpack.
+  extraction_store.py  Durable extraction bundles + TTL cleanup.
+  archive.py / frames.py / ocr.py / podcast.py  Modality-specific helpers.
 ```
 
 ### 3.2 Design decisions
@@ -104,9 +116,9 @@ src/transcript/
   `engine.py`, never at module top level. So importing the package, running
   `transcript --help`, or running the test suite does **not** load the multi-GB
   ML stack. The client (`remote.py`) never imports them at all.
-- **Library core, thin wrappers.** `cli.py`, `server.py`, and `remote.py` are all
-  thin layers over the single `transcribe()` function. Behavior stays consistent
-  across every entry point.
+- **Shared core, separate contracts.** Local/remote ASR uses `transcribe()` and
+  the stable transcript renderers. Extraction routes use a separate envelope and
+  durable store, while reusing the same ASR engine where appropriate.
 - **Engine reuse / warm model.** `TranscriptionEngine` loads model weights once
   and caches alignment models per language. Pass an existing engine to
   `transcribe(..., engine=eng)` to process many files without reloading. The
@@ -127,9 +139,9 @@ src/transcript/
 │  ┌──────────────┐    ┌──────────────────────────────────┐
 │  │ transcript-  │    │ transcript-server (FastAPI)       │
 │  │ remote       │    │  ├ POST /jobs   (upload | url)     │
-│  │  (requests   │───►│  ├ GET  /jobs/{id}                 │
-│  │   only)      │◄───│  ├ GET  /jobs/{id}/result?format= │
-│  └──────────────┘    │  └ GET  /health                   │
+│  │  (requests   │───►│  ├ /jobs/* transcript routes      │
+│  │   only)      │◄───│  ├ /extractions/* bundle routes   │
+│  └──────────────┘    │  └ GET /health                    │
 │                      │     │                              │
 │                      │     ▼ background worker (1 GPU job │
 │                      │       at a time, warm model)       │
@@ -175,16 +187,27 @@ pip install torch torchaudio
 
 ```bash
 # Full local install (run the pipeline on this machine):
-pip install -e .
+pip install -e ".[local]"
 
 # GPU host that will serve the API:
 pip install -e ".[server]"
 
 # Laptop that only talks to a remote server (no torch/whisperx needed):
-pip install requests          # or:  pip install -e ".[client]"
+pip install -e ".[client]"
 
 # Contributors:
 pip install -e ".[dev]"
+```
+
+The console scripts are installed by this project. `pip install requests` alone
+does **not** install `transcript-remote` or `extract-remote`.
+
+Music classification is an optional, potentially conflicting ML stack. Install
+it only on a host that will use explicit music detection:
+
+```bash
+pip install -e ".[local,music]"   # local CLI
+pip install -e ".[server,music]"  # server
 ```
 
 ### 4.4 Hugging Face token (only for speaker labels)
@@ -192,13 +215,37 @@ pip install -e ".[dev]"
 Diarization uses gated `pyannote` models:
 
 1. Create a token at <https://huggingface.co/settings/tokens>.
-2. Accept the licenses at
-   <https://huggingface.co/pyannote/speaker-diarization-3.1> and the
-   `segmentation-3.0` model it links to.
+2. Accept the license for the model used by your WhisperX version:
+   [speaker-diarization-community-1](https://huggingface.co/pyannote/speaker-diarization-community-1)
+   for WhisperX 3.8+, or
+   [speaker-diarization-3.1](https://huggingface.co/pyannote/speaker-diarization-3.1)
+   plus its linked `segmentation-3.0` model for older versions. Accept both if
+   you are unsure.
 3. Expose it: `export HF_TOKEN=hf_xxx` (Windows: `setx HF_TOKEN "hf_xxx"`), or
    pass `--hf-token` / `hf_token=`.
 
 Without a token you can still transcribe — just run with `--no-diarize`.
+
+### 4.5 OCR model setup (server extraction only)
+
+`image_note` and video `--frames` use PaddleOCR. The server deliberately refuses
+an implicit model download during a job. Choose one deployment mode:
+
+```bash
+# Simple trusted setup: explicitly allow PaddleOCR's first-run download.
+export TRANSCRIPT_OCR_ALLOW_DOWNLOAD=1
+
+# Reproducible/offline setup: provide pre-fetched PaddleOCR 2.x Chinese-model
+# directories named det/, rec/, and cls/ under one root.
+export TRANSCRIPT_OCR_MODEL_DIR=/srv/transcript/ocr
+find "$TRANSCRIPT_OCR_MODEL_DIR" -maxdepth 1 -type d
+# .../det  .../rec  .../cls
+```
+
+The pinned directories must match the PaddleOCR 2.x versions in the `server`
+extra. OCR initialization failure does not discard the extraction: image/frame
+assets remain, OCR text is empty, and metadata reports `ocr_requested`,
+`ocr_succeeded`, and a non-sensitive `ocr_warning`.
 
 ---
 
@@ -221,7 +268,19 @@ transcript interview.wav -f json -o interview.json -v
 
 # Hint the speaker count for better diarization
 transcript panel.mp4 --min-speakers 2 --max-speakers 4
+
+# Opt in to music tagging (requires the music extra; rendered views mark [MUSIC])
+transcript concert.mp4 --detect-music -f vtt -o concert.vtt
+
+# Batch sources reuse one warm model and write numbered, collision-safe names.
+transcript a.mp4 b.mp4 --out-dir ./transcripts -f srt
 ```
+
+Multiple sources require `--out-dir` and stop at the first failure. One
+`TranscriptionEngine` is initialized and reused across the batch. Output names
+are `001-<sanitized-source-stem>.<format>`, `002-...`, so duplicate stems do not
+collide. A single source can also use `--out-dir`; `--out-dir` and `-o/--output`
+are mutually exclusive.
 
 See §9 for every flag.
 
@@ -232,7 +291,7 @@ See §9 for every flag.
 ```python
 from transcript import transcribe
 
-t = transcribe("meeting.mp4", diarize=True)
+t = transcribe("meeting.mp4", diarize=True, detect_music=False)
 
 print(t.text)          # plain transcript (no timestamps)
 print(t.speakers)      # ['SPEAKER_00', 'SPEAKER_01']
@@ -270,18 +329,18 @@ Run the heavy work on the GPU box; drive it from a laptop on the same LAN.
 ```bash
 pip install -e ".[server]"
 export HF_TOKEN=hf_xxx
-export TRANSCRIPT_TOKEN=$(python -c "import secrets;print(secrets.token_urlsafe(24))")
-transcript-server --host 0.0.0.0 --port 8000
+./deploy/run-server.sh
 ```
 
-Windows users: use `deploy\run-server.ps1` (generates the token, opens the
-firewall, prints the LAN URL). Full walkthrough in
+The launcher generates an owner-only token file on first run and reuses it after
+restarts. Windows users: use `deploy\run-server.ps1` (same persistence, plus the
+firewall and LAN URL). Full walkthrough in
 [`deploy/WINDOWS.md`](../deploy/WINDOWS.md).
 
 ### 7.2 On the laptop
 
 ```bash
-pip install requests
+pip install -e ".[client]"
 export TRANSCRIPT_SERVER=http://<gpu-lan-ip>:8000
 export TRANSCRIPT_TOKEN=<token the server printed>
 
@@ -291,17 +350,77 @@ transcript-remote "https://youtube.com/watch?v=..." -f txt  # host downloads it
 ```
 
 For a URL job, nothing uploads from the laptop — the GPU host fetches the media
-directly, which is faster.
+directly. `--timeout` controls submission/upload, each connection/read, polling,
+and result download; `--poll` controls the status interval. Progress is shown on
+stderr unless `--quiet` is used. Speaker hints, `--language`, `--no-diarize`, and
+`--detect-music` are sent to the server.
 
-### 7.3 HTTP API reference
+### 7.3 Extraction client (`extract-remote`)
+
+The extraction client returns canonical candidate text on stdout and atomically
+publishes the verified envelope/assets under `<out-dir>/<job-id>/`:
+```bash
+# Ordered images from a zip/tar manual export, with OCR.
+extract-remote cards.zip --kind image_note --out-dir ./results
+
+# Video ASR plus frames sampled every 10 seconds and OCR'd.
+extract-remote video.mp4 --kind video --frames --cadence 10 \
+  --min-speakers 2 --max-speakers 4 --out-dir ./results
+
+# Podcast RSS provenance: select by GUID, episode URL, or title+published pair.
+extract-remote --kind audio_extraction --feed-url https://example.com/feed.xml \
+  --episode-guid episode-42 --out-dir ./results
+
+# Explicit enclosure provenance needs no feed selector.
+extract-remote --kind audio_extraction \
+  --enclosure-url https://cdn.example.com/episode.mp3 --out-dir ./results
+```
+
+Kind inference is intentionally narrow: archive extensions map to `image_note`
+and video extensions map to `video`. Bare audio belongs to `transcript-remote`;
+podcast `audio_extraction` requires RSS/enclosure provenance. `--frames` and
+`--cadence` apply only to video. Feed selection accepts a GUID, an episode URL,
+or both (the URL cross-checks the GUID). Title plus published date is the
+last-resort fallback and cannot be combined with GUID/URL selectors.
+
+The downloaded zip is untrusted. The client rejects traversal, symlinks,
+duplicate/case-colliding paths, extra members, and asset size/hash mismatches. It
+streams once into a sibling staging directory and renames only after complete
+verification, so a failed download never leaves a partial final directory. Both
+the streamed zip and declared assets are capped around the server's 2 GiB
+archive ceiling to stop decompression/disk-exhaustion bundles.
+
+### 7.4 HTTP API reference
 
 | Method & path | Auth | Body / params | Returns |
 |---------------|------|---------------|---------|
 | `GET /health` | none | — | `{status, model, queued_or_running[]}` |
-| `POST /jobs` | bearer | multipart: `file` **or** `url`; optional `diarize`, `language`, `min_speakers`, `max_speakers` | job JSON incl. `id`, `status` |
+| `POST /jobs` | bearer | multipart: exactly one `file` or public HTTP(S) `url`; optional `diarize`, `language`, speaker hints, `detect_music` | transcript job status |
 | `GET /jobs` | bearer | — | list of jobs |
-| `GET /jobs/{id}` | bearer | — | job JSON (`status`: queued/running/done/error) |
+| `GET /jobs/{id}` | bearer | — | status (`queued`, `running`, `done`, `error`) |
 | `GET /jobs/{id}/result` | bearer | `format=txt\|srt\|vtt\|json` | rendered transcript (text/plain) |
+| `DELETE /jobs/{id}` | bearer | — | cancel queued or delete terminal job; running is `409` |
+| `POST /extractions` | bearer | multipart extraction form (below) | extraction status |
+| `GET /extractions/{id}` | bearer | — | status; completed bundles survive restart |
+| `GET /extractions/{id}/result` | bearer | — | canonical `ExtractionResult` JSON |
+| `GET /extractions/{id}/bundle` | bearer | — | zip containing exactly `result.json` + declared assets |
+| `DELETE /extractions/{id}` | bearer | — | cancel queued/delete error or durable done bundle; running/leased is `409` |
+
+`POST /extractions` always needs `kind=video|image_note|audio_extraction`.
+ASR-capable kinds accept optional `diarize`, `language`, `min_speakers`,
+`max_speakers`, and `detect_music`. Kind-specific fields are:
+
+- `video`: exactly one `url` or `file`; optional `frames=true` and `cadence_s`.
+  Cadence must be at least 0.5 seconds.
+- `image_note`: one uploaded archive in `file`; no URL.
+- `audio_extraction`: either `enclosure_url`, or `feed_url` plus `episode_guid`,
+  `episode_url`, or both. The complete `episode_title` + `episode_published` pair
+  is a fallback used only without GUID/URL.
+
+Queued status includes a 1-based `queue_position`. Extraction failures may add
+machine-readable `error_reason` (for example `ambiguous` or `stale_selector`)
+alongside the human-readable `error`. A `410` means a previously known bundle
+was deleted, evicted, or lost; `404` means the ID is unknown.
 
 Auth: when `TRANSCRIPT_TOKEN` is set, every endpoint except `/health` requires
 `Authorization: Bearer <token>`. If it is unset the server runs **open** and logs
@@ -323,6 +442,10 @@ curl -H "Authorization: Bearer $TRANSCRIPT_TOKEN" \
 # fetch result as SRT
 curl -H "Authorization: Bearer $TRANSCRIPT_TOKEN" \
      "$TRANSCRIPT_SERVER/jobs/ab12cd34ef56/result?format=srt"
+
+# cancel a queued job or delete its terminal result
+curl -X DELETE -H "Authorization: Bearer $TRANSCRIPT_TOKEN" \
+     "$TRANSCRIPT_SERVER/jobs/ab12cd34ef56"
 ```
 
 ---
@@ -336,7 +459,24 @@ curl -H "Authorization: Bearer $TRANSCRIPT_TOKEN" \
 | `vtt`  | `.vtt` | WebVTT subtitles, `HH:MM:SS.mmm` timestamps. |
 | `json` | `.json` | Full structured data: segments, words, timestamps, scores, speakers, language, meta. |
 
-The JSON form is the canonical, lossless output; the others are derived views.
+The JSON form is the canonical transcript output; the others are derived views.
+The legacy JSON shape is frozen by an explicit serializer and deliberately
+omits per-segment `music`, even when detection is requested. Opt-in music
+metadata is added only for `--detect-music`, preserving default output bytes for
+existing consumers. Per-segment `music` is available in extraction envelopes.
+
+Extraction JSON is a separate envelope containing `kind`, canonical `text`,
+`assets[]` (`key`, `sha256`, `size`, media type), modality-specific
+`segments`/`frames`/`cards`, and `meta` provenance. `image_note` text uses
+`## card N` blocks in archive order. Video frame OCR stays in `frames[]` and is
+not mixed into spoken transcript text.
+
+With `--detect-music`, segments that overlap classified music for at least half
+their duration are marked and rendered with `[MUSIC]`. Metadata records:
+`music_detection_requested`, `music_detection_succeeded`,
+`music_detector_version`, `music_overlap_threshold` (`0.5`), and
+`music_segments_flagged`. If the optional detector is absent or fails, the job
+continues and records failure instead of silently changing the default path.
 
 ---
 
@@ -346,9 +486,10 @@ The JSON form is the canonical, lossless output; the others are derived views.
 
 | Flag | Default | Meaning |
 |------|---------|---------|
-| `source` (positional) | — | Local file path or http(s) URL. |
+| `source` (positional, 1+) | — | Local file path(s) or http(s) URL(s). |
 | `-f, --format` | `txt` | `txt` / `srt` / `vtt` / `json`. |
 | `-o, --output` | stdout | Write to this file. |
+| `--out-dir` | none | Batch/single output directory with numbered safe filenames. |
 | `--model` | `large-v3` | Whisper model name (e.g. `medium`, `small`). |
 | `--diarize` / `--no-diarize` | on | Speaker labels on/off. |
 | `--language` | auto | Force a language code (e.g. `en`). |
@@ -358,15 +499,26 @@ The JSON form is the canonical, lossless output; the others are derived views.
 | `--min-speakers` / `--max-speakers` | none | Diarization hints. |
 | `--batch-size` | 16 | ASR batch size. |
 | `--no-align` | off | Skip word alignment (faster, coarser timing). |
+| `--detect-music` | off | Explicitly run optional music classification/tagging. |
 | `-v, --verbose` | off | Verbose logging / full tracebacks. |
 
-### 9.2 `transcribe()` parameters
+### 9.2 Remote client flags
+
+Both clients accept `--server`, `--token`, `--no-diarize`, `--language`,
+`--min-speakers`, `--max-speakers`, `--detect-music`, `--poll`, `--timeout`, and
+`--quiet`. `transcript-remote` additionally accepts `--format` and `--output`.
+`extract-remote` accepts the kind/source selectors documented in §7.3 plus
+`--out-dir`. Invalid speaker ranges and incompatible kind options are rejected
+before network or file upload work starts.
+
+### 9.3 `transcribe()` parameters
 
 Mirror the CLI flags, plus: `work_dir` (where downloads/temp audio live),
 `keep_audio` (don't delete temp files), and `engine` (reuse a warm
-`TranscriptionEngine`).
+`TranscriptionEngine`). `detect_music=False` keeps music classification out of
+the default pipeline.
 
-### 9.3 Environment variables
+### 9.4 Environment variables
 
 | Variable | Used by | Purpose |
 |----------|---------|---------|
@@ -374,6 +526,16 @@ Mirror the CLI flags, plus: `work_dir` (where downloads/temp audio live),
 | `TRANSCRIPT_TOKEN` | server, client | Bearer auth token. |
 | `TRANSCRIPT_SERVER` | client | Server base URL. |
 | `TRANSCRIPT_HOST` / `TRANSCRIPT_PORT` / `TRANSCRIPT_MODEL` | launch scripts | Server bind + model. |
+| `TRANSCRIPT_TOKEN_FILE` | launch scripts | Persisted generated token path. |
+| `TRANSCRIPT_DATA_DIR` | server | Durable extraction root. |
+| `TRANSCRIPT_OCR_MODEL_DIR` | server | Pinned OCR root containing `det/rec/cls`. |
+| `TRANSCRIPT_OCR_ALLOW_DOWNLOAD=1` | server | Explicitly allow PaddleOCR first-run downloads. |
+| `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Request/upload cap; default 8 GiB. |
+| `TRANSCRIPT_MAX_QUEUE_SIZE` | server | Waiting-job cap; default 32. |
+| `TRANSCRIPT_JOB_TTL_SECONDS` | server | Terminal in-memory transcript retention; default 86400. |
+| `TRANSCRIPT_MAX_TERMINAL_JOBS` | server | Terminal transcript count cap; default 100. |
+| `TRANSCRIPT_JANITOR_INTERVAL_SECONDS` | server | Cleanup sweep interval; default 900. |
+| `TRANSCRIPT_MAX_CONCURRENT_BUNDLES` | server | Concurrent zip-build cap; default 8. |
 
 ---
 
@@ -381,14 +543,40 @@ Mirror the CLI flags, plus: `work_dir` (where downloads/temp audio live),
 
 | Target | Asset | Notes |
 |--------|-------|-------|
-| Windows (5090 PC) | `deploy/run-server.ps1`, `deploy/run-server.bat`, `deploy/WINDOWS.md` | Token gen, firewall, LAN-IP hint; NSSM / Task Scheduler for auto-start. |
-| Linux | `deploy/run-server.sh` | Token gen + launch. |
-| Linux (service) | `deploy/transcript-server.service` | systemd unit; auto-start on boot. |
+| Windows (5090 PC) | `deploy/run-server.ps1`, `deploy/run-server.bat`, `deploy/WINDOWS.md` | Owner-only persisted token, firewall, LAN IP. |
+| Linux | `deploy/run-server.sh` | Owner-only persisted token + launch. |
+| Linux (service) | `deploy/transcript-server.service` | Root-owned EnvironmentFile, auto-restart. |
 
 To keep the server running unattended:
 - **Windows:** NSSM service or a Task Scheduler "at startup" task (see
   `deploy/WINDOWS.md`).
 - **Linux:** the provided systemd unit (`systemctl enable --now transcript-server`).
+
+The shell launcher stores its generated token at
+`${XDG_CONFIG_HOME:-~/.config}/transcript/server.token`; PowerShell uses Local
+AppData. Set `TRANSCRIPT_TOKEN_FILE` to override either. Existing environment
+tokens are never overwritten.
+
+For systemd, copy `deploy/transcript-server.env.example` to
+`/etc/transcript-server.env`, replace both tokens, and keep it mode `600`. The
+unit reads this `EnvironmentFile` and passes `TRANSCRIPT_HOST`,
+`TRANSCRIPT_PORT`, and `TRANSCRIPT_MODEL` to the server. Do not put secrets in
+the unit or repository.
+
+### Durable extraction data and cleanup
+
+Completed extraction bundles are stored at
+`$TRANSCRIPT_DATA_DIR/<job-id>/` (default
+`~/.cache/transcript/extractions/<job-id>/`). Each contains immutable
+`result.json`, declared assets, and a mutable side manifest. Bundles survive a
+server restart and expire seven days after their last result/bundle access. A
+janitor runs every 15 minutes by default; active read leases block deletion.
+`DELETE /extractions/{id}` provides explicit cleanup.
+
+Legacy terminal transcript jobs remain in memory for at most one day and 100
+terminal records by default. Queued uploads are bounded by the 32-job queue;
+their temporary files are removed on cancellation, completion, error, and stale
+startup cleanup. Tune only after measuring workload with the variables in §9.4.
 
 ---
 
@@ -413,12 +601,21 @@ To keep the server running unattended:
   plain HTTP**. That is appropriate inside a home/office network.
 - **Do not** expose the port directly to the public internet. For off-LAN access,
   put it behind **Tailscale/WireGuard** (simplest) or a **TLS reverse proxy**
-  that enforces the token.
-- The launch scripts open the firewall only for the **Private** network profile.
-- Uploaded files are written to a temp directory and deleted after the job
-  completes. Downloaded URL media lives in a temp work dir cleaned up per call.
-- Keep `HF_TOKEN` and `TRANSCRIPT_TOKEN` out of source control (they belong in
-  environment variables / service config).
+  that enforces the token and its own request-body limit.
+- API `url` fields accept only HTTP(S), resolve DNS, and reject non-global IP
+  destinations (loopback, private/link-local, carrier-grade NAT, multicast, and
+  reserved ranges). API callers cannot submit server-local file paths. Keep
+  outbound firewall rules as defense in depth because media downloaders may
+  follow redirects internally.
+- Upload filenames are treated as untrusted and body size is capped by
+  `TRANSCRIPT_MAX_UPLOAD_BYTES`. Configure a smaller reverse-proxy/ASGI ingress
+  cap if 8 GiB is unnecessary for your deployment.
+- The launch scripts restrict persisted token files to the current owner. The
+  PowerShell firewall rule targets only the **Private** profile. Keep `HF_TOKEN`,
+  `TRANSCRIPT_TOKEN`, and systemd environment files out of source control.
+- Jobs and extraction bundles have bounded queue/retention cleanup (§10).
+  Downloaded bundle members are verified by the client before atomic publish;
+  never bypass that check for an untrusted server.
 
 ---
 
@@ -432,70 +629,38 @@ To keep the server running unattended:
 | `compute_type float16 ... unsupported` on CPU | float16 on a CPU build | Handled automatically (retries int8); or pass `--compute-type int8`. |
 | Mac can't reach the server | firewall / network profile / wrong IP | Set LAN to Private, run PowerShell as admin once, `curl /health` with the printed IP. |
 | `401 unauthorized` from the server | missing/incorrect token | Set `--token` / `$TRANSCRIPT_TOKEN` to match the server. |
+| OCR assets have empty text | OCR weights unavailable | Set `TRANSCRIPT_OCR_MODEL_DIR` or explicitly allow download (§4.5); inspect extraction `meta.ocr_warning`. |
+| Music flags stay empty | detector missing/failed | Install `.[music]`, pass `--detect-music`, and inspect music metadata (§8). |
+| extraction returns `410` | durable bundle was evicted/deleted | Resubmit; copy verified bundles elsewhere when they need retention beyond seven days. |
+| submission says queue is full | 32 waiting jobs already queued | Wait/cancel queued work; increase `TRANSCRIPT_MAX_QUEUE_SIZE` only if disk capacity allows. |
 | yt-dlp download fails | site change / no network / age-gate | Update `yt-dlp` (`pip install -U yt-dlp`); check the URL. |
 | Word timestamps missing | alignment failed for that language | Non-fatal; transcript still produced. Check `-v` logs. |
 
 ---
 
-## 14. Project layout
-
-```
-transcript/
-├── pyproject.toml                  Packaging; CLI/server/client entry points; extras.
-├── README.md                       Quick start.
-├── docs/
-│   └── DOCUMENTATION.md            This document.
-├── deploy/
-│   ├── run-server.ps1              Windows launcher (token, firewall, LAN IP).
-│   ├── run-server.bat             Windows launcher (minimal).
-│   ├── run-server.sh               Linux launcher.
-│   ├── transcript-server.service   systemd unit (Linux).
-│   └── WINDOWS.md                  Windows host setup guide.
-├── src/transcript/
-│   ├── __init__.py                 Public API: transcribe(...).
-│   ├── types.py                    Transcript / Segment / Word.
-│   ├── device.py                   Device + compute-type detection.
-│   ├── ingest.py                   Source -> media file.
-│   ├── audio.py                    Media -> 16 kHz mono WAV.
-│   ├── engine.py                   WhisperX transcribe/align/diarize.
-│   ├── formats.py                  Renderers.
-│   ├── cli.py                      `transcript` command.
-│   ├── server.py                   `transcript-server` API.
-│   └── remote.py                   `transcript-remote` client.
-└── tests/
-    ├── test_formats.py             Formatter + data-model tests.
-    └── test_device.py              Device selection tests.
-```
-
----
-
-## 15. Development
+## 14. Development
 
 ```bash
 pip install -e ".[dev]"
-pytest          # formatter + device tests; run without the ML stack
+PYTHONPATH=src pytest -q   # fast suite; no GPU/model download
 ruff check .
 ```
 
-The test suite intentionally covers the dependency-free parts (formatters, data
-model, device logic) so it runs fast anywhere, including CI without a GPU.
+CI runs Ruff and the fast suite on Python 3.10 and 3.12. A real media check is
+available but skipped by default:
+
+```bash
+# Generate a one-second ffmpeg input and run WhisperX (tiny model by default).
+TRANSCRIPT_REAL_MEDIA_SMOKE=1 PYTHONPATH=src \
+  pytest -q tests/test_real_media_smoke.py
+
+# Also exercise yt-dlp using a media URL you are authorized to download.
+TRANSCRIPT_REAL_MEDIA_SMOKE=1 TRANSCRIPT_SMOKE_URL=https://example/media \
+  TRANSCRIPT_SMOKE_MODEL=small PYTHONPATH=src \
+  pytest -q tests/test_real_media_smoke.py
+```
 
 Conventions:
 - Keep `torch`/`whisperx` imports lazy (inside functions in `engine.py`).
-- New entry points should wrap `transcribe()` rather than reimplement the
-  pipeline.
+- Keep legacy transcript serialization separate from extraction envelopes.
 - Line length 100; `ruff` configured in `pyproject.toml`.
-
----
-
-## 16. Roadmap
-
-Ideas not yet implemented:
-
-- Batch mode (`transcript *.mp4 --out-dir ./transcripts/`) with one model load.
-- A browser upload page served by the same server (drag-and-drop, no CLI).
-- Job persistence (survive a server restart) and result caching by content hash.
-- Optional model warmup on startup so the first job isn't slow.
-- An end-to-end smoke test that runs a short clip through the whole pipeline.
-- Output enrichment: paragraph segmentation, speaker renaming, simple summaries.
-```
