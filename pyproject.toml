@@ -38,9 +38,12 @@ local = [
     "whisperx>=3.1.1",
     # Source downloading (YouTube + thousands of sites).
     "yt-dlp>=2024.1.0",
-    # Speech/music segmentation (flags segments overlapping songs). Optional at
-    # runtime — transcribe() degrades gracefully if missing — but pulls
-    # TensorFlow, so it lives here with the rest of the heavy stack.
+]
+# Music tagging (Segment.music). Deliberately NOT in `local`/`server`:
+# inaSpeechSegmenter pulls tensorflow[and-cuda] + onnxruntime-gpu, which
+# conflicts with the pinned torch/cu128 stack. transcribe() degrades
+# gracefully without it, so only install this where the TF stack resolves.
+music = [
     "inaSpeechSegmenter>=0.7",
 ]
 # Install on the GPU host to expose the HTTP API: `pip install -e ".[server]"`.
