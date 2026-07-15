@@ -33,11 +33,11 @@ from ._remote_http import (
     stderr_note,
     validate_common_options,
 )
+from .extraction import KINDS
 from .frames import MIN_CADENCE_S
 from .ingest import is_url
 from .types import has_windows_drive_prefix
 
-KINDS = ("video", "audio_extraction", "image_note")
 # Note: plain audio extensions are deliberately NOT mapped. `audio_extraction`
 # is podcast-only (it requires RSS/enclosure provenance), so a bare audio file/URL
 # must not auto-route here — plain ASR stays on `transcript-remote`. A user who

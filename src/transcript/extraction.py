@@ -20,9 +20,9 @@ Hard boundaries enforced here:
   (normalizing there would change byte-stable ASR output).
 
 No heavy dependencies (torch/whisperx/paddleocr/…) are imported here; the only
-module-top imports are the stdlib-only ``.formats`` and ``.types``. NOTE: the
-thin-client boundary is upheld by ``extract_remote.py`` NOT importing this module
-at all — it is not, itself, on the client import path.
+module-top imports are the stdlib-only ``.formats`` and ``.types``. The thin
+client can therefore share constants from this module without pulling in the ML
+stack.
 """
 
 from __future__ import annotations
