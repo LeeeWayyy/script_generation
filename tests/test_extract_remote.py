@@ -202,6 +202,106 @@ def test_unpack_rejects_unicode_normalization_collision_in_asset_keys(tmp_path):
 
 
 @pytest.mark.parametrize(
+    "key",
+    [
+        "assets/CON.txt",
+        "assets/PRN .txt",
+        "assets/AUX...txt",
+        "assets/NUL.txt",
+        "assets/CLOCK$.txt",
+        "assets/COM1.txt",
+        "assets/COM9.txt",
+        "assets/LPT1.txt",
+        "assets/LPT9.txt",
+        "assets/CON/file.txt",
+        "assets/file.txt:secret",
+        "assets/x\x1f.txt",
+        "assets/x\x7f.txt",
+        "assets/bad<.txt",
+        "assets/bad>.txt",
+        'assets/bad".txt',
+        "assets/bad|.txt",
+        "assets/bad?.txt",
+        "assets/bad*.txt",
+        "assets/foo.",
+        "assets/foo ",
+    ],
+)
+def test_unpack_rejects_windows_unsafe_asset_components(tmp_path, key):
+    data = b"x"
+    env = _envelope(assets=[{
+        "key": key,
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "size": len(data),
+        "media_type": "text/plain",
+    }])
+    with pytest.raises(BundleVerificationError, match="Windows-unsafe"):
+        unpack_and_verify(_bundle(env, {}), tmp_path / "o")
+
+
+@pytest.mark.parametrize("name", ["assets/NUL.jpg", "assets/NUL/"])
+def test_unpack_rejects_windows_unsafe_bundle_member(tmp_path, name):
+    with pytest.raises(BundleVerificationError, match="Windows-unsafe"):
+        unpack_and_verify(
+            _bundle(_envelope(), {}, extra_members={name: b"x"}),
+            tmp_path / "o",
+        )
+
+
+def test_unpack_rejects_windows_trailing_dot_alias_pair(tmp_path):
+    data = b"x"
+    assets = {"assets/foo": data, "assets/foo.": data}
+    env = _envelope(assets=[{
+        "key": key,
+        "sha256": hashlib.sha256(value).hexdigest(),
+        "size": len(value),
+        "media_type": "application/octet-stream",
+    } for key, value in assets.items()])
+    with pytest.raises(BundleVerificationError, match="Windows-unsafe"):
+        unpack_and_verify(_bundle(env, assets), tmp_path / "o")
+
+
+def test_unpack_preflights_member_count_before_zipfile(monkeypatch, tmp_path):
+    from transcript import extract_remote
+
+    monkeypatch.setattr(extract_remote, "_MAX_MEMBERS", 1)
+    data = b"x"
+    env = _envelope(assets=[{
+        "key": "assets/a.jpg",
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "size": 1,
+        "media_type": "image/jpeg",
+    }])
+    with pytest.raises(BundleVerificationError, match="invalid zip bundle"):
+        unpack_and_verify(_bundle(env, {"assets/a.jpg": data}), tmp_path / "o")
+
+
+def test_unpack_failed_preflight_never_constructs_zipfile(monkeypatch, tmp_path):
+    from transcript import extract_remote
+
+    bundle = _bundle(_envelope(), {})
+
+    def fail_preflight(*_args, **_kwargs):
+        raise ValueError("bad central directory")
+
+    def fail_zipfile(*_args, **_kwargs):
+        raise AssertionError("ZipFile must not run after a failed preflight")
+
+    monkeypatch.setattr(extract_remote, "preflight_zip", fail_preflight)
+    monkeypatch.setattr(extract_remote.zipfile, "ZipFile", fail_zipfile)
+    with pytest.raises(BundleVerificationError, match="bad central directory"):
+        unpack_and_verify(bundle, tmp_path / "o")
+
+
+def test_unpack_preflights_central_directory_bytes(monkeypatch, tmp_path):
+    from transcript import extract_remote
+
+    monkeypatch.setattr(extract_remote, "_MAX_CENTRAL_DIRECTORY_BYTES", 1)
+    with pytest.raises(BundleVerificationError, match="invalid zip bundle"):
+        unpack_and_verify(_bundle(_envelope(), {}), tmp_path / "o")
+
+
+@pytest.mark.parametrize(
     ("encrypted", "external_attr", "message"),
     [(True, 0, "encrypted"), (False, 0o120777 << 16, "symlink")],
 )

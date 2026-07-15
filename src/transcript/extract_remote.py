@@ -38,7 +38,8 @@ from ._remote_http import (
 from .extraction import KINDS
 from .frames import MIN_CADENCE_S
 from .ingest import is_url
-from .types import has_windows_drive_prefix
+from .types import has_windows_drive_prefix, is_windows_reserved_basename
+from .zip_safety import preflight_zip
 
 # Note: plain audio extensions are deliberately NOT mapped. `audio_extraction`
 # is podcast-only (it requires RSS/enclosure provenance), so a bare audio file/URL
@@ -77,6 +78,8 @@ class BundleVerificationError(Exception):
 _CHUNK = 1024 * 1024
 _MAX_RESULT_JSON_BYTES = 64 * 1024 * 1024  # the envelope is text; 64 MiB is enormous
 _MAX_TOTAL_ASSET_BYTES = 2 * 1024 * 1024 * 1024
+_MAX_MEMBERS = 10_000
+_MAX_CENTRAL_DIRECTORY_BYTES = 64 * 1024 * 1024
 # ponytail: mirrors the server's archive ceiling; expose a flag if legitimate
 # video-frame bundles need more than 2 GiB of uncompressed assets.
 _MAX_BUNDLE_BYTES = _MAX_TOTAL_ASSET_BYTES + 128 * 1024 * 1024
@@ -99,6 +102,12 @@ def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
     if (kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in parts
             or "" in parts or "." in parts):  # incl. "a//b" / "a/./b" aliases
         raise BundleVerificationError(f"unsafe {what} rejected: {key!r}")
+    for part in parts:
+        if (part.endswith((" ", "."))
+                or any(char in '<>:"|?*' or ord(char) < 32 or ord(char) == 127
+                       for char in part)
+                or is_windows_reserved_basename(part)):
+            raise BundleVerificationError(f"Windows-unsafe {what} rejected: {key!r}")
     if _path_token(kp) in {_path_token(name) for name in reserved}:
         raise BundleVerificationError(f"{what} collides with a reserved name: {key!r}")
     return kp
@@ -117,6 +126,9 @@ def _safe_member_names(zf: zipfile.ZipFile) -> list[str]:
         if ((info.external_attr >> 16) & 0o170000) == 0o120000:
             raise BundleVerificationError(f"symlink bundle member rejected: {info.filename!r}")
         if info.is_dir():
+            # Directory entries are not part of the payload, but their path
+            # components still need the same cross-platform validation.
+            _check_key(info.filename.rstrip("/"), "bundle member")
             continue
         name = _check_key(info.filename, "bundle member")
         # Dedup case-insensitively — on macOS/Windows two members differing only by
@@ -144,9 +156,22 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
     def _open():
         try:
             if isinstance(zip_source, (bytes, bytearray)):
-                return zipfile.ZipFile(io.BytesIO(zip_source))
+                source = io.BytesIO(zip_source)
+                preflight_zip(
+                    source,
+                    max_entries=_MAX_MEMBERS,
+                    max_central_directory_bytes=_MAX_CENTRAL_DIRECTORY_BYTES,
+                )
+                source.seek(0)
+                return zipfile.ZipFile(source)
+            with Path(zip_source).open("rb") as source:
+                preflight_zip(
+                    source,
+                    max_entries=_MAX_MEMBERS,
+                    max_central_directory_bytes=_MAX_CENTRAL_DIRECTORY_BYTES,
+                )
             return zipfile.ZipFile(zip_source)
-        except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
+        except (OSError, ValueError, RuntimeError, zipfile.BadZipFile) as exc:
             raise BundleVerificationError(f"invalid zip bundle: {exc}") from exc
 
     with _open() as zf:
