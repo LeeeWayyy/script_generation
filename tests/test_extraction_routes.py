@@ -8,7 +8,9 @@ is byte-identical to the /result route.
 import io
 import time
 import zipfile
+from pathlib import Path
 
+import pytest
 
 from transcript.extract_remote import unpack_and_verify
 from transcript.ocr import OcrResult
@@ -76,6 +78,45 @@ def test_image_note_end_to_end(monkeypatch, tmp_path):
         assert out == envelope
         bundle_result = (tmp_path / "unpacked" / "result.json").read_text()
         assert bundle_result == rr.text  # byte-identical
+
+
+def test_bundle_stream_failure_releases_temp_and_permit(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRANSCRIPT_MAX_CONCURRENT_BUNDLES", "1")
+    import transcript.server as server
+
+    real_open = open
+    failed_temp = []
+
+    class FailingReader:
+        def __init__(self, fh):
+            self.fh = fh
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.fh.close()
+
+        @staticmethod
+        def read(*args):
+            raise OSError("forced bundle read failure")
+
+    def fail_first_bundle_read(path, mode="r", *args, **kwargs):
+        if mode == "rb" and Path(path).name.startswith("bundle-") and not failed_temp:
+            failed_temp.append(Path(path))
+            return FailingReader(real_open(path, mode, *args, **kwargs))
+        return real_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(server, "open", fail_first_bundle_read, raising=False)
+    with _make_app(monkeypatch, tmp_path) as client:
+        job_id = _run_image_note(client, _zip_bytes({"a.jpg": b"x"}))
+        with pytest.raises(OSError, match="forced bundle read failure"):
+            client.get(f"/extractions/{job_id}/bundle")
+
+        assert not failed_temp[0].exists()
+        with server._ACTIVE_BUNDLE_TEMPS_LOCK:
+            assert str(failed_temp[0]) not in server._ACTIVE_BUNDLE_TEMPS
+        assert client.get(f"/extractions/{job_id}/bundle").status_code == 200
 
 
 def test_unknown_extraction_is_404(monkeypatch, tmp_path):
