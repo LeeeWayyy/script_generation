@@ -46,8 +46,8 @@ PyTorch is **not** pinned in `pyproject.toml` because the correct wheel depends
 on your platform. Install it first, then this package.
 
 ```bash
-# NVIDIA GPU (e.g. RTX 5090). Blackwell (sm_120) needs a recent CUDA wheel:
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+# NVIDIA GPU (e.g. RTX 5090). Blackwell (sm_120) needs CUDA 12.8+:
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # macOS / CPU-only
 pip install torch torchaudio
@@ -55,7 +55,8 @@ pip install torch torchaudio
 
 > **RTX 5090 note:** Blackwell is very new. If you hit a
 > `no kernel image is available` error, you need a newer PyTorch/CUDA build
-> (cu124 or later, or a nightly). Everything else stays the same.
+> (CUDA 12.8+ from the [official PyTorch install matrix](https://pytorch.org/get-started/locally/)).
+> Everything else stays the same.
 
 ### 3. This package
 

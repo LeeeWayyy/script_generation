@@ -14,6 +14,7 @@ from transcript.extract_remote import (BundleVerificationError, sniff_kind,
 def test_sniff_kind_by_extension():
     assert sniff_kind("export.zip") == "image_note"
     assert sniff_kind("https://x/clip.mp4") == "video"
+    assert sniff_kind("https://x/clip.mp4?download=1#t=10") == "video"
 
 
 def test_sniff_kind_plain_audio_directs_to_legacy():
@@ -75,7 +76,12 @@ def test_audio_extraction_without_feed_or_enclosure_errors(monkeypatch, capsys):
     assert rc == 1
 
 
+def _envelope(**overrides) -> dict:
+    return {"kind": "image_note", "text": "", "assets": [], **overrides}
+
+
 def _bundle(envelope: dict, assets: dict[str, bytes], *, extra_members=None) -> bytes:
+    envelope = _envelope(**envelope)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("result.json", json.dumps(envelope))
@@ -97,7 +103,7 @@ def test_unpack_and_verify_happy_path(tmp_path):
 
 
 def test_unpack_rejects_sha_mismatch(tmp_path):
-    env = {"assets": [{"key": "assets/a.jpg", "sha256": "deadbeef", "size": 3,
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": "0" * 64, "size": 3,
                        "media_type": "image/jpeg"}]}
     with pytest.raises(BundleVerificationError, match="sha256"):
         unpack_and_verify(_bundle(env, {"assets/a.jpg": b"abc"}), tmp_path / "o")
@@ -113,7 +119,7 @@ def test_unpack_rejects_size_mismatch(tmp_path):
 
 def test_unpack_rejects_oversized_member_before_publish(tmp_path):
     data = b"x" * (2 * 1024 * 1024)
-    env = {"assets": [{"key": "assets/a.jpg", "sha256": "ignored", "size": 1,
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": "0" * 64, "size": 1,
                        "media_type": "image/jpeg"}]}
     out = tmp_path / "o"
     with pytest.raises(BundleVerificationError, match="size"):
@@ -123,21 +129,22 @@ def test_unpack_rejects_oversized_member_before_publish(tmp_path):
 
 
 def test_unpack_rejects_negative_declared_size(tmp_path):
-    env = {"assets": [{"key": "assets/a.jpg", "sha256": "ignored", "size": -1,
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": hashlib.sha256(b"").hexdigest(),
+                       "size": -1,
                        "media_type": "image/jpeg"}]}
     with pytest.raises(BundleVerificationError, match="negative"):
         unpack_and_verify(_bundle(env, {"assets/a.jpg": b""}), tmp_path / "o")
 
 
 def test_unpack_rejects_zip_slip_member(tmp_path):
-    env = {"assets": []}
+    env = _envelope()
     with pytest.raises(BundleVerificationError):
         unpack_and_verify(_bundle(env, {}, extra_members={"../escape.txt": b"x"}),
                           tmp_path / "o")
 
 
 def test_unpack_rejects_drive_letter_bundle_member(tmp_path):
-    env = {"assets": []}
+    env = _envelope()
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("result.json", json.dumps(env))
@@ -158,6 +165,26 @@ def test_unpack_rejects_case_insensitive_duplicate_member(tmp_path):
         zf.writestr("assets/A.jpg", data)
     with pytest.raises(BundleVerificationError, match="duplicate"):
         unpack_and_verify(buf.getvalue(), tmp_path / "o")
+
+
+@pytest.mark.parametrize(
+    ("encrypted", "external_attr", "message"),
+    [(True, 0, "encrypted"), (False, 0o120777 << 16, "symlink")],
+)
+def test_member_flags_rejected_even_for_directory_entries(encrypted, external_attr, message):
+    from transcript import extract_remote
+
+    info = zipfile.ZipInfo("assets/")
+    info.flag_bits = 1 if encrypted else 0
+    info.external_attr = external_attr
+
+    class FakeZip:
+        @staticmethod
+        def infolist():
+            return [info]
+
+    with pytest.raises(BundleVerificationError, match=message):
+        extract_remote._safe_member_names(FakeZip())
 
 
 def test_main_rejects_unsafe_server_job_id(monkeypatch, tmp_path):
@@ -188,7 +215,9 @@ def test_main_rejects_unsafe_server_job_id(monkeypatch, tmp_path):
 
 def test_unpack_rejects_path_alias_asset_key(tmp_path):
     for bad in ("assets//a.jpg", "assets/./a.jpg"):
-        env = {"assets": [{"key": bad, "sha256": "0", "size": 0, "media_type": "x"}]}
+        env = _envelope(assets=[
+            {"key": bad, "sha256": "0", "size": 0, "media_type": "x"},
+        ])
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w") as zf:
             zf.writestr("result.json", json.dumps(env))
@@ -200,8 +229,10 @@ def test_unpack_rejects_unsafe_asset_key_in_envelope(tmp_path):
     # The server-supplied envelope is untrusted: a `..` asset key must be rejected
     # before `out_dir / key` is ever used (zip members alone aren't enough).
     data = b"x"
-    env = {"assets": [{"key": "../escape.jpg", "sha256": hashlib.sha256(data).hexdigest(),
-                       "size": 1, "media_type": "image/jpeg"}]}
+    env = _envelope(assets=[{
+        "key": "../escape.jpg", "sha256": hashlib.sha256(data).hexdigest(),
+        "size": 1, "media_type": "image/jpeg",
+    }])
     # Put the file under a benign member name so the zip itself is "safe".
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
@@ -212,8 +243,10 @@ def test_unpack_rejects_unsafe_asset_key_in_envelope(tmp_path):
 
 def test_unpack_rejects_backslash_asset_key(tmp_path):
     data = b"x"
-    env = {"assets": [{"key": "assets\\card.jpg", "sha256": hashlib.sha256(data).hexdigest(),
-                       "size": 1, "media_type": "image/jpeg"}]}
+    env = _envelope(assets=[{
+        "key": "assets\\card.jpg", "sha256": hashlib.sha256(data).hexdigest(),
+        "size": 1, "media_type": "image/jpeg",
+    }])
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("result.json", json.dumps(env))
@@ -224,7 +257,7 @@ def test_unpack_rejects_backslash_asset_key(tmp_path):
 def test_unpack_rejects_unexpected_extra_member(tmp_path):
     # A member not in {result.json} ∪ {asset keys} must be rejected, and NOTHING
     # is written to disk (verify-before-write).
-    env = {"assets": []}
+    env = _envelope()
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("result.json", json.dumps(env))
@@ -238,11 +271,12 @@ def test_unpack_rejects_unexpected_extra_member(tmp_path):
 
 def test_unpack_nothing_written_until_all_assets_verified(tmp_path):
     good = b"good"
-    env = {"assets": [
+    env = _envelope(assets=[
         {"key": "assets/a.jpg", "sha256": hashlib.sha256(good).hexdigest(),
          "size": 4, "media_type": "image/jpeg"},
-        {"key": "assets/b.jpg", "sha256": "deadbeef", "size": 3, "media_type": "image/jpeg"},
-    ]}
+        {"key": "assets/b.jpg", "sha256": "0" * 64, "size": 3,
+         "media_type": "image/jpeg"},
+    ])
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("result.json", json.dumps(env))
@@ -258,8 +292,10 @@ def test_unpack_nothing_written_until_all_assets_verified(tmp_path):
 
 def test_unpack_rejects_asset_key_claiming_result_json(tmp_path):
     # A compromised server can't list result.json as an asset key (reserved).
-    env = {"assets": [{"key": "result.json", "sha256": "0", "size": 0,
-                       "media_type": "application/json"}]}
+    env = _envelope(assets=[{
+        "key": "result.json", "sha256": "0", "size": 0,
+        "media_type": "application/json",
+    }])
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("result.json", json.dumps(env))
@@ -270,9 +306,10 @@ def test_unpack_rejects_asset_key_claiming_result_json(tmp_path):
 def test_unpack_accepts_a_zip_path_and_streams(tmp_path):
     # The client downloads to a temp file and verifies from the PATH (bounded RAM).
     data = b"img"
-    env = {"text": "hi", "assets": [
+    env = _envelope(text="hi", assets=[
         {"key": "assets/a.jpg", "sha256": hashlib.sha256(data).hexdigest(),
-         "size": 3, "media_type": "image/jpeg"}]}
+         "size": 3, "media_type": "image/jpeg"},
+    ])
     zpath = tmp_path / "bundle.zip"
     with zipfile.ZipFile(zpath, "w") as zf:
         zf.writestr("result.json", json.dumps(env))
@@ -287,10 +324,61 @@ def test_unpack_rejects_malformed_envelope(tmp_path):
     # an uncaught KeyError.
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
-        zf.writestr("result.json", json.dumps({"assets": [{"key": "assets/a.jpg"}]}))
+        zf.writestr("result.json", json.dumps(_envelope(
+            assets=[{"key": "assets/a.jpg"}],
+        )))
         zf.writestr("assets/a.jpg", b"x")
     with pytest.raises(BundleVerificationError, match="malformed"):
         unpack_and_verify(buf.getvalue(), tmp_path / "o")
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        {"kind": "unknown"},
+        {"text": 123},
+        {"assets": {}},
+        {"assets": [{"key": "assets/a", "sha256": "nope", "size": 1}]},
+        {"assets": [{"key": "assets/a", "sha256": "0" * 64, "size": 1}]},
+    ],
+)
+def test_unpack_rejects_invalid_envelope_schema(tmp_path, bad):
+    with pytest.raises(BundleVerificationError, match="malformed"):
+        unpack_and_verify(_bundle(bad, {}), tmp_path / "o")
+
+
+@pytest.mark.parametrize("error", [RuntimeError("encrypted"), NotImplementedError("codec")])
+def test_unpack_wraps_result_read_errors(monkeypatch, tmp_path, error):
+    real_read = zipfile.ZipFile.read
+
+    def fail_result(self, name, *args, **kwargs):
+        if name == "result.json":
+            raise error
+        return real_read(self, name, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "read", fail_result)
+    with pytest.raises(BundleVerificationError, match="malformed"):
+        unpack_and_verify(_bundle({}, {}), tmp_path / "o")
+
+
+def test_unpack_wraps_unsupported_asset_open(monkeypatch, tmp_path):
+    data = b"x"
+    env = {"assets": [{
+        "key": "assets/a.jpg", "sha256": hashlib.sha256(data).hexdigest(),
+        "size": 1, "media_type": "image/jpeg",
+    }]}
+    bundle = _bundle(env, {"assets/a.jpg": data})
+    real_open = zipfile.ZipFile.open
+
+    def fail_asset(self, name, *args, **kwargs):
+        if name == "assets/a.jpg":
+            raise NotImplementedError("unsupported compression")
+        return real_open(self, name, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "open", fail_asset)
+    with pytest.raises(BundleVerificationError, match="failed writing"):
+        unpack_and_verify(bundle, tmp_path / "o")
+    assert not list(tmp_path.glob(".o-*"))
 
 
 def test_unpack_requires_result_json(tmp_path):

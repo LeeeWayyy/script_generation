@@ -21,8 +21,8 @@ cd C:\path\to\transcript
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 
-# Blackwell (5090, sm_120) needs a recent CUDA wheel:
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+# Blackwell (5090, sm_120) needs CUDA 12.8+:
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 pip install -e ".[server]"
 ```
 
