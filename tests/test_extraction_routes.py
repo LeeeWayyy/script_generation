@@ -285,9 +285,11 @@ def test_unsafe_upload_filename_is_sanitized(monkeypatch, tmp_path):
     assert server._safe_upload_name("..") == "upload.bin"
     assert server._safe_upload_name("") == "upload.bin"
     assert server._safe_upload_name("ok.zip") == "ok.zip"
-    # Windows reserved device names (any case / extension / 2-digit) are rejected.
+    # Windows reserved device names (any case / extension / digit count) are rejected.
     for reserved in (
-        "CON", "CON .txt", "nul.txt", "COM1", "lpt9.bin", "AUX", "COM10", "LPT12.x",
+        "CON", "CON .txt", "CON.foo.txt", "nul.txt", "COM1", "lpt9.bin",
+        "AUX", "CLOCK$.txt", "CONIN$.txt", "CONOUT$.txt", "COM10",
+        "LPT12.x", "COM¹.png",
     ):
         assert server._safe_upload_name(reserved) == "upload.bin"
     assert server._safe_upload_name("console.txt") == "console.txt"  # not reserved
