@@ -111,6 +111,26 @@ def test_streaming_cap_trips_on_actual_bytes(tmp_path, monkeypatch):
         arc.extract_images(arc_path, tmp_path / "out")
 
 
+@pytest.mark.parametrize("kind", ("zip", "tar"))
+def test_skipped_regular_members_count_toward_uncompressed_cap(tmp_path, monkeypatch, kind):
+    import transcript.archive as arc
+
+    monkeypatch.setattr(arc, "MAX_TOTAL_UNCOMPRESSED", 8)
+    path = tmp_path / f"in.{kind}"
+    if kind == "zip":
+        with zipfile.ZipFile(path, "w") as zf:
+            zf.writestr("ignored.txt", b"x" * 9)
+    else:
+        data = io.BytesIO(b"x" * 9)
+        with tarfile.open(path, "w") as tf:
+            info = tarfile.TarInfo("ignored.txt")
+            info.size = 9
+            tf.addfile(info, data)
+
+    with pytest.raises(UnsafeArchiveError, match="size cap"):
+        arc.extract_images(path, tmp_path / "out")
+
+
 def test_unsafe_directory_member_rejected_not_skipped(tmp_path):
     # A `..` directory member must trip the rule, not be silently skipped.
     p = tmp_path / "in.zip"

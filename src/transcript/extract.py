@@ -22,8 +22,15 @@ import mimetypes
 from pathlib import Path
 from typing import Optional
 
-from .extraction import AssetRef, Card, ExtractionResult, Frame, render_audio_text, \
-    render_image_note_text
+from .extraction import (
+    MAX_TOTAL_ASSET_BYTES,
+    AssetRef,
+    Card,
+    ExtractionResult,
+    Frame,
+    render_audio_text,
+    render_image_note_text,
+)
 from .types import Transcript
 
 log = logging.getLogger("transcript.extract")
@@ -31,7 +38,7 @@ log = logging.getLogger("transcript.extract")
 OCR_UNAVAILABLE = object()  # worker-cached sentinel: don't retry a failed loader
 _OCR_RECIPE = [
     "ocr_requested", "ocr_engine", "ocr_model", "ocr_model_dir",
-    "ocr_device", "ocr_params",
+    "ocr_params",
 ]
 
 
@@ -85,7 +92,6 @@ def _ocr_meta(*, requested: bool, succeeded: Optional[bool], warning: Optional[s
         "ocr_engine": f"paddleocr@{version}" if version else None,
         "ocr_model": f"paddleocr-{OCR_PARAMS['lang']}",
         "ocr_model_dir": os.path.basename(model_dir.rstrip("/")) if model_dir else None,
-        "ocr_device": os.environ.get("TRANSCRIPT_OCR_DEVICE"),
         "ocr_params": OCR_PARAMS,
     }
 
@@ -222,13 +228,6 @@ def extract_audio_extraction(
                 "feed_identity_unavailable",
                 f"could not download enclosure {resolution.enclosure_url!r}",
             )
-        transcribe_work = work / "transcribe"
-        transcribe_work.mkdir()
-        transcript: Transcript = transcribe_fn(
-            str(dl.path), engine=engine, work_dir=str(transcribe_work),
-            **transcribe_kwargs,
-        )
-
         downloaded_size = dl.downloaded_size
         content_length = dl.content_length
         # Authoritative only for a complete, non-ranged, non-redirected download —
@@ -247,6 +246,12 @@ def extract_audio_extraction(
                 f"downloaded {downloaded_size} bytes != feed <enclosure length> "
                 f"{feed_len}",
             )
+        transcribe_work = work / "transcribe"
+        transcribe_work.mkdir()
+        transcript: Transcript = transcribe_fn(
+            str(dl.path), engine=engine, work_dir=str(transcribe_work),
+            **transcribe_kwargs,
+        )
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
@@ -321,6 +326,11 @@ def extract_video(
         extract_frames(video_path, asset_dir / "_frames", cadence_s=cadence)
         if (with_frames and video_path is not None) else []
     )
+    asset_bytes = sum(frame.path.stat().st_size for frame in frame_assets)
+    if asset_bytes > MAX_TOTAL_ASSET_BYTES:
+        raise ValueError(
+            f"video frame assets exceed the {MAX_TOTAL_ASSET_BYTES}-byte total cap"
+        )
     ocr_engine, ocr_warning = _prepare_ocr(ocr_engine, needed=bool(frame_assets))
     ocr_failures = 0
 
@@ -375,6 +385,7 @@ def extract_video(
         meta.setdefault("ffmpeg_version", _ffmpeg_version())
     meta.update({
         "frame_count": len(frames),
+        "frame_cap_reached": len(frame_assets) >= FRAME_POLICY["max_frames"],
         "selected_audio_format": selected_audio_format,
     })
     # Only name recipe keys that are actually present (frame_policy /
@@ -385,7 +396,7 @@ def extract_video(
     _tag_provenance(
         meta, recipe=recipe,
         observation=["ocr_succeeded", "ocr_warning", "frames", "segments",
-                     "frame_count", "duration_s"],
+                     "frame_count", "frame_cap_reached", "duration_s"],
     )
     result = ExtractionResult(
         kind="video",

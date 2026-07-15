@@ -17,6 +17,7 @@ from .types import Segment, Transcript, Word
 log = logging.getLogger("transcript.engine")
 
 DEFAULT_MODEL = "large-v3"
+DIARIZATION_MODEL_URL = "https://huggingface.co/pyannote/speaker-diarization-community-1"
 
 
 class TranscriptionEngine:
@@ -51,6 +52,14 @@ class TranscriptionEngine:
 
     # --- model loaders (lazy) -------------------------------------------------
 
+    def require_diarization_token(self) -> None:
+        if not self.hf_token:
+            raise RuntimeError(
+                "Speaker diarization needs a Hugging Face token. Set HF_TOKEN (or pass "
+                "hf_token=...), and accept the model conditions at "
+                f"{DIARIZATION_MODEL_URL}"
+            )
+
     def _load_asr(self):
         if self._asr is None:
             import whisperx
@@ -80,12 +89,7 @@ class TranscriptionEngine:
 
     def _load_diarizer(self):
         if self._diarizer is None:
-            if not self.hf_token:
-                raise RuntimeError(
-                    "Speaker diarization needs a Hugging Face token. Set HF_TOKEN (or pass "
-                    "hf_token=...), and accept the model license at "
-                    "https://huggingface.co/pyannote/speaker-diarization-3.1"
-                )
+            self.require_diarization_token()
             # DiarizationPipeline moved between whisperx versions; try both locations.
             try:
                 from whisperx.diarize import DiarizationPipeline
@@ -114,6 +118,8 @@ class TranscriptionEngine:
         align: bool = True,
     ) -> Transcript:
         """Transcribe a 16 kHz mono WAV at ``audio_path`` into a Transcript."""
+        if diarize:
+            self.require_diarization_token()
         import whisperx
 
         audio = whisperx.load_audio(audio_path)
@@ -140,6 +146,8 @@ class TranscriptionEngine:
         align: bool = True,
     ) -> Transcript:
         """Use human caption text, running only alignment/diarization when requested."""
+        if diarize:
+            self.require_diarization_token()
         result = {
             "segments": [
                 {"text": segment.text, "start": segment.start, "end": segment.end}

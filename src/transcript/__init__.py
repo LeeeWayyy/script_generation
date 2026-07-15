@@ -45,6 +45,25 @@ __version__ = "0.1.0"
 log = logging.getLogger("transcript")
 
 
+def _validate_transcribe_options(
+    *, diarize: bool, device: Optional[str], min_speakers: Optional[int],
+    max_speakers: Optional[int], batch_size: int,
+) -> None:
+    if device not in (None, "cpu", "cuda", "mps"):
+        raise ValueError("device must be one of: cpu, cuda, mps")
+    if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size < 1:
+        raise ValueError("batch_size must be at least 1")
+    for name, value in (("min_speakers", min_speakers), ("max_speakers", max_speakers)):
+        if value is not None and (
+            isinstance(value, bool) or not isinstance(value, int) or value < 1
+        ):
+            raise ValueError(f"{name} must be at least 1")
+    if min_speakers is not None and max_speakers is not None and min_speakers > max_speakers:
+        raise ValueError("min_speakers cannot exceed max_speakers")
+    if not diarize and (min_speakers is not None or max_speakers is not None):
+        raise ValueError("speaker-count hints cannot be used when diarize is false")
+
+
 def _ffmpeg_version() -> Optional[str]:
     """ffmpeg version string for provenance (None if unavailable)."""
     try:
@@ -87,6 +106,20 @@ def transcribe(
     detect_music  Opt in to music-overlap tagging (requires inaSpeechSegmenter).
     engine        Reuse a pre-built TranscriptionEngine (avoids reloading models).
     """
+    _validate_transcribe_options(
+        diarize=diarize, device=device, min_speakers=min_speakers,
+        max_speakers=max_speakers, batch_size=batch_size,
+    )
+    eng = engine or TranscriptionEngine(
+        model=model,
+        device=device,
+        compute_type=compute_type,
+        batch_size=batch_size,
+        hf_token=hf_token,
+    )
+    if diarize and isinstance(eng, TranscriptionEngine):
+        eng.require_diarization_token()
+
     own_work_dir = work_dir is None
     work_path = Path(work_dir) if work_dir else Path(tempfile.mkdtemp(prefix="transcript-"))
 
@@ -110,14 +143,6 @@ def transcribe(
                 log.warning("Could not parse manual captions (%s); falling back to ASR.", exc)
             if not captions:
                 log.warning("Manual caption track was empty; falling back to ASR.")
-
-        eng = engine or TranscriptionEngine(
-            model=model,
-            device=device,
-            compute_type=compute_type,
-            batch_size=batch_size,
-            hf_token=hf_token,
-        )
 
         if captions:
             audio = extract_audio(media, work_path) if diarize or detect_music else None
