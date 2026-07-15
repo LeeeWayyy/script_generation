@@ -76,11 +76,18 @@ def submit_job(requests_mod, url: str, *, data: dict, files, headers: dict,
 
 
 def is_transient_get_error(requests_mod, exc: BaseException) -> bool:
-    """Only connection failures/timeouts are safe to retry for an idempotent GET."""
+    """Only interrupted connections/timeouts are safe to retry for an idempotent GET."""
+    exceptions = getattr(requests_mod, "exceptions", None)
+    ssl_error = getattr(requests_mod, "SSLError", None) or getattr(
+        exceptions, "SSLError", None
+    )
+    if isinstance(ssl_error, type) and isinstance(exc, ssl_error):
+        return False
     transient = tuple(
         error
-        for name in ("ConnectionError", "Timeout")
-        if isinstance((error := getattr(requests_mod, name, None)), type)
+        for name in ("ConnectionError", "Timeout", "ChunkedEncodingError")
+        if isinstance((error := getattr(requests_mod, name, None)
+                       or getattr(exceptions, name, None)), type)
     )
     return isinstance(exc, transient)
 

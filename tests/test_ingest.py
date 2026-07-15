@@ -67,6 +67,7 @@ def test_ytdlp_fetch_stops_and_cleans_unknown_size_download_over_cap(monkeypatch
         )
 
     assert captured["cmd"][captured["cmd"].index("--max-filesize") + 1] == "3"
+    assert "--ignore-config" in captured["cmd"]
     assert captured["kwargs"]["text"] is True
     assert captured["process"].stop_timeout == ingest.PROCESS_STOP_TIMEOUT_S
     if ingest.os.name == "posix":

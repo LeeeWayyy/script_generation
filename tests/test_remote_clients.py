@@ -201,6 +201,24 @@ def test_get_does_not_retry_permanent_request_error(monkeypatch):
     assert len(calls) == 1
 
 
+def test_interrupted_chunked_get_is_retryable():
+    import requests
+
+    from transcript._remote_http import is_transient_get_error
+
+    error = requests.exceptions.ChunkedEncodingError("stream ended early")
+    assert is_transient_get_error(requests, error)
+
+
+def test_certificate_error_is_not_retryable():
+    import requests
+
+    from transcript._remote_http import is_transient_get_error
+
+    error = requests.exceptions.SSLError("certificate verify failed")
+    assert not is_transient_get_error(requests, error)
+
+
 def test_submit_is_never_retried():
     calls = []
 

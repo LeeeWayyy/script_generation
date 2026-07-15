@@ -39,3 +39,15 @@ def test_output_write_failure_is_clean(monkeypatch, tmp_path, capsys):
     output = tmp_path / "missing" / "out.txt"
     assert cli.main(["one.mp3", "--no-diarize", "-o", str(output)]) == 1
     assert f"Error: could not write {output}:" in capsys.readouterr().err
+
+
+def test_stdout_write_failure_is_clean(monkeypatch, capsys):
+    monkeypatch.setattr(
+        cli, "transcribe", lambda source, **kwargs: Transcript(segments=[Segment(text="ok")])
+    )
+    monkeypatch.setattr(
+        cli.sys.stdout, "write", lambda _text: (_ for _ in ()).throw(OSError("closed")),
+    )
+
+    assert cli.main(["one.mp3", "--no-diarize"]) == 1
+    assert "Error: could not write output: closed" in capsys.readouterr().err

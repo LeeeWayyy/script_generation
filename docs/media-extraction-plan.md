@@ -71,7 +71,8 @@ limited to decisions that future changes must preserve.
 - Remote routes require bearer authentication before request bodies are parsed. An explicitly
   open server is suitable only for a trusted, firewalled network.
 - User-supplied fetch URLs must be HTTP(S) and initially resolve only to globally routable
-  addresses. Downloader redirects are additionally contained by deployment egress rules.
+  addresses. Operators must additionally contain downloader redirects with deployment egress
+  rules.
 - Upload, remote-download, decoded-image, archive-expansion, frame-count, asset-byte, queue, and
   retention limits bound resource use.
 

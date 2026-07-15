@@ -125,6 +125,7 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
     max_bytes, timeout = _download_limits()
     cmd = [
         sys.executable, "-m", "yt_dlp",
+        "--ignore-config",
         "-f", fmt,
         "--max-filesize", str(max_bytes),
         "--no-playlist",
@@ -313,7 +314,8 @@ def download_manual_caption(
     there is no matching manual track; ``automatic_captions`` is never inspected.
     """
     probe = [
-        sys.executable, "-m", "yt_dlp", "--dump-single-json", "--skip-download",
+        sys.executable, "-m", "yt_dlp", "--ignore-config",
+        "--dump-single-json", "--skip-download",
         "--no-playlist", "--no-warnings", "--", url,
     ]
     try:
@@ -335,7 +337,8 @@ def download_manual_caption(
         media = _download_url(url, work_dir, subtitle_language=caption_language)
     else:
         cmd = [
-            sys.executable, "-m", "yt_dlp", "--skip-download", "--write-subs",
+            sys.executable, "-m", "yt_dlp", "--ignore-config",
+            "--skip-download", "--write-subs",
             "--no-write-auto-subs", "--sub-langs", caption_language,
             "--sub-format", "json3", "--write-info-json", "--no-playlist",
             "-o", str(work_dir / "%(id)s.%(ext)s"), "--", url,

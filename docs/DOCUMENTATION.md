@@ -358,8 +358,8 @@ transcript-remote --job-id ab12cd34ef56 -f txt               # resume a job
 For a URL job, nothing uploads from the laptop — the GPU host fetches the media
 directly. `--timeout` controls submission/upload, each connection/read, polling,
 and result download; `--poll` controls the status interval. Progress is shown on
-stderr unless `--quiet` is used. Speaker hints, `--language`, `--no-diarize`, and
-`--no-align` and `--detect-music` are sent to the server. Both clients report
+stderr unless `--quiet` is used. Speaker hints, `--language`, `--no-diarize`,
+`--no-align`, and `--detect-music` are sent to the server. Both clients report
 coarse stage changes and retry transient network failures plus HTTP 502/503 for
 idempotent polling/result GETs within the existing `--timeout`; POST submissions
 are never automatically replayed. Use `--job-id` to resume polling and fetching
@@ -558,8 +558,8 @@ the default pipeline.
 | `TRANSCRIPT_OCR_MODEL_DIR` | server | Pinned OCR root containing `det/rec/cls`. |
 | `TRANSCRIPT_OCR_ALLOW_DOWNLOAD=1` | server | Explicitly allow PaddleOCR first-run downloads. |
 | `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Uploaded file-byte cap; default 8 GiB. |
-| `TRANSCRIPT_MAX_DOWNLOAD_BYTES` | server | yt-dlp media-file cap; default 8 GiB. |
-| `TRANSCRIPT_DOWNLOAD_TIMEOUT_S` | server | yt-dlp subprocess deadline; default 3600 seconds. |
+| `TRANSCRIPT_MAX_DOWNLOAD_BYTES` | local, server | yt-dlp media-file cap; default 8 GiB. |
+| `TRANSCRIPT_DOWNLOAD_TIMEOUT_S` | local, server | yt-dlp subprocess deadline; default 3600 seconds. |
 | `TRANSCRIPT_MAX_IMAGE_PIXELS` | server | Decoded image-pixel cap before OCR; default 100,000,000. |
 | `TRANSCRIPT_MAX_QUEUE_SIZE` | server | Waiting-job cap; default 32. |
 | `TRANSCRIPT_JOB_TTL_SECONDS` | server | Terminal in-memory transcript retention; default 86400. |

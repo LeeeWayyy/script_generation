@@ -533,7 +533,6 @@ class Worker(threading.Thread):
                     # so /extractions consumers can distinguish ambiguous vs stale, etc.
                     job.error_reason = getattr(exc, "reason", None)
                     log.exception("Job %s failed", job.id)
-                    terminal_status = "error"
                 else:
                     terminal_status = "done"
                 finally:

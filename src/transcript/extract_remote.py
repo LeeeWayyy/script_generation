@@ -38,7 +38,7 @@ from ._remote_http import (
     validate_common_options,
     validate_job_id,
 )
-from .extraction import KINDS
+from .extraction import KINDS, MAX_TOTAL_ASSET_BYTES
 from .frames import MIN_CADENCE_S
 from .ingest import is_url
 from .types import has_windows_drive_prefix, is_windows_reserved_basename
@@ -80,12 +80,11 @@ class BundleVerificationError(Exception):
 
 _CHUNK = 1024 * 1024
 _MAX_RESULT_JSON_BYTES = 64 * 1024 * 1024  # the envelope is text; 64 MiB is enormous
-_MAX_TOTAL_ASSET_BYTES = 2 * 1024 * 1024 * 1024
 _MAX_MEMBERS = 10_000
 _MAX_CENTRAL_DIRECTORY_BYTES = 64 * 1024 * 1024
 # ponytail: mirrors the server's archive ceiling; expose a flag if legitimate
 # video-frame bundles need more than 2 GiB of uncompressed assets.
-_MAX_BUNDLE_BYTES = _MAX_TOTAL_ASSET_BYTES + 128 * 1024 * 1024
+_MAX_BUNDLE_BYTES = MAX_TOTAL_ASSET_BYTES + 128 * 1024 * 1024
 
 
 def _degraded_warnings(envelope: dict) -> list[str]:
@@ -115,7 +114,7 @@ def _degraded_warnings(envelope: dict) -> list[str]:
         warnings.append("Music detection failed; music tags may be missing.")
 
     if meta.get("frame_cap_reached"):
-        warnings.append("Frame cap reached; later frames were omitted.")
+        warnings.append("Frame cap reached; later frames may have been omitted.")
     return warnings
 
 
@@ -254,7 +253,7 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
         # Dedup case-insensitively (matches the server + a case-insensitive client FS).
         if len({_path_token(k) for k in asset_keys}) != len(asset_keys):
             raise BundleVerificationError("duplicate asset key in envelope")
-        if sum(size for _, size in asset_meta) > _MAX_TOTAL_ASSET_BYTES:
+        if sum(size for _, size in asset_meta) > MAX_TOTAL_ASSET_BYTES:
             raise BundleVerificationError("bundle assets exceed the 2 GiB safety limit")
         extra = {_path_token(n) for n in names} - {
             _path_token("result.json"), *(_path_token(k) for k in asset_keys),

@@ -131,7 +131,7 @@ def extract_frames(
         tc = pts_times[i] if i < len(pts_times) else i * cadence_s
         frames.append(FrameAsset(frame_id=i, timecode=round_timecode(tc), path=dest))
     if len(frames) >= max_frames:
-        log.warning("Frame cap (%d) reached; later frames were dropped.", max_frames)
+        log.warning("Frame cap (%d) reached; later frames may have been dropped.", max_frames)
     return frames
 
 

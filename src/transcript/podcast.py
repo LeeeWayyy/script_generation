@@ -307,8 +307,8 @@ def download_enclosure(url: str, dest_dir: "Path", *, timeout: float = 60.0,
                         raise _EnclosureTooLarge()
                     out.write(chunk)
     except _EnclosureTooLarge as exc:
-        # A too-large enclosure must FAIL the job, not fall back to yt-dlp (which
-        # has no size cap and would download it anyway, bypassing the limit).
+        # A too-large enclosure must FAIL the job, not switch downloaders and
+        # bypass this enclosure-specific cap and redirect-validation policy.
         try:
             dest.unlink()
         except OSError:

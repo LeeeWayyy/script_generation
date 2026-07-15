@@ -18,6 +18,7 @@ log = logging.getLogger("transcript.engine")
 
 DEFAULT_MODEL = "large-v3"
 DIARIZATION_MODEL_URL = "https://huggingface.co/pyannote/speaker-diarization-community-1"
+LEGACY_DIARIZATION_MODEL_URL = "https://huggingface.co/pyannote/speaker-diarization-3.1"
 
 
 class TranscriptionEngine:
@@ -56,8 +57,9 @@ class TranscriptionEngine:
         if not self.hf_token:
             raise RuntimeError(
                 "Speaker diarization needs a Hugging Face token. Set HF_TOKEN (or pass "
-                "hf_token=...), and accept the model conditions at "
-                f"{DIARIZATION_MODEL_URL}"
+                "hf_token=...), and accept the model conditions required by your "
+                f"WhisperX version: {DIARIZATION_MODEL_URL} (3.8+) or "
+                f"{LEGACY_DIARIZATION_MODEL_URL} (older versions)"
             )
 
     def _load_asr(self):

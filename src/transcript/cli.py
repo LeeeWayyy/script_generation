@@ -179,7 +179,13 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
         else:
-            sys.stdout.write(output)
+            try:
+                sys.stdout.write(output)
+            except OSError as exc:
+                if args.verbose:
+                    raise
+                print(f"Error: could not write output: {exc}", file=sys.stderr)
+                return 1
 
     return 0
 
