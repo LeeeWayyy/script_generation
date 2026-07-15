@@ -168,7 +168,7 @@ def render_image_note_text(cards: list[Card]) -> str:
 
 
 def _segment_to_dict(seg: Segment) -> dict:
-    """Pinned segment field order (mirrors the dataclass declaration order)."""
+    """Pinned extraction segment shape (new fields do not enter legacy JSON)."""
     return {
         "text": seg.text,
         "start": seg.start,
@@ -184,6 +184,7 @@ def _segment_to_dict(seg: Segment) -> dict:
             }
             for w in seg.words
         ],
+        "music": seg.music,
     }
 
 

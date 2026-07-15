@@ -28,6 +28,12 @@ from .types import Transcript
 
 log = logging.getLogger("transcript.extract")
 
+OCR_UNAVAILABLE = object()  # worker-cached sentinel: don't retry a failed loader
+_OCR_RECIPE = [
+    "ocr_requested", "ocr_engine", "ocr_model", "ocr_model_dir",
+    "ocr_device", "ocr_params",
+]
+
 
 def _asset_ref(key: str, path: Path) -> AssetRef:
     # Stream the hash in chunks — an asset can be large (frames/images up to the
@@ -46,6 +52,44 @@ def _tag_provenance(meta: dict, *, recipe: list[str], observation: list[str]) ->
     meta["_provenance"] = {"recipe": recipe, "observation": observation}
 
 
+def _prepare_ocr(engine, *, needed: bool):
+    """Resolve OCR once for an extraction, degrading to empty text if unavailable."""
+    if not needed:
+        return engine, None
+    if engine is OCR_UNAVAILABLE:
+        log.warning("OCR unavailable; returning image assets without text")
+        return None, "OCR unavailable; image assets were returned without OCR text"
+    if engine is not None:
+        return engine, None
+    from .ocr import OcrUnavailableError, _load_engine
+
+    try:
+        return _load_engine(), None
+    except OcrUnavailableError as exc:
+        log.warning("OCR unavailable; returning image assets without text: %s", exc)
+        return None, "OCR unavailable; image assets were returned without OCR text"
+
+
+def _ocr_meta(*, requested: bool, succeeded: Optional[bool], warning: Optional[str]) -> dict:
+    import os
+
+    from .engine import _pkg_version
+    from .ocr import OCR_PARAMS
+
+    model_dir = os.environ.get("TRANSCRIPT_OCR_MODEL_DIR")
+    version = _pkg_version("paddleocr")
+    return {
+        "ocr_requested": requested,
+        "ocr_succeeded": succeeded,
+        "ocr_warning": warning,
+        "ocr_engine": f"paddleocr@{version}" if version else None,
+        "ocr_model": f"paddleocr-{OCR_PARAMS['lang']}",
+        "ocr_model_dir": os.path.basename(model_dir.rstrip("/")) if model_dir else None,
+        "ocr_device": os.environ.get("TRANSCRIPT_OCR_DEVICE"),
+        "ocr_params": OCR_PARAMS,
+    }
+
+
 # ---------------------------------------------------------------------------
 # image_note — OCR'd cards from a manual-export archive
 # ---------------------------------------------------------------------------
@@ -54,9 +98,11 @@ def _tag_provenance(meta: dict, *, recipe: list[str], observation: list[str]) ->
 def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
                        ) -> tuple[ExtractionResult, list[tuple[str, Path]]]:
     from .archive import extract_images
-    from .ocr import OCR_PARAMS, run_ocr
+    from .ocr import run_ocr
 
     members = extract_images(archive_path, asset_dir / "_members")
+    ocr_engine, ocr_warning = _prepare_ocr(ocr_engine, needed=bool(members))
+    ocr_failures = 0
     cards: list[Card] = []
     assets: list[AssetRef] = []
     asset_files: list[tuple[str, Path]] = []
@@ -65,11 +111,13 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
         # 5-digit pad covers MAX_MEMBERS (10_000) so keys stay lexicographically
         # ordered with their numeric index (card-1000 must not sort before card-100).
         key = f"assets/card-{idx:05d}{Path(member.basename).suffix.lower()}"
-        try:
-            ocr = run_ocr(member.path, engine=ocr_engine)
-        except Exception as exc:  # noqa: BLE001 — record empty OCR, keep the card
-            log.warning("OCR failed for %s: %s", member.basename, exc)
-            ocr = None
+        ocr = None
+        if ocr_engine is not None:
+            try:
+                ocr = run_ocr(member.path, engine=ocr_engine)
+            except Exception as exc:  # noqa: BLE001 — record empty OCR, keep the card
+                log.warning("OCR failed for %s: %s", member.basename, exc)
+                ocr_failures += 1
         cards.append(Card(
             index=idx,
             ocr_text=ocr.ocr_text if ocr else "",
@@ -82,31 +130,20 @@ def extract_image_note(archive_path: Path, asset_dir: Path, *, ocr_engine=None
             source_member=member.source_member,
             blocks=ocr.blocks if ocr else None,
         ))
-        assets.append(_asset_ref(key, member.path))
+        assets.append(AssetRef(
+            key=key, sha256=member.sha256, size=member.size,
+            media_type=mimetypes.guess_type(key)[0] or "application/octet-stream",
+        ))
         asset_files.append((key, member.path))
 
-    import os
-
-    from .engine import _pkg_version
-    _model_dir = os.environ.get("TRANSCRIPT_OCR_MODEL_DIR")
-    _ocr_v = _pkg_version("paddleocr")
-    meta: dict = {
-        "ocr_engine": f"paddleocr@{_ocr_v}" if _ocr_v else None,
-        # A model identifier (not just the raw lang, which ocr_params already has).
-        "ocr_model": f"paddleocr-{OCR_PARAMS['lang']}",
-        # The pinned weights folder NAME (basename only — don't leak the server's
-        # absolute fs layout into the vault-agnostic envelope) so the recipe can
-        # explain ocr_text divergence between hosts with different weights.
-        "ocr_model_dir": os.path.basename(_model_dir.rstrip("/")) if _model_dir else None,
-        # Device-affecting runtime (CPU/GPU) — OCR is only deterministic under a
-        # pinned device, so record the operator's declared device when set.
-        "ocr_device": os.environ.get("TRANSCRIPT_OCR_DEVICE"),
-        "ocr_params": OCR_PARAMS,
-    }
+    if ocr_failures:
+        ocr_warning = f"OCR failed for {ocr_failures} of {len(members)} images"
+    ocr_succeeded = None if not members else ocr_warning is None
+    meta = _ocr_meta(requested=True, succeeded=ocr_succeeded, warning=ocr_warning)
     _tag_provenance(
         meta,
-        recipe=["ocr_engine", "ocr_model", "ocr_model_dir", "ocr_device", "ocr_params"],
-        observation=["cards"])
+        recipe=_OCR_RECIPE.copy(),
+        observation=["ocr_succeeded", "ocr_warning", "cards"])
     result = ExtractionResult(
         kind="image_note",
         text=render_image_note_text(cards),
@@ -280,18 +317,22 @@ def extract_video(
         extract_frames(video_path, asset_dir / "_frames", cadence_s=cadence)
         if (with_frames and video_path is not None) else []
     )
+    ocr_engine, ocr_warning = _prepare_ocr(ocr_engine, needed=bool(frame_assets))
+    ocr_failures = 0
 
     frames: list[Frame] = []
     assets: list[AssetRef] = []
     asset_files: list[tuple[str, Path]] = []
     for fa in frame_assets:
         key = f"assets/frame-{fa.frame_id:06d}.jpg"
-        try:
-            ocr = run_ocr(fa.path, engine=ocr_engine)
-            ocr_text, conf, blocks = ocr.ocr_text, ocr.confidence, ocr.blocks
-        except Exception as exc:  # noqa: BLE001 — frames are useful without OCR
-            log.warning("Frame OCR failed for %s: %s", fa.path.name, exc)
-            ocr_text, conf, blocks = "", None, None
+        ocr_text, conf, blocks = "", None, None
+        if ocr_engine is not None:
+            try:
+                ocr = run_ocr(fa.path, engine=ocr_engine)
+                ocr_text, conf, blocks = ocr.ocr_text, ocr.confidence, ocr.blocks
+            except Exception as exc:  # noqa: BLE001 — frames are useful without OCR
+                log.warning("Frame OCR failed for %s: %s", fa.path.name, exc)
+                ocr_failures += 1
         frames.append(Frame(frame_id=fa.frame_id, timecode=round_timecode(fa.timecode),
                             image_ref=key, ocr_text=ocr_text, confidence=conf, blocks=blocks))
         assets.append(_asset_ref(key, fa.path))
@@ -304,6 +345,19 @@ def extract_video(
     # Drop the transient `source` (a server temp path for uploaded video) so the
     # envelope never leaks a server fs path — mirrors the audio_extraction path.
     meta.pop("source", None)
+    if ocr_failures:
+        ocr_warning = f"OCR failed for {ocr_failures} of {len(frame_assets)} images"
+    ocr_succeeded = None if not frame_assets else ocr_warning is None
+    if with_frames:
+        meta.update(_ocr_meta(
+            requested=True, succeeded=ocr_succeeded, warning=ocr_warning,
+        ))
+    else:
+        meta.update({
+            "ocr_requested": False,
+            "ocr_succeeded": None,
+            "ocr_warning": None,
+        })
     if with_frames:
         from . import _ffmpeg_version
         policy = dict(FRAME_POLICY)
@@ -321,12 +375,13 @@ def extract_video(
     })
     # Only name recipe keys that are actually present (frame_policy /
     # selected_video_format exist only when frames were extracted).
-    recipe = ["model", "selected_audio_format"]
+    recipe = ["model", "selected_audio_format", "ocr_requested"]
     if with_frames:
-        recipe += ["frame_policy", "selected_video_format"]
+        recipe += ["frame_policy", "selected_video_format", *_OCR_RECIPE[1:]]
     _tag_provenance(
         meta, recipe=recipe,
-        observation=["frames", "segments", "frame_count", "duration_s"],
+        observation=["ocr_succeeded", "ocr_warning", "frames", "segments",
+                     "frame_count", "duration_s"],
     )
     result = ExtractionResult(
         kind="video",

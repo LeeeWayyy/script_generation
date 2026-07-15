@@ -100,3 +100,8 @@ def test_parse_showinfo_pts_extracts_source_timecodes_in_order():
     )
     assert parse_showinfo_pts(stderr) == [1.5, 6.5, 11.0]
     assert parse_showinfo_pts("") == []
+
+
+def test_parse_showinfo_pts_accepts_signed_and_scientific_values():
+    stderr = "pts_time:-0.125 x\npts_time:+1e-3 x\npts_time:2.5E+1 x\n"
+    assert parse_showinfo_pts(stderr) == [-0.125, 0.001, 25.0]

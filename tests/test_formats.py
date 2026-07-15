@@ -53,6 +53,14 @@ def test_json_roundtrips():
     assert data["language"] == "en"
     assert data["segments"][0]["speaker"] == "SPEAKER_00"
     assert data["segments"][0]["words"][0]["word"] == "Hello"
+    assert "music" not in data["segments"][0]
+
+
+def test_segment_fifth_positional_argument_remains_words():
+    words = [Word("legacy")]
+    segment = Segment("text", 0.0, 1.0, None, words, music=True)
+    assert segment.words is words
+    assert segment.music is True
 
 
 def test_render_dispatch_and_speakers_property():

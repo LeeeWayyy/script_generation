@@ -131,7 +131,9 @@ def extract_frames(
     return frames
 
 
-_PTS_RE = re.compile(r"pts_time:\s*([0-9]+(?:\.[0-9]+)?)")
+_PTS_RE = re.compile(
+    r"pts_time:\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?)"
+)
 
 
 def parse_showinfo_pts(stderr: str) -> list[float]:
