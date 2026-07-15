@@ -22,6 +22,7 @@ import os
 import shutil
 import sys
 import tempfile
+import unicodedata
 import zipfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -81,6 +82,11 @@ _MAX_TOTAL_ASSET_BYTES = 2 * 1024 * 1024 * 1024
 _MAX_BUNDLE_BYTES = _MAX_TOTAL_ASSET_BYTES + 128 * 1024 * 1024
 
 
+def _path_token(path: str) -> str:
+    """Filesystem collision token for case-insensitive, normalizing clients."""
+    return unicodedata.normalize("NFC", path).casefold()
+
+
 def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
     """Reject absolute / drive-letter / ``..`` / backslash / reserved paths."""
     kp = str(key)
@@ -93,7 +99,7 @@ def _check_key(key: str, what: str, *, reserved: tuple[str, ...] = ()) -> str:
     if (kp.startswith("/") or Path(kp).is_absolute() or is_drive or ".." in parts
             or "" in parts or "." in parts):  # incl. "a//b" / "a/./b" aliases
         raise BundleVerificationError(f"unsafe {what} rejected: {key!r}")
-    if kp in reserved:
+    if _path_token(kp) in {_path_token(name) for name in reserved}:
         raise BundleVerificationError(f"{what} collides with a reserved name: {key!r}")
     return kp
 
@@ -115,9 +121,10 @@ def _safe_member_names(zf: zipfile.ZipFile) -> list[str]:
         name = _check_key(info.filename, "bundle member")
         # Dedup case-insensitively — on macOS/Windows two members differing only by
         # case write the same file, silently overwriting one.
-        if name.casefold() in seen:
+        token = _path_token(name)
+        if token in seen:
             raise BundleVerificationError(f"duplicate bundle member rejected: {name!r}")
-        seen.add(name.casefold())
+        seen.add(token)
         names.append(name)
     return names
 
@@ -186,11 +193,13 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
                 zipfile.BadZipFile) as exc:
             raise BundleVerificationError(f"malformed result.json envelope: {exc}") from exc
         # Dedup case-insensitively (matches the server + a case-insensitive client FS).
-        if len({k.casefold() for k in asset_keys}) != len(asset_keys):
+        if len({_path_token(k) for k in asset_keys}) != len(asset_keys):
             raise BundleVerificationError("duplicate asset key in envelope")
         if sum(size for _, size in asset_meta) > _MAX_TOTAL_ASSET_BYTES:
             raise BundleVerificationError("bundle assets exceed the 2 GiB safety limit")
-        extra = {n.casefold() for n in names} - {"result.json", *(k.casefold() for k in asset_keys)}
+        extra = {_path_token(n) for n in names} - {
+            _path_token("result.json"), *(_path_token(k) for k in asset_keys),
+        }
         if extra:
             raise BundleVerificationError("bundle has unexpected members")
         for key, (_, want_size) in zip(asset_keys, asset_meta):

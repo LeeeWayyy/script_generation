@@ -167,6 +167,40 @@ def test_unpack_rejects_case_insensitive_duplicate_member(tmp_path):
         unpack_and_verify(buf.getvalue(), tmp_path / "o")
 
 
+def test_unpack_rejects_unicode_normalization_collision(tmp_path):
+    composed = "assets/é.txt"
+    decomposed = "assets/e\u0301.txt"
+    assets = {composed: b"first", decomposed: b"second"}
+    env = _envelope(assets=[
+        {
+            "key": key,
+            "sha256": hashlib.sha256(data).hexdigest(),
+            "size": len(data),
+            "media_type": "text/plain",
+        }
+        for key, data in assets.items()
+    ])
+    with pytest.raises(BundleVerificationError, match="duplicate"):
+        unpack_and_verify(_bundle(env, assets), tmp_path / "o")
+    assert not (tmp_path / "o").exists()
+
+
+def test_unpack_rejects_unicode_normalization_collision_in_asset_keys(tmp_path):
+    composed = "assets/é.txt"
+    data = b"same"
+    meta = {
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "size": len(data),
+        "media_type": "text/plain",
+    }
+    env = _envelope(assets=[
+        {"key": composed, **meta},
+        {"key": "assets/e\u0301.txt", **meta},
+    ])
+    with pytest.raises(BundleVerificationError, match="duplicate asset key"):
+        unpack_and_verify(_bundle(env, {composed: data}), tmp_path / "o")
+
+
 @pytest.mark.parametrize(
     ("encrypted", "external_attr", "message"),
     [(True, 0, "encrypted"), (False, 0o120777 << 16, "symlink")],
