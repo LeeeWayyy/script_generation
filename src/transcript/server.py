@@ -61,6 +61,31 @@ class _RequestTooLarge(Exception):
     pass
 
 
+class BearerAuthMiddleware:
+    """Reject unauthenticated requests before anything reads their body."""
+
+    def __init__(self, app, token: Optional[str]):
+        self.app = app
+        self.expected = f"Bearer {token}".encode() if token else None
+
+    async def __call__(self, scope, receive, send):
+        if (scope["type"] != "http" or self.expected is None
+                or scope.get("path") == "/health"):
+            await self.app(scope, receive, send)
+            return
+        values = [
+            value for name, value in scope.get("headers", ())
+            if name.lower() == b"authorization"
+        ]
+        if len(values) != 1 or not hmac.compare_digest(values[0], self.expected):
+            response = JSONResponse(
+                {"detail": "Missing or invalid bearer token."}, status_code=401
+            )
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
 class RequestBodyLimitMiddleware:
     """Reject oversized bodies before or while Starlette parses multipart data."""
 
@@ -739,6 +764,8 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         RequestBodyLimitMiddleware,
         max_bytes=MAX_UPLOAD_BYTES + MAX_MULTIPART_OVERHEAD_BYTES,
     )
+    # Added last so Starlette places it outside the body limiter/parser stack.
+    app.add_middleware(BearerAuthMiddleware, token=token)
     app.state.job_store = store
     app.state.worker = worker
     app.state.extraction_store = extraction_store
