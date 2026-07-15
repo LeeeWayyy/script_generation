@@ -7,8 +7,9 @@ set -euo pipefail
 if [[ -z "${TRANSCRIPT_TOKEN:-}" ]]; then
   TOKEN_FILE="${TRANSCRIPT_TOKEN_FILE:-${XDG_CONFIG_HOME:-$HOME/.config}/transcript/server.token}"
   TOKEN_DIR="$(dirname "$TOKEN_FILE")"
-  mkdir -p "$TOKEN_DIR"
-  chmod 700 "$TOKEN_DIR"
+  if [[ ! -d "$TOKEN_DIR" ]]; then
+    (umask 077; mkdir -p "$TOKEN_DIR")
+  fi
   if [[ -s "$TOKEN_FILE" ]]; then
     export TRANSCRIPT_TOKEN="$(<"$TOKEN_FILE")"
   else
