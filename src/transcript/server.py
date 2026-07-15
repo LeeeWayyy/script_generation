@@ -39,7 +39,7 @@ from typing import Optional
 # have FastAPI; importing ``transcript`` itself stays cheap (it never imports this
 # module).
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse, PlainTextResponse, Response
+from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
 from . import __version__
 from .engine import DEFAULT_MODEL
@@ -130,6 +130,29 @@ class RequestBodyLimitMiddleware:
             {"detail": "Request body exceeds the size limit."}, status_code=413
         )
         await response(scope, receive, send)
+
+
+class _CleanupStreamingResponse(StreamingResponse):
+    """Run cleanup even when ASGI fails before or between body sends."""
+
+    def __init__(self, content, *, cleanup, **kwargs):
+        self._cleanup = cleanup
+        super().__init__(content, **kwargs)
+
+    async def __call__(self, scope, receive, send):
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # Starlette does not run BackgroundTask when send() raises. Closing
+            # the iterator also releases an open stream before unlinking on Windows.
+            try:
+                close = getattr(self.body_iterator, "aclose", None)
+                if close is not None:
+                    await close()
+            except Exception:
+                pass
+            finally:
+                self._cleanup()
 
 
 def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
@@ -1127,7 +1150,6 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         import tempfile
         import zipfile
 
-        from fastapi.responses import StreamingResponse
         from starlette.background import BackgroundTask
 
         # Build the zip to a TEMP FILE under the lease (so the asset files can't be
@@ -1215,9 +1237,11 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
         except OSError:
             _cleanup()
             raise
-        return StreamingResponse(_stream(), media_type="application/zip",
-                                 headers={"Content-Length": str(size)},
-                                 background=BackgroundTask(_cleanup))
+        return _CleanupStreamingResponse(
+            _stream(), cleanup=_cleanup, media_type="application/zip",
+            headers={"Content-Length": str(size)},
+            background=BackgroundTask(_cleanup),
+        )
 
     return app
 

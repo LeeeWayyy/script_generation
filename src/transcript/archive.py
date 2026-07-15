@@ -161,6 +161,7 @@ def _extract_zip(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
             # directory entry trips the rule (contract: reject, don't silently skip).
             _reject_path(name)
             if info.is_dir():
+                budget.take(info.file_size)
                 continue
             # Zip carries the Unix file type in the high bits of external_attr.
             # Reject EVERY non-regular type (symlink, FIFO, char/block device,
@@ -195,6 +196,7 @@ def _extract_tar(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
             name = member.name
             _reject_path(name)  # validate before the dir-skip (see zip note above)
             if member.isdir():
+                budget.take(member.size)
                 continue
             # Reject every non-regular-file member: symlinks, hardlinks, devices, FIFOs.
             if not member.isfile():

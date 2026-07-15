@@ -161,9 +161,11 @@ def extract_frames(
                     f"{MAX_TOTAL_ASSET_BYTES}-byte total cap"
                 ) from exc
     except BaseException:
-        if proc.returncode is None:
-            _stop_process_tree(proc)
-        cleanup_frames()
+        try:
+            if proc.returncode is None:
+                _stop_process_tree(proc)
+        finally:
+            cleanup_frames()
         raise
 
     if frame_bytes() > MAX_TOTAL_ASSET_BYTES:

@@ -122,7 +122,7 @@ def _stop_process_tree(proc: subprocess.Popen) -> None:
     if os.name == "posix" and pid is not None:
         try:
             os.killpg(pid, signal.SIGKILL)
-        except OSError:
+        except Exception:
             pass
     elif os.name == "nt" and pid is not None:
         try:
@@ -131,19 +131,30 @@ def _stop_process_tree(proc: subprocess.Popen) -> None:
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 timeout=PROCESS_STOP_TIMEOUT_S, check=False,
             )
-        except (OSError, subprocess.SubprocessError):
+        except Exception:
             pass
     try:
         proc.kill()
-    except OSError:
+    except Exception:
         pass
     try:
         proc.communicate(timeout=PROCESS_STOP_TIMEOUT_S)
-    except subprocess.TimeoutExpired:
-        # A surviving descendant may still own the inherited pipe handles.
-        for pipe in (getattr(proc, "stdout", None), getattr(proc, "stderr", None)):
-            if pipe is not None:
+    except Exception:
+        pass
+    # A surviving descendant may still own an inherited pipe handle. This is a
+    # best-effort cleanup helper: pipe/reap errors must not mask the real failure.
+    for pipe in (getattr(proc, "stdout", None), getattr(proc, "stderr", None)):
+        if pipe is not None:
+            try:
                 pipe.close()
+            except Exception:
+                pass
+    wait = getattr(proc, "wait", None)
+    if wait is not None:
+        try:
+            wait(timeout=PROCESS_STOP_TIMEOUT_S)
+        except Exception:
+            pass
 
 
 def _run_ytdlp(
@@ -203,8 +214,10 @@ def _run_ytdlp(
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            _stop_process_tree(proc)
-            cleanup_download()
+            try:
+                _stop_process_tree(proc)
+            finally:
+                cleanup_download()
             raise RuntimeError(
                 f"yt-dlp timed out after {timeout:g}s while trying to {fail_action} {url}"
             )
@@ -215,14 +228,18 @@ def _run_ytdlp(
             exceeded = exceeded_cap(exc.output)
             if exceeded is None:
                 continue
-            _stop_process_tree(proc)
-            cleanup_download()
+            try:
+                _stop_process_tree(proc)
+            finally:
+                cleanup_download()
             raise RuntimeError(
                 f"yt-dlp download exceeds the {exceeded}-byte cap: {url}"
             ) from exc
         except BaseException:
-            _stop_process_tree(proc)
-            cleanup_download()
+            try:
+                _stop_process_tree(proc)
+            finally:
+                cleanup_download()
             raise
 
     exceeded = exceeded_cap(stdout)

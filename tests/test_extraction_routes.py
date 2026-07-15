@@ -5,6 +5,7 @@ the durable store, auth, the 404/410 contract, and that the bundle's result.json
 is byte-identical to the /result route.
 """
 
+import asyncio
 import io
 import time
 import zipfile
@@ -116,6 +117,49 @@ def test_bundle_stream_failure_releases_temp_and_permit(monkeypatch, tmp_path):
         assert not failed_temp[0].exists()
         with server._ACTIVE_BUNDLE_TEMPS_LOCK:
             assert str(failed_temp[0]) not in server._ACTIVE_BUNDLE_TEMPS
+        assert client.get(f"/extractions/{job_id}/bundle").status_code == 200
+
+
+@pytest.mark.parametrize("fail_on_send", (1, 2))
+def test_bundle_send_failure_releases_temp_and_permit(monkeypatch, tmp_path, fail_on_send):
+    from starlette.requests import ClientDisconnect
+
+    monkeypatch.setenv("TRANSCRIPT_MAX_CONCURRENT_BUNDLES", "1")
+    import transcript.server as server
+
+    with _make_app(monkeypatch, tmp_path) as client:
+        job_id = _run_image_note(client, _zip_bytes({"a.jpg": b"x"}))
+        endpoint = next(
+            route.endpoint for route in client.app.routes
+            if getattr(route, "path", None) == "/extractions/{job_id}/bundle"
+        )
+        with server._ACTIVE_BUNDLE_TEMPS_LOCK:
+            before = set(server._ACTIVE_BUNDLE_TEMPS)
+        response = endpoint(job_id)
+        with server._ACTIVE_BUNDLE_TEMPS_LOCK:
+            created = set(server._ACTIVE_BUNDLE_TEMPS) - before
+        assert len(created) == 1
+        bundle_temp = Path(created.pop())
+
+        async def receive():
+            return {"type": "http.disconnect"}
+
+        sends = 0
+
+        async def send(_message):
+            nonlocal sends
+            sends += 1
+            if sends == fail_on_send:
+                raise OSError("client disconnected")
+
+        with pytest.raises(ClientDisconnect):
+            asyncio.run(response(
+                {"type": "http", "asgi": {"spec_version": "2.4"}}, receive, send,
+            ))
+
+        assert not bundle_temp.exists()
+        with server._ACTIVE_BUNDLE_TEMPS_LOCK:
+            assert str(bundle_temp) not in server._ACTIVE_BUNDLE_TEMPS
         assert client.get(f"/extractions/{job_id}/bundle").status_code == 200
 
 
