@@ -100,6 +100,8 @@ def _directory_layout(fileobj, file_size: int):
     if disk64 != 0 or directory_disk64 != 0 or entries_disk64 != entries_total64:
         raise ValueError("multi-disk or inconsistent ZIP64 directory")
     for legacy, current, sentinel, label in (
+        (disk, disk64, 0xFFFF, "disk number"),
+        (directory_disk, directory_disk64, 0xFFFF, "directory disk"),
         (entries_disk, entries_disk64, 0xFFFF, "entry count"),
         (entries_total, entries_total64, 0xFFFF, "entry count"),
         (directory_size, directory_size64, 0xFFFFFFFF, "directory size"),
