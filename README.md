@@ -114,7 +114,7 @@ transcript a.mp4 b.mp4 --out-dir ./transcripts -f srt
 
 Key flags: `-f/--format {txt,srt,vtt,json}`, `-o/--output`, `--out-dir`, `--model`,
 `--no-diarize`, `--language`, `--device {cuda,cpu}`, `--min-speakers`, `--max-speakers`,
-`--detect-music`, `-v/--verbose`.
+`--no-align`, `--detect-music`, `-v/--verbose`.
 
 ## Library usage
 
@@ -165,6 +165,10 @@ export HF_TOKEN=hf_xxx                  # for speaker labels
 ./deploy/run-server.sh                   # generates/persists auth token once
 ```
 
+Direct `transcript-server` runs on `127.0.0.1` by default. The launch scripts
+deliberately bind to the LAN after generating a token. A non-loopback CLI bind
+requires `TRANSCRIPT_TOKEN` or the explicit, unsafe `--allow-open` opt-in.
+
 **On the Mac** (client):
 
 ```bash
@@ -173,29 +177,36 @@ export TRANSCRIPT_SERVER=http://<gpu-lan-ip>:8000
 export TRANSCRIPT_TOKEN=<token printed by the server>
 
 transcript-remote meeting.mp4 -f srt -o meeting.srt   # uploads the file
-transcript-remote "https://youtube.com/watch?v=..." -f txt   # host downloads it
+transcript-remote "https://youtube.com/watch?v=..." --no-align -f txt
+transcript-remote --job-id ab12cd34ef56 -f txt         # resume polling/fetching
 
 # extraction envelopes + verified assets
 extract-remote slides.zip --kind image_note --out-dir ./extractions
 extract-remote talk.mp4 --kind video --frames --cadence 10 --out-dir ./extractions
 extract-remote --kind audio_extraction --feed-url https://example.com/feed.xml \
   --episode-guid episode-42 --out-dir ./extractions
+extract-remote --job-id ab12cd34ef56 --out-dir ./extractions
 ```
 
 `transcript-remote` uses the legacy transcript routes. `extract-remote` uses the
 separate `/extractions` routes, downloads one zip, verifies its exact member set,
 sizes, and SHA-256 hashes, then atomically publishes `<out-dir>/<job-id>`.
-Completed extraction bundles live for seven days since last access under
-`$TRANSCRIPT_DATA_DIR` (default `~/.cache/transcript/extractions`). See the full
-documentation for the API, OCR model setup, cancellation, and cleanup controls.
+Completed extraction bundles live for seven days since last access by default
+under `$TRANSCRIPT_DATA_DIR` (default `~/.cache/transcript/extractions`); set
+`TRANSCRIPT_EXTRACTION_TTL_SECONDS` to change that retention.
 
-Both clients accept `--detect-music`; it is off by default. When requested,
-metadata records whether detection succeeded, detector version, the `0.5`
-overlap threshold, and the number of segments flagged.
+Both clients accept `--no-align` and `--detect-music`, display coarse server
+stages, and can resume a known job with `--job-id`. Transient polling/result GETs
+are retried within `--timeout`; submissions are not replayed. `extract-remote`
+prints warnings when OCR, alignment, music detection, or frame extraction was
+degraded.
 
 > Security: this is built for a trusted LAN with a shared token. Don't expose the
 > port to the public internet — put it behind Tailscale/WireGuard or a TLS reverse
-> proxy if you need off-LAN access.
+> proxy if you need off-LAN access. URL preflight cannot inspect redirects that
+> yt-dlp follows internally, so enforce outbound egress policy at the host or
+> container too. Never set `TRANSCRIPT_ALLOW_PRIVATE_FETCH=1` on an exposed
+> deployment; it disables the public-destination check.
 
 ## Cross-platform notes
 
