@@ -22,6 +22,7 @@ import os
 import shutil
 import sys
 import tempfile
+import time
 import unicodedata
 import zipfile
 from pathlib import Path
@@ -29,11 +30,13 @@ from urllib.parse import urlsplit
 
 from ._remote_http import (
     build_headers,
+    get_with_retry,
+    is_transient_get_error,
     poll_until_done,
-    request_timeout,
-    response_job_id,
     stderr_note,
+    submit_job,
     validate_common_options,
+    validate_job_id,
 )
 from .extraction import KINDS
 from .frames import MIN_CADENCE_S
@@ -83,6 +86,37 @@ _MAX_CENTRAL_DIRECTORY_BYTES = 64 * 1024 * 1024
 # ponytail: mirrors the server's archive ceiling; expose a flag if legitimate
 # video-frame bundles need more than 2 GiB of uncompressed assets.
 _MAX_BUNDLE_BYTES = _MAX_TOTAL_ASSET_BYTES + 128 * 1024 * 1024
+
+
+def _degraded_warnings(envelope: dict) -> list[str]:
+    """Human-readable warnings for best-effort extraction stages."""
+    meta = envelope.get("meta")
+    if not isinstance(meta, dict):
+        return []
+    warnings = []
+
+    ocr_warning = meta.get("ocr_warning")
+    if isinstance(ocr_warning, str) and ocr_warning:
+        warnings.append(ocr_warning)
+    elif meta.get("ocr_requested") and meta.get("ocr_succeeded") is False:
+        warnings.append("OCR did not complete; image text may be missing.")
+
+    align_warning = meta.get("align_warning") or meta.get("alignment_warning")
+    if isinstance(align_warning, str) and align_warning:
+        warnings.append(align_warning)
+    elif meta.get("align_requested") and meta.get("align_succeeded") is False:
+        warnings.append("Word alignment failed; timestamps are coarse.")
+
+    music_warning = meta.get("music_warning")
+    if isinstance(music_warning, str) and music_warning:
+        warnings.append(music_warning)
+    elif (meta.get("music_detection_requested")
+          and meta.get("music_detection_succeeded") is False):
+        warnings.append("Music detection failed; music tags may be missing.")
+
+    if meta.get("frame_cap_reached"):
+        warnings.append("Frame cap reached; later frames were omitted.")
+    return warnings
 
 
 def _path_token(path: str) -> str:
@@ -279,6 +313,146 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
     return envelope
 
 
+def _fetch_extraction(requests, base: str, headers: dict, job_id: str, args,
+                      note) -> int:
+    try:
+        poll_until_done(
+            requests,
+            f"{base}/extractions/{job_id}",
+            headers,
+            poll=args.poll,
+            timeout=args.timeout,
+            note=note,
+        )
+    except RuntimeError as exc:
+        print(f"Error: extraction {job_id}: {exc}", file=sys.stderr)
+        return 1
+
+    # Stream to disk and restart the GET if the connection drops. A restarted
+    # response truncates the partial file; bundles are immutable once complete.
+    try:
+        tmp = tempfile.NamedTemporaryFile(prefix="bundle-", suffix=".zip", delete=False)
+    except OSError as exc:
+        print(
+            f"Error: extraction {job_id}: could not create bundle temp file: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    deadline = time.monotonic() + args.timeout
+    try:
+        while True:
+            try:
+                rr = get_with_retry(
+                    requests,
+                    f"{base}/extractions/{job_id}/bundle",
+                    headers=headers,
+                    stream=True,
+                    deadline=deadline,
+                    operation="fetching bundle",
+                )
+                with rr:
+                    if rr.status_code in (404, 410):
+                        print(
+                            f"Error: extraction {job_id}: bundle unavailable "
+                            f"({rr.status_code})",
+                            file=sys.stderr,
+                        )
+                        return 1
+                    if not rr.ok:
+                        print(
+                            f"Error: extraction {job_id}: fetching bundle "
+                            f"({rr.status_code})",
+                            file=sys.stderr,
+                        )
+                        return 1
+                    try:
+                        content_length = int(rr.headers.get("Content-Length", 0))
+                    except (TypeError, ValueError):
+                        content_length = 0
+                    if content_length > _MAX_BUNDLE_BYTES:
+                        print(
+                            f"Error: extraction {job_id}: bundle exceeds the client "
+                            "safety limit",
+                            file=sys.stderr,
+                        )
+                        return 1
+                    tmp.seek(0)
+                    tmp.truncate()
+                    downloaded = 0
+                    for chunk in rr.iter_content(chunk_size=_CHUNK):
+                        if time.monotonic() >= deadline:
+                            print(
+                                f"Error: extraction {job_id}: fetching bundle timed out",
+                                file=sys.stderr,
+                            )
+                            return 1
+                        downloaded += len(chunk)
+                        if downloaded > _MAX_BUNDLE_BYTES:
+                            print(
+                                f"Error: extraction {job_id}: bundle exceeds the client "
+                                "safety limit",
+                                file=sys.stderr,
+                            )
+                            return 1
+                        tmp.write(chunk)
+                break
+            except requests.RequestException as exc:
+                if not is_transient_get_error(requests, exc):
+                    print(
+                        f"Error: extraction {job_id}: fetching bundle failed: {exc}",
+                        file=sys.stderr,
+                    )
+                    return 1
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    print(
+                        f"Error: extraction {job_id}: fetching bundle timed out ({exc})",
+                        file=sys.stderr,
+                    )
+                    return 1
+                time.sleep(min(1.0, remaining))
+            except RuntimeError as exc:
+                print(f"Error: extraction {job_id}: {exc}", file=sys.stderr)
+                return 1
+        tmp.close()
+
+        out_dir = Path(args.out_dir).expanduser() / job_id
+        try:
+            envelope = unpack_and_verify(Path(tmp.name), out_dir)
+        except BundleVerificationError as exc:
+            print(
+                f"Error: extraction {job_id}: bundle verification failed: {exc}",
+                file=sys.stderr,
+            )
+            return 1
+    except OSError as exc:
+        print(
+            f"Error: extraction {job_id}: could not write bundle temp file: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    finally:
+        try:
+            tmp.close()
+        except OSError:
+            pass
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+
+    for warning in _degraded_warnings(envelope):
+        print(f"Warning: extraction {job_id}: {warning}", file=sys.stderr)
+    note(f"Verified bundle -> {out_dir} ({len(envelope.get('assets', []))} assets)")
+    try:
+        sys.stdout.write(envelope.get("text", ""))
+    except OSError as exc:
+        print(f"Error: extraction {job_id}: could not write output: {exc}",
+              file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     import requests
 
@@ -291,6 +465,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="URL, local media file, or manual-export bundle (zip/tar). For "
                    "audio_extraction a positional feed URL is also accepted, or omit it "
                    "and pass --feed-url / --enclosure-url.")
+    p.add_argument("--job-id", help="Resume an existing extraction instead of submitting.")
     p.add_argument("--kind", choices=KINDS, help="Modality (else inferred from the extension).")
     p.add_argument("--frames", action="store_true", help="Extract video frames (with --kind video).")
     p.add_argument("--cadence", type=float, help="Frame cadence in seconds (with --frames).")
@@ -304,6 +479,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--server", default=os.environ.get("TRANSCRIPT_SERVER", "http://localhost:8000"))
     p.add_argument("--token", default=os.environ.get("TRANSCRIPT_TOKEN"))
     p.add_argument("--no-diarize", dest="diarize", action="store_false", default=True)
+    p.add_argument("--no-align", dest="align", action="store_false", default=True)
     p.add_argument("--language")
     p.add_argument("--min-speakers", type=int)
     p.add_argument("--max-speakers", type=int)
@@ -327,6 +503,26 @@ def main(argv: list[str] | None = None) -> int:
     base = args.server.rstrip("/")
     headers = build_headers(args.token)
     note = stderr_note(args.quiet)
+
+    if args.job_id:
+        submission_values = (
+            args.source, args.kind, args.frames, args.cadence, args.feed_url,
+            args.episode_guid, args.episode_url, args.episode_title,
+            args.episode_published, args.enclosure_url, not args.diarize,
+            not args.align, args.language, args.min_speakers, args.max_speakers,
+            args.detect_music,
+        )
+        if any(value is not None and value is not False for value in submission_values):
+            print("Error: --job-id cannot be combined with submission options.",
+                  file=sys.stderr)
+            return 1
+        try:
+            job_id = validate_job_id(args.job_id)
+        except RuntimeError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        note(f"Resuming extraction {job_id}. Polling ...")
+        return _fetch_extraction(requests, base, headers, job_id, args, note)
 
     if not args.kind and not args.source:
         print("Error: pass a source, or --kind with the relevant flags.", file=sys.stderr)
@@ -363,6 +559,7 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     if kind == "image_note" and (
         not args.diarize
+        or not args.align
         or args.language is not None
         or args.min_speakers is not None
         or args.max_speakers is not None
@@ -430,6 +627,7 @@ def main(argv: list[str] | None = None) -> int:
     data = {
         "kind": kind,
         "diarize": str(args.diarize).lower(),
+        "align": str(args.align).lower(),
         "detect_music": str(args.detect_music).lower(),
     }
     if args.frames:
@@ -469,91 +667,22 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(f"Error: kind={kind} requires a URL or file source.", file=sys.stderr)
             return 1
-        try:
-            r = requests.post(
-                f"{base}/extractions",
-                data=data,
-                files=files,
-                headers=headers,
-                timeout=request_timeout(args.timeout),
-            )
-        finally:
-            if fh:
-                fh.close()
-    except requests.RequestException as exc:
-        print(f"Error: could not reach server at {base}: {exc}", file=sys.stderr)
-        return 1
-
-    if r.status_code == 401:
-        print("Error: unauthorized. Set --token / $TRANSCRIPT_TOKEN.", file=sys.stderr)
-        return 1
-    if not r.ok:
-        print(f"Error: server rejected job ({r.status_code}): {r.text}", file=sys.stderr)
-        return 1
-
-    try:
-        job_id = response_job_id(r)
-    except RuntimeError as exc:
+        job_id = submit_job(
+            requests,
+            f"{base}/extractions",
+            data=data,
+            files=files,
+            headers=headers,
+            timeout=args.timeout,
+        )
+    except (OSError, RuntimeError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
-        return 1
-    note(f"Extraction {job_id} queued. Polling ...")
-    try:
-        poll_until_done(requests, f"{base}/extractions/{job_id}", headers,
-                        poll=args.poll, timeout=args.timeout, note=note)
-    except RuntimeError as exc:
-        print(f"Error: {exc}", file=sys.stderr)
-        return 1
-
-    # Stream the bundle to a temp file (a connect+read timeout so a stalled server
-    # can't hang the client forever; the body is never held wholly in RAM).
-    tmp = tempfile.NamedTemporaryFile(prefix="bundle-", suffix=".zip", delete=False)
-    try:
-        with requests.get(f"{base}/extractions/{job_id}/bundle", headers=headers,
-                          stream=True, timeout=request_timeout(args.timeout)) as rr:
-            if rr.status_code in (404, 410):
-                print(f"Error: bundle unavailable ({rr.status_code})", file=sys.stderr)
-                return 1
-            if not rr.ok:
-                print(f"Error fetching bundle ({rr.status_code})", file=sys.stderr)
-                return 1
-            try:
-                content_length = int(rr.headers.get("Content-Length", 0))
-            except (TypeError, ValueError):
-                content_length = 0
-            if content_length > _MAX_BUNDLE_BYTES:
-                print("Error: bundle exceeds the client safety limit", file=sys.stderr)
-                return 1
-            downloaded = 0
-            for chunk in rr.iter_content(chunk_size=1024 * 1024):
-                downloaded += len(chunk)
-                if downloaded > _MAX_BUNDLE_BYTES:
-                    print("Error: bundle exceeds the client safety limit", file=sys.stderr)
-                    return 1
-                tmp.write(chunk)
-        tmp.close()
-
-        out_dir = Path(args.out_dir).expanduser() / job_id
-        try:
-            envelope = unpack_and_verify(Path(tmp.name), out_dir)
-        except BundleVerificationError as exc:
-            print(f"Error: bundle verification failed: {exc}", file=sys.stderr)
-            return 1
-    except requests.RequestException as exc:
-        print(f"Error fetching bundle: {exc}", file=sys.stderr)
         return 1
     finally:
-        try:
-            tmp.close()
-        except OSError:
-            pass
-        try:
-            os.unlink(tmp.name)
-        except OSError:
-            pass
-
-    note(f"Verified bundle -> {out_dir} ({len(envelope.get('assets', []))} assets)")
-    sys.stdout.write(envelope.get("text", ""))
-    return 0
+        if fh:
+            fh.close()
+    note(f"Extraction {job_id} queued. Polling ...")
+    return _fetch_extraction(requests, base, headers, job_id, args, note)
 
 
 if __name__ == "__main__":
