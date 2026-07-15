@@ -168,9 +168,9 @@ def _extract_zip(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
                 raise UnsafeArchiveError(
                     f"non-regular zip member rejected (mode {oct(mode)}): {name!r}"
                 )
-            # posixpath (NOT Path/os.path): member names are platform-neutral data
-            # already normalized to "/", and ntpath.basename would treat a leading
-            # "X:" as a drive and corrupt a legit POSIX name like "0:00.jpg".
+            # posixpath (NOT Path/os.path): archive member names are
+            # platform-neutral data already normalized to "/". Windows-unsafe
+            # basename syntax is rejected separately by _register.
             basename = _register(seen, posixpath.basename(name.replace("\\", "/")), name)
             if not basename:
                 continue
@@ -198,8 +198,9 @@ def _extract_tar(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
                 raise UnsafeArchiveError(
                     f"non-regular tar member rejected ({_tar_kind(member)}): {name!r}"
                 )
-            # posixpath (NOT Path/os.path): see the zip path's note — ntpath.basename
-            # would corrupt a legit POSIX name like "0:00.jpg" on a Windows host.
+            # posixpath (NOT Path/os.path): archive member names are
+            # platform-neutral; _register separately applies cross-platform
+            # basename safety rules.
             basename = _register(seen, posixpath.basename(name.replace("\\", "/")), name)
             if not basename:
                 continue

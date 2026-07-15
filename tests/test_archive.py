@@ -133,14 +133,59 @@ def test_zip_fifo_mode_rejected(tmp_path):
         extract_images(p, tmp_path / "out")
 
 
-def test_zip_drive_letter_rejected_but_posix_colon_ok(tmp_path):
-    # Both drive-ABSOLUTE ("C:/x") and drive-RELATIVE ("C:x") escape on Windows.
-    for bad in ("C:/evil.jpg", "C:evil.jpg"):
+def test_zip_windows_unsafe_colons_and_controls_rejected(tmp_path):
+    # Colons are drive/alternate-data-stream syntax on Windows. Reject them in
+    # every image basename, along with control characters, before opening it.
+    for bad in (
+        "C:/evil.jpg",
+        "C:evil.jpg",
+        "0:00.jpg",
+        "normal.jpg:ads.png",
+        "bad\nname.jpg",
+    ):
         with pytest.raises(UnsafeArchiveError):
             extract_images(_write_zip(tmp_path, {bad: b"x"}), tmp_path / "o")
-    # A POSIX filename whose colon is not a drive prefix is fine.
-    members = extract_images(_write_zip(tmp_path, {"0:00.jpg": b"x"}), tmp_path / "ok")
-    assert members[0].basename == "0:00.jpg"
+
+
+@pytest.mark.parametrize(
+    "name",
+    (
+        "CON.jpg",
+        "con.foo.jpg",
+        "PRN .png",
+        "AUX...jpg",
+        "NUL.jpg",
+        "CLOCK$.jpg",
+        "CONIN$.jpg",
+        "CONOUT$.png",
+        "COM1.foo.jpg",
+        "LPT9 .png",
+        "COM¹.jpg",
+    ),
+)
+def test_windows_reserved_image_basenames_rejected(tmp_path, name):
+    with pytest.raises(UnsafeArchiveError, match="reserved device"):
+        extract_images(_write_zip(tmp_path, {name: b"x"}), tmp_path / "out")
+
+
+def test_zip_preflight_rejects_before_zipfile_allocates(tmp_path, monkeypatch):
+    import transcript.archive as archive
+
+    arc = _write_zip(tmp_path, {"a.jpg": b"x"})
+    zipfile_calls = []
+
+    def fail_preflight(*_args, **_kwargs):
+        raise ValueError("bad central directory")
+
+    def track_zipfile(*_args, **_kwargs):
+        zipfile_calls.append(True)
+        raise AssertionError("ZipFile must not run after a failed preflight")
+
+    monkeypatch.setattr(archive, "preflight_zip", fail_preflight)
+    monkeypatch.setattr(archive.zipfile, "ZipFile", track_zipfile)
+    with pytest.raises(UnsafeArchiveError, match="bad central directory"):
+        archive.extract_images(arc, tmp_path / "out")
+    assert not zipfile_calls
 
 
 def test_source_member_preserved_as_observation(tmp_path):
