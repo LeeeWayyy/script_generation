@@ -70,7 +70,7 @@ other/no captions ──► audio ──► WhisperX ──► align ──► d
 | Ingest | `ingest.py` | `yt-dlp` | Uses matching human YouTube captions; otherwise downloads best audio. |
 | Audio  | `audio.py` | `ffmpeg` | Normalizes anything to 16 kHz mono PCM WAV. |
 | Transcribe | `engine.py` | WhisperX (CTranslate2) | Batched Whisper inference with timestamps. |
-| Align | `engine.py` | WhisperX align model | Word-level timing; per-language model, cached. |
+| Align | `engine.py` | WhisperX align model | Word-level timing; the most recently used language model is cached. |
 | Diarize | `engine.py` | `pyannote` | Detects speakers; assigns each word a speaker. |
 | Format | `formats.py` | — | Renders txt / srt / vtt / json. |
 
@@ -120,7 +120,7 @@ src/transcript/
   the stable transcript renderers. Extraction routes use a separate envelope and
   durable store, while reusing the same ASR engine where appropriate.
 - **Engine reuse / warm model.** `TranscriptionEngine` loads model weights once
-  and caches alignment models per language. Pass an existing engine to
+  and retains the most recently used alignment model. Pass an existing engine to
   `transcribe(..., engine=eng)` to process many files without reloading. The
   server keeps one warm engine for its lifetime.
 - **Auto-detection with an honest fallback.** WhisperX's ASR runs through
@@ -337,6 +337,11 @@ restarts. Windows users: use `deploy\run-server.ps1` (same persistence, plus the
 firewall and LAN URL). Full walkthrough in
 [`deploy/WINDOWS.md`](../deploy/WINDOWS.md).
 
+When invoked directly, `transcript-server` binds `127.0.0.1` by default. A
+non-loopback `--host` is refused unless `TRANSCRIPT_TOKEN` is set or
+`--allow-open` explicitly opts into an unauthenticated bind. The supplied LAN
+launchers bind `0.0.0.0` only after generating or loading a token.
+
 ### 7.2 On the laptop
 
 ```bash
@@ -347,13 +352,18 @@ export TRANSCRIPT_TOKEN=<token the server printed>
 curl $TRANSCRIPT_SERVER/health                              # confirm reachable
 transcript-remote meeting.mp4 -f srt -o meeting.srt         # uploads the file
 transcript-remote "https://youtube.com/watch?v=..." -f txt  # host downloads it
+transcript-remote --job-id ab12cd34ef56 -f txt               # resume a job
 ```
 
 For a URL job, nothing uploads from the laptop — the GPU host fetches the media
 directly. `--timeout` controls submission/upload, each connection/read, polling,
 and result download; `--poll` controls the status interval. Progress is shown on
 stderr unless `--quiet` is used. Speaker hints, `--language`, `--no-diarize`, and
-`--detect-music` are sent to the server.
+`--no-align` and `--detect-music` are sent to the server. Both clients report
+coarse stage changes and retry transient network failures plus HTTP 502/503 for
+idempotent polling/result GETs within the existing `--timeout`; POST submissions
+are never automatically replayed. Use `--job-id` to resume polling and fetching
+without submitting again.
 
 ### 7.3 Extraction client (`extract-remote`)
 
@@ -374,6 +384,9 @@ extract-remote --kind audio_extraction --feed-url https://example.com/feed.xml \
 # Explicit enclosure provenance needs no feed selector.
 extract-remote --kind audio_extraction \
   --enclosure-url https://cdn.example.com/episode.mp3 --out-dir ./results
+
+# Resume polling and fetch the immutable bundle for an existing extraction.
+extract-remote --job-id ab12cd34ef56 --out-dir ./results
 ```
 
 Kind inference is intentionally narrow: archive extensions map to `image_note`
@@ -389,13 +402,16 @@ streams once into a sibling staging directory and renames only after complete
 verification, so a failed download never leaves a partial final directory. Both
 the streamed zip and declared assets are capped around the server's 2 GiB
 archive ceiling to stop decompression/disk-exhaustion bundles.
+After verification, degraded OCR, alignment, music detection, and frame-cap
+conditions are printed as warnings on stderr; the usable result is still
+published.
 
 ### 7.4 HTTP API reference
 
 | Method & path | Auth | Body / params | Returns |
 |---------------|------|---------------|---------|
 | `GET /health` | none | — | `{status, model, queued_or_running[]}` |
-| `POST /jobs` | bearer | multipart: exactly one `file` or public HTTP(S) `url`; optional `diarize`, `language`, speaker hints, `detect_music` | transcript job status |
+| `POST /jobs` | bearer | multipart: exactly one `file` or public HTTP(S) `url`; optional `diarize`, `align`, `language`, speaker hints, `detect_music` | transcript job status |
 | `GET /jobs` | bearer | — | list of jobs |
 | `GET /jobs/{id}` | bearer | — | status (`queued`, `running`, `done`, `error`) |
 | `GET /jobs/{id}/result` | bearer | `format=txt\|srt\|vtt\|json` | rendered transcript (text/plain) |
@@ -407,8 +423,8 @@ archive ceiling to stop decompression/disk-exhaustion bundles.
 | `DELETE /extractions/{id}` | bearer | — | cancel queued/delete error or durable done bundle; running/leased is `409` |
 
 `POST /extractions` always needs `kind=video|image_note|audio_extraction`.
-ASR-capable kinds accept optional `diarize`, `language`, `min_speakers`,
-`max_speakers`, and `detect_music`. Kind-specific fields are:
+ASR-capable kinds accept optional `diarize`, `align`, `language`,
+`min_speakers`, `max_speakers`, and `detect_music`. Kind-specific fields are:
 
 - `video`: exactly one `url` or `file`; optional `frames=true` and `cadence_s`.
   Cadence must be at least 0.5 seconds.
@@ -422,16 +438,24 @@ machine-readable `error_reason` (for example `ambiguous` or `stale_selector`)
 alongside the human-readable `error`. A `410` means a previously known bundle
 was deleted, evicted, or lost; `404` means the ID is unknown.
 
+While a job remains in memory, status includes `stage` plus Unix-second
+`created_at`, `started_at`, and `finished_at` timestamps (`null` until the
+corresponding boundary). Stages are coarse worker boundaries such as `queued`,
+`starting`, `loading_model`, `transcribing`, `extracting`, `persisting`, `done`,
+and `error`; they do not promise percentages or an ETA. A durable extraction
+found after restart exposes only the smaller persisted status record.
+
 Auth: when `TRANSCRIPT_TOKEN` is set, every endpoint except `/health` requires
-`Authorization: Bearer <token>`. If it is unset the server runs **open** and logs
-a warning — only acceptable on a trusted, firewalled LAN.
+`Authorization: Bearer <token>`. The CLI defaults to `127.0.0.1`; a non-loopback
+bind without a token requires the explicit `--allow-open` opt-in and is suitable
+only for a separately isolated, firewalled environment.
 
 Example with curl:
 
 ```bash
 # submit a file
 curl -H "Authorization: Bearer $TRANSCRIPT_TOKEN" \
-     -F file=@meeting.mp4 -F diarize=true \
+     -F file=@meeting.mp4 -F diarize=true -F align=true \
      $TRANSCRIPT_SERVER/jobs
 # -> {"id":"ab12cd34ef56", "status":"queued", ...}
 
@@ -491,7 +515,7 @@ continues and records failure instead of silently changing the default path.
 | `-o, --output` | stdout | Write to this file. |
 | `--out-dir` | none | Batch/single output directory with numbered safe filenames. |
 | `--model` | `large-v3` | Whisper model name (e.g. `medium`, `small`). |
-| `--diarize` / `--no-diarize` | on | Speaker labels on/off. |
+| `--no-diarize` | off | Disable speaker labels (they are on by default). |
 | `--language` | auto | Force a language code (e.g. `en`). |
 | `--device` | auto | `cuda` or `cpu`. |
 | `--compute-type` | auto | CTranslate2 compute type (e.g. `float16`, `int8`). |
@@ -504,12 +528,14 @@ continues and records failure instead of silently changing the default path.
 
 ### 9.2 Remote client flags
 
-Both clients accept `--server`, `--token`, `--no-diarize`, `--language`,
-`--min-speakers`, `--max-speakers`, `--detect-music`, `--poll`, `--timeout`, and
-`--quiet`. `transcript-remote` additionally accepts `--format` and `--output`.
-`extract-remote` accepts the kind/source selectors documented in §7.3 plus
-`--out-dir`. Invalid speaker ranges and incompatible kind options are rejected
-before network or file upload work starts.
+Both clients accept `--server`, `--token`, `--job-id`, `--no-diarize`,
+`--no-align`, `--language`, `--min-speakers`, `--max-speakers`, `--detect-music`,
+`--poll`, `--timeout`, and `--quiet`. `--job-id` resumes an existing 12-character
+job and cannot accompany submission options. `transcript-remote` additionally
+accepts `--format` and `--output`; `extract-remote` accepts the kind/source
+selectors documented in §7.3 plus `--out-dir`. Invalid speaker ranges and
+incompatible kind options are rejected before network or file upload work
+starts.
 
 ### 9.3 `transcribe()` parameters
 
@@ -528,14 +554,19 @@ the default pipeline.
 | `TRANSCRIPT_HOST` / `TRANSCRIPT_PORT` / `TRANSCRIPT_MODEL` | launch scripts | Server bind + model. |
 | `TRANSCRIPT_TOKEN_FILE` | launch scripts | Persisted generated token path. |
 | `TRANSCRIPT_DATA_DIR` | server | Durable extraction root. |
+| `TRANSCRIPT_EXTRACTION_TTL_SECONDS` | server | Durable bundle retention since last access; default 604800 (7 days). |
 | `TRANSCRIPT_OCR_MODEL_DIR` | server | Pinned OCR root containing `det/rec/cls`. |
 | `TRANSCRIPT_OCR_ALLOW_DOWNLOAD=1` | server | Explicitly allow PaddleOCR first-run downloads. |
 | `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Uploaded file-byte cap; default 8 GiB. |
+| `TRANSCRIPT_MAX_DOWNLOAD_BYTES` | server | yt-dlp media-file cap; default 8 GiB. |
+| `TRANSCRIPT_DOWNLOAD_TIMEOUT_S` | server | yt-dlp subprocess deadline; default 3600 seconds. |
+| `TRANSCRIPT_MAX_IMAGE_PIXELS` | server | Decoded image-pixel cap before OCR; default 100,000,000. |
 | `TRANSCRIPT_MAX_QUEUE_SIZE` | server | Waiting-job cap; default 32. |
 | `TRANSCRIPT_JOB_TTL_SECONDS` | server | Terminal in-memory transcript retention; default 86400. |
 | `TRANSCRIPT_MAX_TERMINAL_JOBS` | server | Terminal transcript count cap; default 100. |
 | `TRANSCRIPT_JANITOR_INTERVAL_SECONDS` | server | Cleanup sweep interval; default 900. |
 | `TRANSCRIPT_MAX_CONCURRENT_BUNDLES` | server | Concurrent zip-build cap; default 8. |
+| `TRANSCRIPT_ALLOW_PRIVATE_FETCH=1` | server | **Dangerous:** disable public-destination URL checks; never use on an exposed deployment. |
 
 ---
 
@@ -571,6 +602,7 @@ Completed extraction bundles are stored at
 `result.json`, declared assets, and a mutable side manifest. Bundles survive a
 server restart and expire seven days after their last result/bundle access. A
 janitor runs every 15 minutes by default; active read leases block deletion.
+`TRANSCRIPT_EXTRACTION_TTL_SECONDS` changes the retention period;
 `DELETE /extractions/{id}` provides explicit cleanup.
 
 On POSIX hosts, the store pins its directories to owner-only access (`0700`)
@@ -609,13 +641,21 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
   that enforces the token and its own request-body limit.
 - API `url` fields accept only HTTP(S), resolve DNS, and reject non-global IP
   destinations (loopback, private/link-local, carrier-grade NAT, multicast, and
-  reserved ranges). API callers cannot submit server-local file paths. Keep
-  outbound firewall rules as defense in depth because media downloaders may
-  follow redirects internally.
+  reserved ranges). API callers cannot submit server-local file paths. This
+  preflight does not re-check redirects followed internally by yt-dlp, leaving a
+  residual redirect/DNS-rebinding risk. Use native host or container egress
+  allowlisting to permit only required DNS and public HTTP(S), excluding private,
+  link-local, loopback, and cloud metadata destinations.
+- **Never set `TRANSCRIPT_ALLOW_PRIVATE_FETCH=1` on a shared, LAN-facing, or
+  internet-facing server.** It disables the public-destination check and permits
+  callers to target private services and metadata endpoints. It exists only for
+  controlled tests or an isolated deployment with independently enforced egress.
 - Upload filenames are treated as untrusted. `TRANSCRIPT_MAX_UPLOAD_BYTES` caps
   file bytes; the ASGI body limit automatically adds 1 MiB for multipart
   framing. Configure a smaller reverse-proxy ingress cap if 8 GiB is unnecessary
   for your deployment.
+- URL downloads and OCR have separate byte/time/pixel ceilings (§9.4). These are
+  process safeguards, not substitutes for filesystem quotas and outbound policy.
 - The launch scripts restrict persisted token files to the current owner. The
   PowerShell firewall rule targets only the **Private** profile. Keep `HF_TOKEN`,
   `TRANSCRIPT_TOKEN`, and systemd environment files out of source control.
