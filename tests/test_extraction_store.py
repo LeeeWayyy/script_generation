@@ -1,5 +1,9 @@
 """Durable extraction store: atomic publish, TTL eviction, restart scan, crash GC."""
 
+import os
+import stat
+
+import pytest
 
 from transcript.extraction_store import ExtractionStore
 
@@ -18,6 +22,44 @@ def test_record_publishes_result_and_assets(tmp_path):
     assert (store.root / "job1" / "assets" / "card-000.jpg").read_bytes() == b"imgbytes"
     # The mutable manifest lives beside (not inside) the immutable result.json.
     assert (store.root / "job1" / "manifest.json").is_file()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits")
+def test_store_publishes_owner_only_directories_and_files(tmp_path):
+    old_umask = os.umask(0o022)
+    try:
+        root = tmp_path / "durable"
+        store = ExtractionStore(root=root, ttl_s=100)
+        _publish(store)
+    finally:
+        os.umask(old_umask)
+
+    directories = [
+        root,
+        root / ".staging",
+        root / "job1",
+        root / "job1" / "assets",
+    ]
+    files = [
+        root / "job1" / "result.json",
+        root / "job1" / "manifest.json",
+        root / "job1" / "assets" / "card-000.jpg",
+    ]
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o700 for path in directories)
+    assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in files)
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX permission bits")
+def test_store_does_not_loosen_existing_root_owner_bits(tmp_path, monkeypatch):
+    root = tmp_path / "durable"
+    root.mkdir(mode=0o700)
+    root.chmod(0o300)  # operator deliberately removed owner-read
+    monkeypatch.setattr(ExtractionStore, "_scan", lambda self: None)
+    try:
+        ExtractionStore(root=root, ttl_s=100)
+        assert stat.S_IMODE(root.stat().st_mode) == 0o300
+    finally:
+        root.chmod(0o700)
 
 
 def test_read_result_bumps_last_access(tmp_path):
@@ -127,7 +169,6 @@ def test_startup_gcs_partial_publish(tmp_path):
 
 
 def test_record_rejects_unsafe_asset_keys(tmp_path):
-    import pytest
     store = ExtractionStore(root=tmp_path, ttl_s=100)
     src = store.root / "_src.jpg"
     src.write_bytes(b"x")

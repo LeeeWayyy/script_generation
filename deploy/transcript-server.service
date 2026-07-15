@@ -18,6 +18,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
+UMask=0077
 User=USER
 WorkingDirectory=/path/to/transcript
 # Point at the venv that has the [server] extra + torch installed.

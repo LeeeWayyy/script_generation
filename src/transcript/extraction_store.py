@@ -27,6 +27,7 @@ import json
 import math
 import os
 import shutil
+import stat
 import threading
 import time
 from contextlib import contextmanager
@@ -39,6 +40,38 @@ DEFAULT_TTL_S = 7 * 24 * 3600  # a completed bundle lives a week since last acce
 # Bound the number of renames done under the store lock per janitor sweep so a
 # large eviction batch can't block concurrent /result and /bundle requests.
 MAX_EVICT_PER_SWEEP = 50
+
+
+def _restrict_to_owner(path: Path) -> None:
+    """Remove group/other mode bits without loosening stricter owner bits."""
+    if os.name == "nt":
+        return
+    current = stat.S_IMODE(path.stat().st_mode)
+    private = current & 0o700
+    if private != current:
+        path.chmod(private)
+
+
+def _mkdir_private(path: Path, *, parents: bool = False) -> None:
+    """Create an owner-only directory, or harden an existing one in place."""
+    existed = path.exists()
+    path.mkdir(mode=0o700, parents=parents, exist_ok=True)
+    if existed:
+        _restrict_to_owner(path)
+    elif os.name != "nt":
+        path.chmod(0o700)
+
+
+def _make_tree_private(root: Path) -> None:
+    """Pin modes for a store-created tree before publishing it."""
+    if os.name == "nt":
+        return
+    root.chmod(0o700)
+    for path in root.rglob("*"):
+        if path.is_dir():
+            path.chmod(0o700)
+        elif path.is_file():
+            path.chmod(0o600)
 
 
 def _fsync_path(path: Path) -> None:
@@ -61,6 +94,8 @@ def _write_json_atomic(path: Path, value: dict) -> None:
     )
     try:
         tmp.write_text(json.dumps(value), encoding="utf-8")
+        if os.name != "nt":
+            tmp.chmod(0o600)
         _fsync_path(tmp)
         os.replace(tmp, path)
         _fsync_path(path.parent)
@@ -166,8 +201,8 @@ class ExtractionStore:
         self._tombstone_set: set[str] = set()
         # job_ids whose staging dir is being written RIGHT NOW (gc_staging skips).
         self._staging_active: set[str] = set()
-        self.root.mkdir(parents=True, exist_ok=True)
-        (self.root / self.STAGING_DIR).mkdir(exist_ok=True)
+        _mkdir_private(self.root, parents=True)
+        _mkdir_private(self.root / self.STAGING_DIR)
         self._scan()
 
     # -- paths ---------------------------------------------------------------
@@ -193,7 +228,7 @@ class ExtractionStore:
                 if transient.is_dir():
                     for child in transient.iterdir():
                         shutil.rmtree(child, ignore_errors=True)
-            staging_root.mkdir(exist_ok=True)
+            _mkdir_private(staging_root)
 
             for child in self.root.iterdir():
                 if not child.is_dir() or child.name in (self.STAGING_DIR, self.EVICTING_DIR):
@@ -275,7 +310,7 @@ class ExtractionStore:
         staging = self.staging_dir(job_id)
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
-        staging.mkdir(parents=True)
+        staging.mkdir(mode=0o700, parents=True)
 
         # result.json — the immutable, hashed bundle member.
         (staging / self.RESULT_NAME).write_text(result_json, encoding="utf-8")
@@ -294,6 +329,11 @@ class ExtractionStore:
             "last_access": now,
         }
         (staging / self.MANIFEST_NAME).write_text(json.dumps(manifest), encoding="utf-8")
+
+        # The staging root is private, so permissive intermediate modes are not
+        # externally traversable. Pin copied assets and directories before the
+        # atomic rename so published media never inherits world-readable modes.
+        _make_tree_private(staging)
 
         # Crash-durability: fsync the staged files + the staging dir BEFORE the
         # rename, so a power loss after status=done cannot expose a truncated

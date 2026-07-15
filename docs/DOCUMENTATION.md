@@ -573,6 +573,11 @@ server restart and expire seven days after their last result/bundle access. A
 janitor runs every 15 minutes by default; active read leases block deletion.
 `DELETE /extractions/{id}` provides explicit cleanup.
 
+On POSIX hosts, the store pins its directories to owner-only access (`0700`)
+and published files to `0600`; the supplied systemd unit also sets `UMask=0077`.
+Run the service as a dedicated user and keep a custom data root owned by that
+user.
+
 Legacy terminal transcript jobs remain in memory for at most one day and 100
 terminal records by default. Queued uploads are bounded by the 32-job queue;
 their temporary files are removed on cancellation, completion, error, and stale
