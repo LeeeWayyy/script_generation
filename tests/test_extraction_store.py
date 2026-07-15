@@ -142,6 +142,11 @@ def test_record_rejects_unsafe_asset_keys(tmp_path):
         store.record("j", "image_note", "{}", [("a.jpg", src), ("a.jpg", src)])
     with pytest.raises(ValueError):
         store.record("j", "image_note", "{}", [("assets/a.jpg", src), ("assets/A.jpg", src)])
+    with pytest.raises(ValueError):
+        store.record(
+            "j", "image_note", "{}",
+            [("assets/é.jpg", src), ("assets/e\u0301.jpg", src)],
+        )
     # A rejected key must not leave a partial staging dir behind.
     assert not (store.staging_dir("j")).exists()
 

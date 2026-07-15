@@ -33,7 +33,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
-from .types import has_windows_drive_prefix
+from .types import has_windows_drive_prefix, nfc as _nfc
 
 DEFAULT_TTL_S = 7 * 24 * 3600  # a completed bundle lives a week since last access
 # Bound the number of renames done under the store lock per janitor sweep so a
@@ -140,13 +140,14 @@ class ExtractionStore:
             raise ValueError(f"path-traversal asset key rejected: {key!r}")
         if "" in parts or "." in parts:  # "a//b" / "a/./b" alias to the same path
             raise ValueError(f"path-alias asset key rejected: {key!r}")
-        if norm.casefold() in (cls.RESULT_NAME, cls.MANIFEST_NAME):
+        collision_key = _nfc(norm).casefold()
+        if collision_key in (cls.RESULT_NAME, cls.MANIFEST_NAME):
             raise ValueError(f"asset key collides with a reserved bundle name: {key!r}")
-        # Dedup CASE-INSENSITIVELY: on a case-insensitive FS two keys differing only
-        # by case would write the same file, silently overwriting one asset.
-        if norm.casefold() in seen:
+        # Dedup by NFC + casefold: case-insensitive and normalization-insensitive
+        # filesystems (notably default macOS APFS) otherwise alias distinct keys.
+        if collision_key in seen:
             raise ValueError(f"duplicate asset key: {key!r}")
-        seen.add(norm.casefold())
+        seen.add(collision_key)
 
     def __init__(self, root: Optional[Path] = None, ttl_s: float = DEFAULT_TTL_S):
         self.root = Path(root) if root else default_root()
