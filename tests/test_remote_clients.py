@@ -80,6 +80,19 @@ def test_poll_surfaces_structured_error_reason():
                         note=lambda _: None)
 
 
+def test_poll_rejects_unknown_status():
+    class Requests:
+        RequestException = OSError
+
+        @staticmethod
+        def get(*args, **kwargs):
+            return _Response({"status": "paused"})
+
+    with pytest.raises(RuntimeError, match="invalid status 'paused'"):
+        poll_until_done(Requests, "https://example/status", {}, poll=1, timeout=5,
+                        note=lambda _: None)
+
+
 def test_extraction_client_sends_speaker_and_music_flags(monkeypatch):
     captured = {}
 

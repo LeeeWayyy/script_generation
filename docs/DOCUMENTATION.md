@@ -176,8 +176,8 @@ PyTorch is **not** pinned by the project because the right build is
 platform-specific. Install it first.
 
 ```bash
-# NVIDIA GPU (e.g. RTX 5090 — Blackwell/sm_120 needs a recent CUDA wheel)
-pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu124
+# NVIDIA GPU (e.g. RTX 5090 — Blackwell/sm_120 needs CUDA 12.8+)
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
 
 # macOS / CPU-only
 pip install torch torchaudio
@@ -530,7 +530,7 @@ the default pipeline.
 | `TRANSCRIPT_DATA_DIR` | server | Durable extraction root. |
 | `TRANSCRIPT_OCR_MODEL_DIR` | server | Pinned OCR root containing `det/rec/cls`. |
 | `TRANSCRIPT_OCR_ALLOW_DOWNLOAD=1` | server | Explicitly allow PaddleOCR first-run downloads. |
-| `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Request/upload cap; default 8 GiB. |
+| `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Uploaded file-byte cap; default 8 GiB. |
 | `TRANSCRIPT_MAX_QUEUE_SIZE` | server | Waiting-job cap; default 32. |
 | `TRANSCRIPT_JOB_TTL_SECONDS` | server | Terminal in-memory transcript retention; default 86400. |
 | `TRANSCRIPT_MAX_TERMINAL_JOBS` | server | Terminal transcript count cap; default 100. |
@@ -585,8 +585,8 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
 - **NVIDIA GPU (CUDA)** is the intended runtime. With `large-v3` + `float16`,
   transcription runs many times faster than realtime; diarization adds overhead
   but stays well below realtime on a modern GPU.
-- **RTX 5090 (Blackwell, sm_120)** is very new — use a CUDA 12.4+ (or nightly)
-  PyTorch wheel, or you may see `no kernel image is available`.
+- **RTX 5090 (Blackwell, sm_120)** requires a CUDA 12.8+ PyTorch wheel, or you
+  may see `no kernel image is available`.
 - **Apple Silicon / CPU** works but uses CPU for ASR (no MPS backend in
   CTranslate2) and CPU for diarization. Fine for short clips; slower for long
   media. Compute type defaults to `int8` on CPU.
@@ -607,9 +607,10 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
   reserved ranges). API callers cannot submit server-local file paths. Keep
   outbound firewall rules as defense in depth because media downloaders may
   follow redirects internally.
-- Upload filenames are treated as untrusted and body size is capped by
-  `TRANSCRIPT_MAX_UPLOAD_BYTES`. Configure a smaller reverse-proxy/ASGI ingress
-  cap if 8 GiB is unnecessary for your deployment.
+- Upload filenames are treated as untrusted. `TRANSCRIPT_MAX_UPLOAD_BYTES` caps
+  file bytes; the ASGI body limit automatically adds 1 MiB for multipart
+  framing. Configure a smaller reverse-proxy ingress cap if 8 GiB is unnecessary
+  for your deployment.
 - The launch scripts restrict persisted token files to the current owner. The
   PowerShell firewall rule targets only the **Private** profile. Keep `HF_TOKEN`,
   `TRANSCRIPT_TOKEN`, and systemd environment files out of source control.
@@ -625,7 +626,7 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
 |---------|--------------|-----|
 | `Required tool 'ffmpeg' was not found` | ffmpeg not installed / not on PATH | Install ffmpeg (§4.1); reopen the terminal. |
 | `Speaker diarization needs a Hugging Face token` | `HF_TOKEN` unset or license not accepted | Set the token and accept the pyannote licenses (§4.4), or use `--no-diarize`. |
-| `no kernel image is available for execution` | torch wheel too old for your GPU | Install a cu124+/nightly wheel (§4.2). |
+| `no kernel image is available for execution` | torch wheel too old for your GPU | Install a current cu128+ wheel (§4.2). |
 | `compute_type float16 ... unsupported` on CPU | float16 on a CPU build | Handled automatically (retries int8); or pass `--compute-type int8`. |
 | Mac can't reach the server | firewall / network profile / wrong IP | Set LAN to Private, run PowerShell as admin once, `curl /health` with the printed IP. |
 | `401 unauthorized` from the server | missing/incorrect token | Set `--token` / `$TRANSCRIPT_TOKEN` to match the server. |

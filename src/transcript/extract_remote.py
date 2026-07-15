@@ -24,6 +24,7 @@ import sys
 import tempfile
 import zipfile
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from ._remote_http import (
     build_headers,
@@ -52,7 +53,7 @@ _AUDIO_EXTS = {".mp3", ".m4a", ".wav", ".flac", ".ogg", ".aac"}
 
 def sniff_kind(source: str) -> str:
     """Sniff modality by extension; hard-fail on ambiguity (explicit --kind wins)."""
-    suffix = Path(source.split("?")[0]).suffix.lower()
+    suffix = Path(urlsplit(source).path if is_url(source) else source).suffix.lower()
     kind = _EXT_TO_KIND.get(suffix)
     if kind is None:
         if suffix in _AUDIO_EXTS:
@@ -103,11 +104,15 @@ def _safe_member_names(zf: zipfile.ZipFile) -> list[str]:
     names: list[str] = []
     seen: set[str] = set()
     for info in zf.infolist():
+        if info.flag_bits & 0x1:
+            raise BundleVerificationError(
+                f"encrypted bundle member rejected: {info.filename!r}"
+            )
+        if ((info.external_attr >> 16) & 0o170000) == 0o120000:
+            raise BundleVerificationError(f"symlink bundle member rejected: {info.filename!r}")
         if info.is_dir():
             continue
         name = _check_key(info.filename, "bundle member")
-        if ((info.external_attr >> 16) & 0o170000) == 0o120000:
-            raise BundleVerificationError(f"symlink bundle member rejected: {name!r}")
         # Dedup case-insensitively — on macOS/Windows two members differing only by
         # case write the same file, silently overwriting one.
         if name.casefold() in seen:
@@ -134,7 +139,7 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
             if isinstance(zip_source, (bytes, bytearray)):
                 return zipfile.ZipFile(io.BytesIO(zip_source))
             return zipfile.ZipFile(zip_source)
-        except (OSError, zipfile.BadZipFile) as exc:
+        except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
             raise BundleVerificationError(f"invalid zip bundle: {exc}") from exc
 
     with _open() as zf:
@@ -149,20 +154,40 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
         try:
             result_json = zf.read("result.json")
             envelope = json.loads(result_json.decode("utf-8"))
-            if not isinstance(envelope, dict) or not isinstance(envelope.get("text", ""), str):
-                raise TypeError("envelope/text has the wrong type")
-            assets = envelope.get("assets", [])
-            asset_keys = [_check_key(a["key"], "asset key", reserved=("result.json",))
-                          for a in assets]
-            asset_meta = [(a["sha256"], int(a["size"])) for a in assets]
-        except (ValueError, KeyError, TypeError, AttributeError, OSError,
+            if not isinstance(envelope, dict):
+                raise TypeError("envelope must be an object")
+            if envelope.get("kind") not in KINDS:
+                raise ValueError("invalid extraction kind")
+            if not isinstance(envelope.get("text"), str):
+                raise TypeError("text must be a string")
+            assets = envelope.get("assets")
+            if not isinstance(assets, list):
+                raise TypeError("assets must be a list")
+            asset_keys = []
+            asset_meta = []
+            for asset in assets:
+                if not isinstance(asset, dict) or not isinstance(asset.get("key"), str):
+                    raise TypeError("asset/key has the wrong type")
+                key = _check_key(asset["key"], "asset key", reserved=("result.json",))
+                sha = asset.get("sha256")
+                if (not isinstance(sha, str) or len(sha) != 64
+                        or any(c not in "0123456789abcdefABCDEF" for c in sha)):
+                    raise ValueError(f"invalid asset sha256 for {key}")
+                size = asset.get("size")
+                if type(size) is not int:  # bool is not a valid JSON byte count
+                    raise TypeError(f"invalid asset size for {key}")
+                if size < 0:
+                    raise ValueError(f"asset size cannot be negative for {key}")
+                if not isinstance(asset.get("media_type"), str):
+                    raise TypeError(f"invalid asset media_type for {key}")
+                asset_keys.append(key)
+                asset_meta.append((sha.lower(), size))
+        except (ValueError, KeyError, TypeError, AttributeError, OSError, RuntimeError,
                 zipfile.BadZipFile) as exc:
             raise BundleVerificationError(f"malformed result.json envelope: {exc}") from exc
         # Dedup case-insensitively (matches the server + a case-insensitive client FS).
         if len({k.casefold() for k in asset_keys}) != len(asset_keys):
             raise BundleVerificationError("duplicate asset key in envelope")
-        if any(size < 0 for _, size in asset_meta):
-            raise BundleVerificationError("asset size cannot be negative")
         if sum(size for _, size in asset_meta) > _MAX_TOTAL_ASSET_BYTES:
             raise BundleVerificationError("bundle assets exceed the 2 GiB safety limit")
         extra = {n.casefold() for n in names} - {"result.json", *(k.casefold() for k in asset_keys)}
@@ -212,7 +237,7 @@ def unpack_and_verify(zip_source, out_dir: Path) -> dict:
             staging = None
         except BundleVerificationError:
             raise
-        except (OSError, zipfile.BadZipFile) as exc:
+        except (OSError, RuntimeError, zipfile.BadZipFile) as exc:
             raise BundleVerificationError(f"failed writing bundle to disk: {exc}") from exc
         finally:
             if staging is not None:

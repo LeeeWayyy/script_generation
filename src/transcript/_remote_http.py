@@ -109,6 +109,8 @@ def poll_until_done(
             raise RuntimeError("Error polling job: server returned malformed JSON")
 
         status = s.get("status")
+        if status not in ("queued", "running", "done", "error"):
+            raise RuntimeError(f"Error polling job: server returned invalid status {status!r}")
         if status != last_status:
             note(f"  status: {status}")
             last_status = status
