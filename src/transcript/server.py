@@ -42,6 +42,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
 from . import __version__
 from .engine import DEFAULT_MODEL
+from .types import is_windows_reserved_basename
 
 log = logging.getLogger("transcript.server")
 
@@ -217,12 +218,9 @@ def _safe_upload_name(filename: Optional[str]) -> str:
     base = os.path.basename(raw).strip()
     if not base or base in (".", "..") or "/" in base or "\\" in base:
         return "upload.bin"
-    # Reject Windows reserved device names (CON/PRN/AUX/NUL/COM1-9/LPT1-9), which
+    # Reject Windows reserved device names (CON/PRN/AUX/NUL/CLOCK$/COM*/LPT*), which
     # can hang the process or write to a device on a Windows host.
-    stem = os.path.splitext(base)[0].rstrip(" .").upper()
-    if stem in {"CON", "PRN", "AUX", "NUL"} or (
-        len(stem) > 3 and stem[:3] in {"COM", "LPT"} and stem[3:].isdigit()
-    ):
+    if is_windows_reserved_basename(base):
         return "upload.bin"  # incl. COM1..COM999 / LPT1..LPT999
     return base
 
