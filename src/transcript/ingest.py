@@ -6,17 +6,40 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import math
 import os
+import signal
 import shutil
 import subprocess
 import sys
-import json
+import time
 from pathlib import Path
 
 from .types import Segment
 
 log = logging.getLogger("transcript.ingest")
+
+DEFAULT_MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024 * 1024  # match the default upload cap
+DEFAULT_DOWNLOAD_TIMEOUT_S = 3600.0
+PROCESS_STOP_TIMEOUT_S = 1.0
+
+
+def _download_limits() -> tuple[int, float]:
+    """Read operator-configured yt-dlp limits at fetch time."""
+    try:
+        max_bytes = int(os.environ.get(
+            "TRANSCRIPT_MAX_DOWNLOAD_BYTES", DEFAULT_MAX_DOWNLOAD_BYTES,
+        ))
+        timeout = float(os.environ.get(
+            "TRANSCRIPT_DOWNLOAD_TIMEOUT_S", DEFAULT_DOWNLOAD_TIMEOUT_S,
+        ))
+    except ValueError as exc:
+        raise RuntimeError("yt-dlp download limits must be numeric") from exc
+    if max_bytes <= 0 or not math.isfinite(timeout) or timeout <= 0:
+        raise RuntimeError("yt-dlp download limits must be finite and greater than zero")
+    return max_bytes, timeout
 
 
 def is_url(source: str) -> bool:
@@ -99,9 +122,11 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
     ``fail_action`` (e.g. "download") and ``nofile_msg`` only shape the two
     error messages, kept verbatim per caller.
     """
+    max_bytes, timeout = _download_limits()
     cmd = [
         sys.executable, "-m", "yt_dlp",
         "-f", fmt,
+        "--max-filesize", str(max_bytes),
         "--no-playlist",
         "-o", out_template,
         "--write-info-json",   # full provenance metadata → <id>.info.json
@@ -111,26 +136,130 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
         "--",   # end of options: a URL starting with '-' can't be parsed as a flag
         url,
     ]
+
+    def tracked_files() -> dict[Path, int]:
+        tracked = {}
+        for path in search_dir.glob(fallback_glob):
+            try:
+                if path.is_file():
+                    tracked[path] = path.stat().st_size
+            except OSError:
+                pass
+        return tracked
+
+    before = tracked_files()
+
+    def downloaded_bytes() -> int:
+        return sum(
+            max(0, size - before.get(path, 0))
+            for path, size in tracked_files().items()
+        )
+
+    def cleanup_download() -> None:
+        for path, size in tracked_files().items():
+            if path not in before or size != before[path]:
+                try:
+                    path.unlink()
+                except OSError:
+                    pass
+
+    popen_kwargs = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "text": True}
+    if os.name == "posix":
+        popen_kwargs["start_new_session"] = True
+    elif os.name == "nt":
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     try:
-        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        proc = subprocess.Popen(cmd, **popen_kwargs)
     except FileNotFoundError as exc:
         raise RuntimeError(
             "yt-dlp is not available. Install it with `pip install yt-dlp`."
         ) from exc
-    except subprocess.CalledProcessError as exc:
-        raise RuntimeError(f"yt-dlp failed to {fail_action} {url}:\n{exc.stderr}") from exc
+
+    def stop_process() -> None:
+        pid = getattr(proc, "pid", None)
+        if os.name == "posix" and pid is not None:
+            try:
+                os.killpg(pid, signal.SIGKILL)
+            except OSError:
+                pass
+        elif os.name == "nt" and pid is not None:
+            try:
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(pid)],
+                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    timeout=PROCESS_STOP_TIMEOUT_S, check=False,
+                )
+            except (OSError, subprocess.SubprocessError):
+                pass
+        try:
+            proc.kill()
+        except OSError:
+            pass
+        try:
+            proc.communicate(timeout=PROCESS_STOP_TIMEOUT_S)
+        except subprocess.TimeoutExpired:
+            # A surviving descendant may still own the inherited pipe handles.
+            for pipe in (getattr(proc, "stdout", None), getattr(proc, "stderr", None)):
+                if pipe is not None:
+                    pipe.close()
+
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            stop_process()
+            cleanup_download()
+            raise RuntimeError(
+                f"yt-dlp timed out after {timeout:g}s while trying to {fail_action} {url}"
+            )
+        try:
+            stdout, stderr = proc.communicate(timeout=min(0.1, remaining))
+            break
+        except subprocess.TimeoutExpired as exc:
+            if downloaded_bytes() <= max_bytes:
+                continue
+            stop_process()
+            cleanup_download()
+            raise RuntimeError(
+                f"yt-dlp download exceeds the {max_bytes}-byte cap: {url}"
+            ) from exc
+        except BaseException:
+            stop_process()
+            cleanup_download()
+            raise
+
+    if downloaded_bytes() > max_bytes:
+        cleanup_download()
+        raise RuntimeError(f"yt-dlp download exceeds the {max_bytes}-byte cap: {url}")
+    if proc.returncode:
+        if "max-filesize" in stderr.lower() or "larger than" in stderr.lower():
+            cleanup_download()
+            raise RuntimeError(
+                f"yt-dlp refused {url}: download exceeds the {max_bytes}-byte cap"
+            )
+        cleanup_download()
+        raise RuntimeError(f"yt-dlp failed to {fail_action} {url}:\n{stderr}")
+
+    def verify(path: Path) -> Path:
+        if path.stat().st_size > max_bytes:
+            cleanup_download()
+            path.unlink(missing_ok=True)
+            raise RuntimeError(
+                f"yt-dlp download exceeds the {max_bytes}-byte cap: {url}"
+            )
+        return path
 
     # The last non-empty stdout line is the final file path (after_move:filepath).
-    printed = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+    printed = [ln.strip() for ln in stdout.splitlines() if ln.strip()]
     if printed and os.path.exists(printed[-1]):
-        return Path(printed[-1])
+        return verify(Path(printed[-1]))
     candidates = sorted(
         (p for p in search_dir.glob(fallback_glob)
          if p.suffix.lower() not in {".json", ".json3"}),
         key=lambda p: p.stat().st_mtime, reverse=True,
     )
     if candidates:
-        return candidates[0]
+        return verify(candidates[0])
     raise RuntimeError(nofile_msg)
 
 
@@ -190,8 +319,9 @@ def download_manual_caption(
     try:
         info = json.loads(subprocess.run(
             probe, check=True, capture_output=True, text=True,
+            timeout=_download_limits()[1],
         ).stdout)
-    except (OSError, subprocess.CalledProcessError, ValueError) as exc:
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
         log.warning("Could not inspect YouTube captions (%s); falling back to ASR.", exc)
         return None
 
@@ -211,8 +341,11 @@ def download_manual_caption(
             "-o", str(work_dir / "%(id)s.%(ext)s"), "--", url,
         ]
         try:
-            subprocess.run(cmd, check=True, capture_output=True, text=True)
-        except (OSError, subprocess.CalledProcessError) as exc:
+            subprocess.run(
+                cmd, check=True, capture_output=True, text=True,
+                timeout=_download_limits()[1],
+            )
+        except (OSError, subprocess.SubprocessError) as exc:
             log.warning("Could not download manual captions (%s); falling back to ASR.", exc)
             return None, caption_language, None, info
 
@@ -263,7 +396,7 @@ def download_frame_video(url: str, work_dir: Path, *, height_cap: int = 720) -> 
     """
     frame_dir = work_dir / "frame-stream"
     frame_dir.mkdir(parents=True, exist_ok=True)
-    fmt = f"bestvideo[height<={height_cap}]/best[height<={height_cap}]/best"
+    fmt = f"bestvideo[height<={height_cap}]/best[height<={height_cap}]"
     log.info("Downloading capped video stream for frames: %s", url)
     # Distinct output template + subdir + glob so this download can't overwrite /
     # ambiguate the ASR `bestaudio` download's info.json. The selected format id is

@@ -175,6 +175,7 @@ def _extract_zip(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
             # basename syntax is rejected separately by _register.
             basename = _register(seen, posixpath.basename(name.replace("\\", "/")), name)
             if not basename:
+                budget.take(info.file_size)
                 continue
             with zf.open(info) as fh:
                 out.append(_stream_land(dest_dir, basename, name, fh, budget))
@@ -205,6 +206,7 @@ def _extract_tar(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
             # basename safety rules.
             basename = _register(seen, posixpath.basename(name.replace("\\", "/")), name)
             if not basename:
+                budget.take(member.size)
                 continue
             fh = tf.extractfile(member)
             if fh is None:

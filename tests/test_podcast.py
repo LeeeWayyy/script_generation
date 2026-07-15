@@ -108,11 +108,12 @@ def test_authoritative_length_mismatch_is_fatal(monkeypatch):
     monkeypatch.setattr(podcast, "download_enclosure", lambda url, dest, **k: EnclosureDownload(
         path=Path("/tmp/x"), downloaded_size=200, content_length=200, ok=True))  # != 100
 
-    from transcript.types import Transcript
+    transcribe_calls = []
     with pytest.raises(PodcastResolutionError) as ei:
         extract_audio_extraction(feed_url="f", engine=None,
-                                 transcribe_fn=lambda *a, **k: Transcript())
+                                 transcribe_fn=lambda *a, **k: transcribe_calls.append(True))
     assert ei.value.reason == "length_mismatch"
+    assert not transcribe_calls
 
 
 def test_ranged_download_size_mismatch_is_not_fatal(monkeypatch):

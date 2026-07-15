@@ -38,6 +38,7 @@ from .types import Segment, Transcript, nfc as _nfc
 # it stays on the legacy Transcript route. ``audio_extraction`` (podcast/RSS) is
 # spelled out so "audio" never names two commands that hash different bytes.
 KINDS = ("video", "image_note", "audio_extraction")
+MAX_TOTAL_ASSET_BYTES = 2 * 1024 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------

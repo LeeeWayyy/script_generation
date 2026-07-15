@@ -6,6 +6,8 @@ import json
 import unicodedata
 import zipfile
 
+import pytest
+
 from transcript.extraction import (
     AssetRef,
     Card,
@@ -262,7 +264,7 @@ def test_image_note_ocr_unavailable_is_attempted_once_and_recorded(
 
 def test_video_ocr_unavailable_keeps_frames_and_does_not_retry(monkeypatch, tmp_path):
     from transcript.extract import extract_video
-    from transcript.frames import FrameAsset
+    from transcript.frames import FRAME_POLICY, FrameAsset
     from transcript.ocr import OcrUnavailableError
 
     frames = []
@@ -271,6 +273,7 @@ def test_video_ocr_unavailable_keeps_frames_and_does_not_retry(monkeypatch, tmp_
         path.write_bytes(str(index).encode())
         frames.append(FrameAsset(index, float(index), path))
     monkeypatch.setattr("transcript.frames.extract_frames", lambda *a, **k: frames)
+    monkeypatch.setitem(FRAME_POLICY, "max_frames", 2)
     monkeypatch.setattr("transcript._ffmpeg_version", lambda: "6.0")
     calls = 0
 
@@ -290,3 +293,26 @@ def test_video_ocr_unavailable_keeps_frames_and_does_not_retry(monkeypatch, tmp_
     assert result.meta["ocr_requested"] is True
     assert result.meta["ocr_succeeded"] is False
     assert "OCR unavailable" in result.meta["ocr_warning"]
+    assert result.meta["frame_cap_reached"] is True
+
+
+def test_video_asset_cap_fails_before_ocr(monkeypatch, tmp_path):
+    from transcript.extract import extract_video
+    from transcript.frames import FrameAsset
+
+    frame = tmp_path / "frame.jpg"
+    frame.write_bytes(b"xx")
+    monkeypatch.setattr("transcript.frames.extract_frames", lambda *a, **k: [
+        FrameAsset(0, 0.0, frame),
+    ])
+    monkeypatch.setattr("transcript.extract.MAX_TOTAL_ASSET_BYTES", 1)
+    monkeypatch.setattr(
+        "transcript.ocr._load_engine",
+        lambda: (_ for _ in ()).throw(AssertionError("OCR started")),
+    )
+
+    with pytest.raises(ValueError, match="video frame assets"):
+        extract_video(
+            transcript=Transcript(), video_path=tmp_path / "video.mp4",
+            asset_dir=tmp_path / "assets",
+        )

@@ -38,6 +38,7 @@ OCR_PARAMS = {
     "colorspace": "RGB",  # decode/convert to RGB
     "alpha_flatten": "white",  # composite transparency over white
 }
+DEFAULT_MAX_IMAGE_PIXELS = 100_000_000
 
 # A line whose vertical centre is within this fraction of the running line height
 # is treated as the same text line (column/row grouping for multi-column + CJK).
@@ -196,13 +197,29 @@ def _load_engine():
 
 
 def _decode_image(image_path: Path):
+    import os
+
     from PIL import Image, ImageOps
+
+    try:
+        max_pixels = int(os.environ.get(
+            "TRANSCRIPT_MAX_IMAGE_PIXELS", DEFAULT_MAX_IMAGE_PIXELS,
+        ))
+    except ValueError as exc:
+        raise ValueError("TRANSCRIPT_MAX_IMAGE_PIXELS must be an integer") from exc
+    if max_pixels <= 0:
+        raise ValueError("TRANSCRIPT_MAX_IMAGE_PIXELS must be greater than zero")
 
     # Close the source descriptor promptly — Image.open is lazy and would
     # otherwise leak FDs across thousands of video frames. exif_transpose returns
     # the SAME object when there's no orientation tag, so detach with a copy (and
     # force pixels into memory) before the `with` closes the file handle.
     with Image.open(image_path) as src:
+        pixels = src.width * src.height
+        if pixels > max_pixels:
+            raise ValueError(
+                f"image has {pixels} decoded pixels; exceeds the {max_pixels}-pixel OCR cap"
+            )
         img = ImageOps.exif_transpose(src) if OCR_PARAMS["exif_transpose"] else src
         if img is src:
             img = src.copy()

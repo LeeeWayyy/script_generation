@@ -92,6 +92,24 @@ def test_ocr_native_import_failure_is_reported_as_unavailable(monkeypatch):
         _load_engine()
 
 
+def test_ocr_pixel_cap_is_checked_before_decode_or_copy(monkeypatch, tmp_path):
+    import pytest
+
+    Image = pytest.importorskip("PIL.Image")
+    ImageOps = pytest.importorskip("PIL.ImageOps")
+    from transcript.ocr import _decode_image
+
+    path = tmp_path / "large.png"
+    Image.new("RGB", (10, 10)).save(path)
+    monkeypatch.setenv("TRANSCRIPT_MAX_IMAGE_PIXELS", "99")
+    monkeypatch.setattr(
+        ImageOps, "exif_transpose",
+        lambda *_: (_ for _ in ()).throw(AssertionError("decode started")),
+    )
+    with pytest.raises(ValueError, match="100 decoded pixels"):
+        _decode_image(path)
+
+
 # --- frame cadence / naming --------------------------------------------------
 
 
@@ -136,3 +154,26 @@ def test_parse_showinfo_pts_extracts_source_timecodes_in_order():
 def test_parse_showinfo_pts_accepts_signed_and_scientific_values():
     stderr = "pts_time:-0.125 x\npts_time:+1e-3 x\npts_time:2.5E+1 x\n"
     assert parse_showinfo_pts(stderr) == [-0.125, 0.001, 25.0]
+
+
+def test_ffmpeg_command_is_derived_from_policy_and_caps_dimensions(monkeypatch, tmp_path):
+    import subprocess
+
+    import transcript.frames as frames
+
+    captured = {}
+    monkeypatch.setattr("transcript.ingest.ensure_tool", lambda _name: None)
+
+    def run(cmd, **_kwargs):
+        captured["cmd"] = cmd
+        return subprocess.CompletedProcess(cmd, 0, stderr="")
+
+    monkeypatch.setattr(frames.subprocess, "run", run)
+    frames.extract_frames(tmp_path / "video.mp4", tmp_path / "out", cadence_s=7.5)
+
+    cmd = captured["cmd"]
+    vf = cmd[cmd.index("-vf") + 1]
+    assert frames.FRAME_POLICY["selector"].format(cadence_s=7.5) in vf
+    assert frames.FRAME_POLICY["scale"] in vf
+    assert "1280" in vf and "720" in vf
+    assert cmd[cmd.index("-vsync") + 1] == frames.FRAME_POLICY["vsync"]

@@ -1,11 +1,10 @@
 """Video frame extraction + (in the worker) per-frame OCR — plan §B.
 
-Policy: **fixed cadence is the DEFAULT** (reproducible); scene-detect is opt-in.
-The recipe records cadence, the exact ffmpeg select/scale/colorspace, timestamp
-rounding, frame naming, encoding params, and (when dedup is on) the pHash
-impl+size+distance — asset hashes are only useful if the recipe explains why they
-changed. Frame *selection* is reproducible only against the recorded
-policy+ffmpeg version; ``frames[].ocr_text`` is an **observation**, never recipe.
+Policy: **fixed cadence** (reproducible). The recipe records cadence, the exact
+ffmpeg select/scale/colorspace, timestamp rounding, frame naming, and encoding
+params — asset hashes are only useful if the recipe explains why they changed.
+Frame *selection* is reproducible only against the recorded policy+ffmpeg
+version; ``frames[].ocr_text`` is an **observation**, never recipe.
 
 No cross-modal timestamp-alignment guarantee: frame timecodes are on the **video
 stream clock** and transcript segment times are on the **ASR audio stream clock**
@@ -34,14 +33,18 @@ FRAME_POLICY = {
     "frame_format": "jpg",
     "jpeg_quality": 2,  # ffmpeg -q:v (2 = high quality)
     "pixel_format": "yuvj420p",
-    "scale": "iw:ih",  # no rescale by default
+    # Preserve aspect ratio, never upscale, and bound both landscape and portrait.
+    "scale": (
+        "w='min(1280,iw)':h='min(720,ih)':"
+        "force_original_aspect_ratio=decrease:force_divisible_by=2"
+    ),
     "scale_algorithm": "bicubic",
     "timecode_round_dp": 3,  # seconds, fixed to 3 decimal places
     "max_frames": 2000,  # frame cap for long video
     "exif_handling": "none",  # extracted frames carry no EXIF
     # The exact ffmpeg shape that selects frames + sources timestamps — recorded
     # so the recipe fully explains how frame assets/timecodes were produced.
-    "selector": "select='isnan(prev_selected_t)+gte(t-prev_selected_t,{cadence_s})'",
+    "selector": "select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,{cadence_s})'",
     "vsync": "0",  # passthrough — preserves source PTS
     "timestamp_source": "showinfo:pts_time",  # frame timecodes come from showinfo
 }
@@ -81,9 +84,9 @@ def extract_frames(
 ) -> list[FrameAsset]:
     """Extract frames at a fixed cadence into ``dest_dir`` via ffmpeg.
 
-    Returns the frames sorted by ``frame_id`` (== chronological). The frame
-    timecodes are computed from the cadence (the ffmpeg ``fps`` filter emits on a
-    regular grid), so naming/timecodes are reproducible against the recipe.
+    Returns the frames sorted by ``frame_id`` (== chronological). Timecodes come
+    from ffmpeg ``showinfo`` source PTS, with the cadence grid used only as a
+    fallback when a corresponding PTS is unavailable.
     """
     from .ingest import ensure_tool
 
@@ -99,12 +102,12 @@ def extract_frames(
     # real `pts_time` from showinfo. This is the video-stream clock (plan §B), so
     # it stays correct for non-zero start times, VFR inputs, and dropped frames —
     # unlike a synthetic n*cadence grid. `-vsync 0` (passthrough) keeps source PTS.
-    select = f"select='isnan(prev_selected_t)+gte(t-prev_selected_t\\,{cadence_s})'"
+    select = FRAME_POLICY["selector"].format(cadence_s=cadence_s)
     scale = f"scale={FRAME_POLICY['scale']}:flags={FRAME_POLICY['scale_algorithm']}"
     cmd = [
         "ffmpeg", "-y", "-i", str(video_path),
         "-vf", f"{select},{scale},showinfo",
-        "-vsync", "0",
+        "-vsync", FRAME_POLICY["vsync"],
         "-pix_fmt", FRAME_POLICY["pixel_format"],
         "-q:v", str(FRAME_POLICY["jpeg_quality"]),
         "-frames:v", str(max_frames),
