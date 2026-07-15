@@ -55,6 +55,30 @@ def test_custom_engine_can_diarize_without_hf_token(monkeypatch, tmp_path):
     ).meta["diarized"] is True
 
 
+def test_custom_engine_subclass_can_diarize_without_hf_token(monkeypatch, tmp_path):
+    source = tmp_path / "audio.mp3"
+    source.write_bytes(b"audio")
+    wav = tmp_path / "audio.wav"
+    wav.write_bytes(b"wav")
+    monkeypatch.setattr(transcript, "extract_audio", lambda *_a, **_k: wav)
+
+    class Engine(TranscriptionEngine):
+        model_name = "custom"
+        device = "cpu"
+        compute_type = "custom"
+        hf_token = None
+
+        def __init__(self):
+            pass
+
+        def run(self, *_args, **_kwargs):
+            return Transcript()
+
+    assert transcript.transcribe(
+        str(source), engine=Engine(), diarize=True, work_dir=str(tmp_path),
+    ).meta["diarized"] is True
+
+
 def test_mps_remains_a_supported_cpu_fallback(monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
     engine = TranscriptionEngine(device="mps")

@@ -23,6 +23,7 @@ log = logging.getLogger("transcript.ingest")
 
 DEFAULT_MAX_DOWNLOAD_BYTES = 8 * 1024 * 1024 * 1024  # match the default upload cap
 DEFAULT_DOWNLOAD_TIMEOUT_S = 3600.0
+MAX_YTDLP_STDOUT_BYTES = 64 * 1024 * 1024
 PROCESS_STOP_TIMEOUT_S = 1.0
 
 
@@ -109,34 +110,49 @@ def resolve_source(source: str, work_dir: Path) -> Path:
     return path
 
 
-def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
-                 fallback_glob: str, fail_action: str, nofile_msg: str,
-                 extra_args: tuple[str, ...] = ()) -> Path:
-    """Run yt-dlp for ``url`` and return the produced file path.
+def _output_bytes(value) -> int:
+    if not value:
+        return 0
+    return len(value) if isinstance(value, bytes) else len(value.encode("utf-8"))
 
-    Shared by the audio (`_download_url`) and frame-video (`download_frame_video`)
-    paths: identical invocation (best stream of ``fmt`` → ``out_template`` with
-    ``--write-info-json``), the same ``after_move:filepath`` stdout parse, and the
-    same newest-file fallback that EXCLUDES the ``.info.json`` sidecar (written
-    AFTER the media, so a naive newest-file pick would wrongly return the JSON).
-    ``fail_action`` (e.g. "download") and ``nofile_msg`` only shape the two
-    error messages, kept verbatim per caller.
-    """
+
+def _stop_process_tree(proc: subprocess.Popen) -> None:
+    """Kill a subprocess and its descendants without waiting indefinitely on pipes."""
+    pid = getattr(proc, "pid", None)
+    if os.name == "posix" and pid is not None:
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except OSError:
+            pass
+    elif os.name == "nt" and pid is not None:
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(pid)],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=PROCESS_STOP_TIMEOUT_S, check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    try:
+        proc.kill()
+    except OSError:
+        pass
+    try:
+        proc.communicate(timeout=PROCESS_STOP_TIMEOUT_S)
+    except subprocess.TimeoutExpired:
+        # A surviving descendant may still own the inherited pipe handles.
+        for pipe in (getattr(proc, "stdout", None), getattr(proc, "stderr", None)):
+            if pipe is not None:
+                pipe.close()
+
+
+def _run_ytdlp(
+    cmd: list[str], *, url: str, search_dir: Path, fallback_glob: str,
+    fail_action: str, monitor_stdout: bool = False,
+) -> tuple[str, int]:
+    """Run one yt-dlp subprocess under the shared byte/deadline/tree limits."""
     max_bytes, timeout = _download_limits()
-    cmd = [
-        sys.executable, "-m", "yt_dlp",
-        "--ignore-config",
-        "-f", fmt,
-        "--max-filesize", str(max_bytes),
-        "--no-playlist",
-        "-o", out_template,
-        "--write-info-json",   # full provenance metadata → <id>.info.json
-        "--print", "after_move:filepath",
-        "--no-simulate",
-        *extra_args,
-        "--",   # end of options: a URL starting with '-' can't be parsed as a flag
-        url,
-    ]
+    stdout_cap = min(max_bytes, MAX_YTDLP_STDOUT_BYTES)
 
     def tracked_files() -> dict[Path, int]:
         tracked = {}
@@ -164,6 +180,13 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
                 except OSError:
                     pass
 
+    def exceeded_cap(output=None) -> int | None:
+        if downloaded_bytes() > max_bytes:
+            return max_bytes
+        if monitor_stdout and _output_bytes(output) > stdout_cap:
+            return stdout_cap
+        return None
+
     popen_kwargs = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "text": True}
     if os.name == "posix":
         popen_kwargs["start_new_session"] = True
@@ -176,39 +199,11 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
             "yt-dlp is not available. Install it with `pip install yt-dlp`."
         ) from exc
 
-    def stop_process() -> None:
-        pid = getattr(proc, "pid", None)
-        if os.name == "posix" and pid is not None:
-            try:
-                os.killpg(pid, signal.SIGKILL)
-            except OSError:
-                pass
-        elif os.name == "nt" and pid is not None:
-            try:
-                subprocess.run(
-                    ["taskkill", "/F", "/T", "/PID", str(pid)],
-                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                    timeout=PROCESS_STOP_TIMEOUT_S, check=False,
-                )
-            except (OSError, subprocess.SubprocessError):
-                pass
-        try:
-            proc.kill()
-        except OSError:
-            pass
-        try:
-            proc.communicate(timeout=PROCESS_STOP_TIMEOUT_S)
-        except subprocess.TimeoutExpired:
-            # A surviving descendant may still own the inherited pipe handles.
-            for pipe in (getattr(proc, "stdout", None), getattr(proc, "stderr", None)):
-                if pipe is not None:
-                    pipe.close()
-
     deadline = time.monotonic() + timeout
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            stop_process()
+            _stop_process_tree(proc)
             cleanup_download()
             raise RuntimeError(
                 f"yt-dlp timed out after {timeout:g}s while trying to {fail_action} {url}"
@@ -217,21 +212,24 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
             stdout, stderr = proc.communicate(timeout=min(0.1, remaining))
             break
         except subprocess.TimeoutExpired as exc:
-            if downloaded_bytes() <= max_bytes:
+            exceeded = exceeded_cap(exc.output)
+            if exceeded is None:
                 continue
-            stop_process()
+            _stop_process_tree(proc)
             cleanup_download()
             raise RuntimeError(
-                f"yt-dlp download exceeds the {max_bytes}-byte cap: {url}"
+                f"yt-dlp download exceeds the {exceeded}-byte cap: {url}"
             ) from exc
         except BaseException:
-            stop_process()
+            _stop_process_tree(proc)
             cleanup_download()
             raise
 
-    if downloaded_bytes() > max_bytes:
+    exceeded = exceeded_cap(stdout)
+    if exceeded is not None:
         cleanup_download()
-        raise RuntimeError(f"yt-dlp download exceeds the {max_bytes}-byte cap: {url}")
+        raise RuntimeError(f"yt-dlp download exceeds the {exceeded}-byte cap: {url}")
+    stderr = stderr or ""
     if proc.returncode:
         if "max-filesize" in stderr.lower() or "larger than" in stderr.lower():
             cleanup_download()
@@ -240,10 +238,44 @@ def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
             )
         cleanup_download()
         raise RuntimeError(f"yt-dlp failed to {fail_action} {url}:\n{stderr}")
+    return stdout, max_bytes
+
+
+def _ytdlp_fetch(url: str, *, fmt: str, out_template: str, search_dir: Path,
+                 fallback_glob: str, fail_action: str, nofile_msg: str,
+                 extra_args: tuple[str, ...] = ()) -> Path:
+    """Run yt-dlp for ``url`` and return the produced file path.
+
+    Shared by the audio (`_download_url`) and frame-video (`download_frame_video`)
+    paths: identical invocation (best stream of ``fmt`` → ``out_template`` with
+    ``--write-info-json``), the same ``after_move:filepath`` stdout parse, and the
+    same newest-file fallback that EXCLUDES the ``.info.json`` sidecar (written
+    AFTER the media, so a naive newest-file pick would wrongly return the JSON).
+    ``fail_action`` (e.g. "download") and ``nofile_msg`` only shape the two
+    error messages, kept verbatim per caller.
+    """
+    max_bytes, _ = _download_limits()
+    cmd = [
+        sys.executable, "-m", "yt_dlp",
+        "--ignore-config",
+        "-f", fmt,
+        "--max-filesize", str(max_bytes),
+        "--no-playlist",
+        "-o", out_template,
+        "--write-info-json",   # full provenance metadata → <id>.info.json
+        "--print", "after_move:filepath",
+        "--no-simulate",
+        *extra_args,
+        "--",   # end of options: a URL starting with '-' can't be parsed as a flag
+        url,
+    ]
+    stdout, max_bytes = _run_ytdlp(
+        cmd, url=url, search_dir=search_dir, fallback_glob=fallback_glob,
+        fail_action=fail_action,
+    )
 
     def verify(path: Path) -> Path:
         if path.stat().st_size > max_bytes:
-            cleanup_download()
             path.unlink(missing_ok=True)
             raise RuntimeError(
                 f"yt-dlp download exceeds the {max_bytes}-byte cap: {url}"
@@ -319,11 +351,12 @@ def download_manual_caption(
         "--no-playlist", "--no-warnings", "--", url,
     ]
     try:
-        info = json.loads(subprocess.run(
-            probe, check=True, capture_output=True, text=True,
-            timeout=_download_limits()[1],
-        ).stdout)
-    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        stdout, _ = _run_ytdlp(
+            probe, url=url, search_dir=work_dir, fallback_glob="*",
+            fail_action="inspect", monitor_stdout=True,
+        )
+        info = json.loads(stdout)
+    except (OSError, RuntimeError, ValueError) as exc:
         log.warning("Could not inspect YouTube captions (%s); falling back to ASR.", exc)
         return None
 
@@ -344,11 +377,11 @@ def download_manual_caption(
             "-o", str(work_dir / "%(id)s.%(ext)s"), "--", url,
         ]
         try:
-            subprocess.run(
-                cmd, check=True, capture_output=True, text=True,
-                timeout=_download_limits()[1],
+            _run_ytdlp(
+                cmd, url=url, search_dir=work_dir, fallback_glob="*",
+                fail_action="download manual captions",
             )
-        except (OSError, subprocess.SubprocessError) as exc:
+        except (OSError, RuntimeError) as exc:
             log.warning("Could not download manual captions (%s); falling back to ASR.", exc)
             return None, caption_language, None, info
 

@@ -76,6 +76,39 @@ def test_ytdlp_fetch_stops_and_cleans_unknown_size_download_over_cap(monkeypatch
     assert not media.exists()
 
 
+def test_ytdlp_runner_caps_metadata_stdout(monkeypatch, tmp_path):
+    captured = {}
+
+    class Process:
+        returncode = None
+
+        def __init__(self, cmd, **_kwargs):
+            captured["cmd"] = cmd
+            self.killed = False
+
+        def communicate(self, timeout=None):
+            if self.killed:
+                self.returncode = -9
+                return "", ""
+            raise subprocess.TimeoutExpired(captured["cmd"], timeout, output=b"xxxx")
+
+        def kill(self):
+            self.killed = True
+
+    monkeypatch.setenv("TRANSCRIPT_MAX_DOWNLOAD_BYTES", "100")
+    monkeypatch.setattr(ingest, "MAX_YTDLP_STDOUT_BYTES", 3)
+    monkeypatch.setattr(ingest.subprocess, "Popen", Process)
+
+    with pytest.raises(RuntimeError, match="3-byte cap"):
+        ingest._run_ytdlp(
+            ["python", "-m", "yt_dlp", "--dump-single-json"],
+            url="https://youtube.com/watch?v=x", search_dir=tmp_path,
+            fallback_glob="*", fail_action="inspect", monitor_stdout=True,
+        )
+
+    assert "--max-filesize" not in captured["cmd"]
+
+
 def test_ytdlp_timeout_and_nonfinite_config_fail_cleanly(monkeypatch, tmp_path):
     monkeypatch.setenv("TRANSCRIPT_DOWNLOAD_TIMEOUT_S", "2")
     partial = tmp_path / "video.webm.part"
