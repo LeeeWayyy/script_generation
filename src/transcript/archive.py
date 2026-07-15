@@ -29,11 +29,17 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from .types import has_windows_drive_prefix, nfc as _nfc
+from .types import (
+    has_windows_drive_prefix,
+    is_windows_reserved_basename,
+    nfc as _nfc,
+)
+from .zip_safety import preflight_zip
 
 # Conservative defaults; a zip bomb or a runaway export trips these clearly.
 MAX_TOTAL_UNCOMPRESSED = 2 * 1024 * 1024 * 1024  # 2 GiB across the whole archive
 MAX_MEMBERS = 10_000
+MAX_CENTRAL_DIRECTORY_BYTES = 64 * 1024 * 1024  # bound ZipFile's metadata allocation
 
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".gif", ".tif", ".tiff"}
 
@@ -105,6 +111,14 @@ def _register(seen: dict, basename: str, source_member: str) -> str:
     nfc = _nfc(basename)
     if not _is_image(nfc):
         return ""  # non-image member: skip silently (exports carry stray files)
+    if ":" in nfc or any(ord(char) < 32 or ord(char) == 127 for char in nfc):
+        raise UnsafeArchiveError(
+            f"Windows-unsafe image basename rejected: {nfc!r}"
+        )
+    if is_windows_reserved_basename(nfc):
+        raise UnsafeArchiveError(
+            f"Windows reserved device basename rejected: {nfc!r}"
+        )
     folded = nfc.casefold()
     if folded in seen:
         raise UnsafeArchiveError(
@@ -126,6 +140,15 @@ def _extract_zip(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
     out: list[ExtractedMember] = []
     seen: dict[str, str] = {}
     budget = _Budget(MAX_TOTAL_UNCOMPRESSED)
+    try:
+        with archive_path.open("rb") as fh:
+            preflight_zip(
+                fh,
+                max_entries=MAX_MEMBERS,
+                max_central_directory_bytes=MAX_CENTRAL_DIRECTORY_BYTES,
+            )
+    except (OSError, ValueError) as exc:
+        raise UnsafeArchiveError(f"unsafe ZIP directory: {exc}") from exc
     with zipfile.ZipFile(archive_path) as zf:
         infos = zf.infolist()
         if len(infos) > MAX_MEMBERS:
