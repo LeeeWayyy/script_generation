@@ -22,8 +22,8 @@ DEFAULT_MODEL = "large-v3"
 class TranscriptionEngine:
     """Loads WhisperX models once and reuses them across calls.
 
-    Align models are cached per-language so transcribing several same-language
-    sources only loads each alignment model once.
+    The most recent alignment model is reused without retaining one model per
+    language for the lifetime of a multilingual server.
     """
 
     def __init__(
@@ -42,7 +42,7 @@ class TranscriptionEngine:
         self.hf_token = hf_token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
 
         self._asr = None
-        self._align_cache: dict[str, tuple] = {}
+        self._align_cache: Optional[tuple[str, tuple]] = None
         self._diarizer = None
 
         log.info(
@@ -70,13 +70,13 @@ class TranscriptionEngine:
         return self._asr
 
     def _load_align(self, language: str):
-        if language not in self._align_cache:
-            import whisperx
+        if self._align_cache is not None and self._align_cache[0] == language:
+            return self._align_cache[1]
+        import whisperx
 
-            self._align_cache[language] = whisperx.load_align_model(
-                language_code=language, device=self.device
-            )
-        return self._align_cache[language]
+        model = whisperx.load_align_model(language_code=language, device=self.device)
+        self._align_cache = (language, model)
+        return model
 
     def _load_diarizer(self):
         if self._diarizer is None:
@@ -148,7 +148,7 @@ class TranscriptionEngine:
             "language": language,
         }
         if audio_path is None:
-            return _stamp(_to_transcript(result, language=language), align=False,
+            return _stamp(_to_transcript(result, language=language), align=align,
                           align_ok=None, diarize=False)
 
         import whisperx

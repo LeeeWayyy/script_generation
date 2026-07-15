@@ -7,7 +7,7 @@ and inspected without loading torch/whisperx.
 from __future__ import annotations
 
 import unicodedata
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -43,10 +43,11 @@ class Segment:
     start: Optional[float] = None
     end: Optional[float] = None
     speaker: Optional[str] = None
-    # True when the segment overlaps detected music (sung lyrics or a song
-    # playing under speech) — treat text/speaker as unreliable there.
-    music: bool = False
     words: list[Word] = field(default_factory=list)
+    # True when the segment overlaps detected music (sung lyrics or a song
+    # playing under speech) — keyword-only so the legacy fifth positional
+    # argument remains ``words``.
+    music: bool = field(default=False, kw_only=True)
 
 
 @dataclass
@@ -70,4 +71,31 @@ class Transcript:
         return sorted(found)
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        """Frozen legacy JSON shape used by ``transcript[-remote] -f json``.
+
+        Keep this explicit: new dataclass fields belong in versioned extraction
+        envelopes, not in the byte-stable legacy output.
+        """
+        return {
+            "segments": [
+                {
+                    "text": segment.text,
+                    "start": segment.start,
+                    "end": segment.end,
+                    "speaker": segment.speaker,
+                    "words": [
+                        {
+                            "word": word.word,
+                            "start": word.start,
+                            "end": word.end,
+                            "score": word.score,
+                            "speaker": word.speaker,
+                        }
+                        for word in segment.words
+                    ],
+                }
+                for segment in self.segments
+            ],
+            "language": self.language,
+            "meta": self.meta,
+        }

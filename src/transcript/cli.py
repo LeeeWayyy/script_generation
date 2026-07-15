@@ -61,6 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         help="Skip word-level alignment (faster, coarser timestamps).",
     )
+    p.add_argument(
+        "--detect-music",
+        action="store_true",
+        help="Flag transcript segments overlapping music (default: off).",
+    )
     p.add_argument("-v", "--verbose", action="store_true", help="Verbose logging.")
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
@@ -87,6 +92,7 @@ def main(argv: list[str] | None = None) -> int:
             max_speakers=args.max_speakers,
             batch_size=args.batch_size,
             align=args.align,
+            detect_music=args.detect_music,
         )
     except KeyboardInterrupt:
         print("Interrupted.", file=sys.stderr)
