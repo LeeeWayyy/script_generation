@@ -16,14 +16,78 @@ def test_auto_captions_are_ignored(monkeypatch, tmp_path):
 
     def fake_run(cmd, **kwargs):
         calls.append(cmd)
-        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps(info), stderr="")
+        assert kwargs["monitor_stdout"] is True
+        return json.dumps(info), 100
 
-    monkeypatch.setattr("transcript.ingest.subprocess.run", fake_run)
+    monkeypatch.setattr("transcript.ingest._run_ytdlp", fake_run)
 
     assert download_manual_caption(
         "https://youtube.com/watch?v=video", tmp_path, language="en"
     ) is None
     assert len(calls) == 1
+
+
+def test_manual_caption_probe_and_subtitle_share_bounded_runner(monkeypatch, tmp_path):
+    info = {"id": "video", "subtitles": {"en": [{"ext": "json3"}]}}
+    calls = []
+
+    def fake_run(cmd, **kwargs):
+        calls.append((cmd, kwargs))
+        if len(calls) == 1:
+            return json.dumps(info), 100
+        (tmp_path / "video.en.json3").write_text("{}", encoding="utf-8")
+        return "", 100
+
+    monkeypatch.setattr("transcript.ingest._run_ytdlp", fake_run)
+    result = download_manual_caption(
+        "https://youtube.com/watch?v=video", tmp_path, language="en",
+    )
+
+    assert result is not None and result[0] == tmp_path / "video.en.json3"
+    assert [kwargs["fail_action"] for _, kwargs in calls] == [
+        "inspect", "download manual captions",
+    ]
+    assert calls[0][1]["monitor_stdout"] is True
+    assert "--write-subs" in calls[1][0]
+
+
+def test_manual_caption_partial_file_is_capped_and_cleaned(monkeypatch, tmp_path):
+    info = {"id": "video", "subtitles": {"en": [{"ext": "json3"}]}}
+    partial = tmp_path / "video.en.json3.part"
+    calls = []
+
+    class Process:
+        returncode = None
+
+        def __init__(self, cmd, **_kwargs):
+            self.cmd = cmd
+            self.killed = False
+            calls.append(cmd)
+
+        def communicate(self, timeout=None):
+            if self.killed:
+                self.returncode = -9
+                return "", ""
+            if "--dump-single-json" in self.cmd:
+                self.returncode = 0
+                return json.dumps(info), ""
+            partial.write_bytes(b"x" * 101)
+            raise subprocess.TimeoutExpired(self.cmd, timeout)
+
+        def kill(self):
+            self.killed = True
+
+    monkeypatch.setenv("TRANSCRIPT_MAX_DOWNLOAD_BYTES", "100")
+    monkeypatch.setattr("transcript.ingest.subprocess.Popen", Process)
+
+    result = download_manual_caption(
+        "https://youtube.com/watch?v=video", tmp_path, language="en",
+    )
+
+    assert result == (None, "en", None, info)
+    assert not partial.exists()
+    assert "--write-subs" in calls[1]
+    assert all("--max-filesize" not in cmd for cmd in calls)
 
 
 def test_manual_caption_selection_parsing_and_speaker_turn_split(tmp_path):

@@ -117,7 +117,7 @@ def transcribe(
         batch_size=batch_size,
         hf_token=hf_token,
     )
-    if diarize and isinstance(eng, TranscriptionEngine):
+    if diarize and type(eng) is TranscriptionEngine:
         eng.require_diarization_token()
 
     own_work_dir = work_dir is None
