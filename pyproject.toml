@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "transcript"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Generate transcripts (with speaker labels) from any video/audio file or URL."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -85,9 +85,13 @@ Homepage = "https://github.com/leeewayyy/transcript"
 [tool.hatch.build.targets.wheel]
 packages = ["src/transcript"]
 
+[tool.hatch.version]
+path = "src/transcript/__init__.py"
+
 [tool.ruff]
 line-length = 100
 target-version = "py310"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
