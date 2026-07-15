@@ -38,14 +38,15 @@ def test_audio_extraction_positional_feed_url_is_routed(monkeypatch):
 
         @staticmethod
         def json():
-            return {"id": "job1"}
+            return {"id": "a1b2c3d4e5f6"}
 
     class _FakeRequests:
         RequestException = Exception
 
         @staticmethod
-        def post(url, data=None, files=None, headers=None):
+        def post(url, data=None, files=None, headers=None, timeout=None):
             captured["data"] = data
+            captured["timeout"] = timeout
             return _Resp()
 
     monkeypatch.setitem(__import__("sys").modules, "requests", _FakeRequests)
@@ -65,6 +66,7 @@ def test_audio_extraction_positional_feed_url_is_routed(monkeypatch):
     assert captured["data"]["feed_url"] == "https://feed.example/rss"
     assert "url" not in captured["data"]  # not submitted as a plain url
     assert captured["data"]["episode_guid"] == "g1"
+    assert captured["timeout"] == (30.0, 3600.0)
 
 
 def test_audio_extraction_without_feed_or_enclosure_errors(monkeypatch, capsys):
@@ -107,6 +109,24 @@ def test_unpack_rejects_size_mismatch(tmp_path):
                        "size": 99, "media_type": "image/jpeg"}]}
     with pytest.raises(BundleVerificationError, match="size"):
         unpack_and_verify(_bundle(env, {"assets/a.jpg": data}), tmp_path / "o")
+
+
+def test_unpack_rejects_oversized_member_before_publish(tmp_path):
+    data = b"x" * (2 * 1024 * 1024)
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": "ignored", "size": 1,
+                       "media_type": "image/jpeg"}]}
+    out = tmp_path / "o"
+    with pytest.raises(BundleVerificationError, match="size"):
+        unpack_and_verify(_bundle(env, {"assets/a.jpg": data}), out)
+    assert not out.exists()
+    assert not list(tmp_path.glob(".o-*"))
+
+
+def test_unpack_rejects_negative_declared_size(tmp_path):
+    env = {"assets": [{"key": "assets/a.jpg", "sha256": "ignored", "size": -1,
+                       "media_type": "image/jpeg"}]}
+    with pytest.raises(BundleVerificationError, match="negative"):
+        unpack_and_verify(_bundle(env, {"assets/a.jpg": b""}), tmp_path / "o")
 
 
 def test_unpack_rejects_zip_slip_member(tmp_path):
@@ -233,6 +253,7 @@ def test_unpack_nothing_written_until_all_assets_verified(tmp_path):
         unpack_and_verify(buf.getvalue(), out)
     # Even the valid asset must not have been written (atomic-ish verify-then-write).
     assert not (out / "assets" / "a.jpg").exists()
+    assert not list(tmp_path.glob(".o-*"))  # failed sibling staging was cleaned
 
 
 def test_unpack_rejects_asset_key_claiming_result_json(tmp_path):

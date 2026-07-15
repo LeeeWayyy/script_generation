@@ -67,8 +67,8 @@ server = [
     "numpy>=1.24",
     "feedparser>=6.0",
 ]
-# Install on the Mac (client only) — no torch/whisperx needed:
-#   pip install requests   (or  pip install -e ".[client]")
+# Install this project with the client extra — no torch/whisperx needed:
+#   pip install -e ".[client]"
 client = [
     "requests>=2.31",
 ]

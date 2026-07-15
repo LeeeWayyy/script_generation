@@ -18,7 +18,14 @@ import os
 import sys
 from pathlib import Path
 
-from ._remote_http import build_headers, poll_until_done, stderr_note
+from ._remote_http import (
+    build_headers,
+    poll_until_done,
+    request_timeout,
+    response_job_id,
+    stderr_note,
+    validate_common_options,
+)
 from .formats import FORMATS
 from .ingest import is_url
 
@@ -47,20 +54,33 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--language", help="Force language code (e.g. en).")
     p.add_argument("--min-speakers", type=int)
     p.add_argument("--max-speakers", type=int)
+    p.add_argument("--detect-music", action="store_true", help="Opt in to music tagging.")
     p.add_argument("--poll", type=float, default=3.0, help="Seconds between status checks.")
     p.add_argument("--timeout", type=float, default=3600.0, help="Give up after N seconds.")
-    p.add_argument(
-        "-v", "--verbose", action="store_true", help="Show progress on stderr (the default)."
-    )
+    p.add_argument("-v", "--verbose", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("-q", "--quiet", action="store_true", help="Suppress progress on stderr.")
     args = p.parse_args(argv)
+
+    option_error = validate_common_options(
+        poll=args.poll,
+        timeout=args.timeout,
+        diarize=args.diarize,
+        min_speakers=args.min_speakers,
+        max_speakers=args.max_speakers,
+    )
+    if option_error:
+        print(f"Error: {option_error}.", file=sys.stderr)
+        return 1
 
     base = args.server.rstrip("/")
     headers = build_headers(args.token)
     note = stderr_note(args.quiet)
 
     # Build the multipart form (works for both upload and URL).
-    data = {"diarize": str(args.diarize).lower()}
+    data = {
+        "diarize": str(args.diarize).lower(),
+        "detect_music": str(args.detect_music).lower(),
+    }
     if args.language:
         data["language"] = args.language
     if args.min_speakers is not None:
@@ -84,7 +104,13 @@ def main(argv: list[str] | None = None) -> int:
             note(f"Uploading {path.name} to {base} ...")
 
         try:
-            r = requests.post(f"{base}/jobs", data=data, files=files, headers=headers)
+            r = requests.post(
+                f"{base}/jobs",
+                data=data,
+                files=files,
+                headers=headers,
+                timeout=request_timeout(args.timeout),
+            )
         finally:
             if fh:
                 fh.close()
@@ -99,7 +125,11 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: server rejected job ({r.status_code}): {r.text}", file=sys.stderr)
         return 1
 
-    job_id = r.json()["id"]
+    try:
+        job_id = response_job_id(r)
+    except RuntimeError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
     note(f"Job {job_id} queued. Polling ...")
 
     # Shared submit/poll logic (also used by extract-remote) lives in _remote_http.
@@ -110,10 +140,16 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
 
-    rr = requests.get(
-        f"{base}/jobs/{job_id}/result", params={"format": args.format}, headers=headers,
-        timeout=(30, args.timeout),  # don't hang forever on a stalled server
-    )
+    try:
+        rr = requests.get(
+            f"{base}/jobs/{job_id}/result",
+            params={"format": args.format},
+            headers=headers,
+            timeout=request_timeout(args.timeout),
+        )
+    except requests.RequestException as exc:
+        print(f"Error fetching result: {exc}", file=sys.stderr)
+        return 1
     if not rr.ok:
         print(f"Error fetching result ({rr.status_code}): {rr.text}", file=sys.stderr)
         return 1
