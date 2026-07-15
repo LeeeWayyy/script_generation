@@ -152,6 +152,28 @@ def test_directory_payload_counts_toward_uncompressed_cap(tmp_path, monkeypatch,
         arc.extract_images(path, tmp_path / "out")
 
 
+def test_negative_tar_member_size_cannot_reduce_uncompressed_budget(tmp_path, monkeypatch):
+    import transcript.archive as arc
+
+    monkeypatch.setattr(arc, "MAX_TOTAL_UNCOMPRESSED", 8)
+    ignored = tarfile.TarInfo("ignored.txt")
+    ignored.size = -9
+    image = tarfile.TarInfo("ok.jpg")
+    image.size = 16
+    payload = b"x" * image.size
+    padding = b"\0" * (tarfile.BLOCKSIZE - len(payload))
+    path = tmp_path / "in.tar"
+    path.write_bytes(
+        ignored.tobuf(format=tarfile.GNU_FORMAT)
+        + image.tobuf(format=tarfile.GNU_FORMAT)
+        + payload + padding
+        + b"\0" * (tarfile.BLOCKSIZE * 2)
+    )
+
+    with pytest.raises(UnsafeArchiveError, match="negative size"):
+        arc.extract_images(path, tmp_path / "out")
+
+
 def test_unsafe_directory_member_rejected_not_skipped(tmp_path):
     # A `..` directory member must trip the rule, not be silently skipped.
     p = tmp_path / "in.zip"

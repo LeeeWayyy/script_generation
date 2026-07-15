@@ -234,6 +234,27 @@ def test_bearer_auth_rejects_before_body_limit_or_receive():
     assert consumed == 0
 
 
+def test_openapi_advertises_middleware_bearer_auth(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRANSCRIPT_TOKEN", "secret")
+    with TestClient(_app(monkeypatch, tmp_path)) as client:
+        response = client.get(
+            "/openapi.json", headers={"Authorization": "Bearer secret"},
+        )
+
+    assert response.status_code == 200
+    schema = response.json()
+    assert schema["components"]["securitySchemes"]["BearerAuth"] == {
+        "type": "http", "scheme": "bearer",
+    }
+    assert schema["security"] == [{"BearerAuth": []}]
+    assert schema["paths"]["/health"]["get"]["security"] == []
+
+    monkeypatch.delenv("TRANSCRIPT_TOKEN")
+    with TestClient(_app(monkeypatch, tmp_path / "open")) as client:
+        open_schema = client.get("/openapi.json").json()
+    assert "security" not in open_schema
+
+
 def test_bounded_queue_reports_position_and_cleans_rejected_upload(
     monkeypatch, tmp_path,
 ):

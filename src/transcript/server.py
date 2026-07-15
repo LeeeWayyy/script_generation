@@ -812,6 +812,23 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
             worker.join()
 
     app = FastAPI(title="transcript", version=__version__, lifespan=lifespan)
+
+    # Authentication stays in outer ASGI middleware so rejected uploads are never
+    # parsed, but the generated contract must still tell clients about bearer auth.
+    default_openapi = app.openapi
+
+    def openapi_with_bearer():
+        schema = default_openapi()
+        if token:
+            security_schemes = schema.setdefault("components", {}).setdefault(
+                "securitySchemes", {}
+            )
+            security_schemes["BearerAuth"] = {"type": "http", "scheme": "bearer"}
+            schema["security"] = [{"BearerAuth": []}]
+            schema["paths"]["/health"]["get"]["security"] = []
+        return schema
+
+    app.openapi = openapi_with_bearer
     app.add_middleware(
         RequestBodyLimitMiddleware,
         max_bytes=MAX_UPLOAD_BYTES + MAX_MULTIPART_OVERHEAD_BYTES,

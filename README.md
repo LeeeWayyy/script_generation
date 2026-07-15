@@ -208,6 +208,9 @@ degraded.
 > container too. Never set `TRANSCRIPT_ALLOW_PRIVATE_FETCH=1` on an exposed
 > deployment; it disables the public-destination check.
 
+URL downloads, decoded WAV files, OCR images, archives, and frame assets have
+independent resource ceilings; see the configuration reference for overrides.
+
 ## Cross-platform notes
 
 `transcript` auto-detects the device: **CUDA if available, otherwise CPU**.

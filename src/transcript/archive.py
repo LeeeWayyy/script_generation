@@ -226,6 +226,8 @@ class _Budget:
         self.used = 0
 
     def take(self, n: int) -> None:
+        if n < 0:
+            raise UnsafeArchiveError("archive member has a negative size")
         self.used += n
         if self.used > self.cap:
             raise UnsafeArchiveError(

@@ -560,6 +560,8 @@ the default pipeline.
 | `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Uploaded file-byte cap; default 8 GiB. |
 | `TRANSCRIPT_MAX_DOWNLOAD_BYTES` | local, server | yt-dlp media-file cap; default 8 GiB. |
 | `TRANSCRIPT_DOWNLOAD_TIMEOUT_S` | local, server | yt-dlp subprocess deadline; default 3600 seconds. |
+| `TRANSCRIPT_MAX_AUDIO_BYTES` | local, server | Decoded 16 kHz mono WAV cap; default 8 GiB. |
+| `TRANSCRIPT_AUDIO_TIMEOUT_S` | local, server | ffmpeg audio-normalization deadline; default 3600 seconds. |
 | `TRANSCRIPT_MAX_IMAGE_PIXELS` | server | Decoded image-pixel cap before OCR; default 100,000,000. |
 | `TRANSCRIPT_MAX_QUEUE_SIZE` | server | Waiting-job cap; default 32. |
 | `TRANSCRIPT_JOB_TTL_SECONDS` | server | Terminal in-memory transcript retention; default 86400. |
