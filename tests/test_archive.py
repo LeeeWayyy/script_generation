@@ -143,6 +143,12 @@ def test_zip_drive_letter_rejected_but_posix_colon_ok(tmp_path):
     assert members[0].basename == "0:00.jpg"
 
 
+def test_nested_drive_relative_basename_rejected(tmp_path):
+    archive = _write_zip(tmp_path, {"folder/C:evil.jpg": b"x"})
+    with pytest.raises(UnsafeArchiveError, match="drive-relative basename"):
+        extract_images(archive, tmp_path / "out")
+
+
 def test_source_member_preserved_as_observation(tmp_path):
     arc = _write_zip(tmp_path, {"deep/nested/photo.jpg": b"x"})
     [m] = extract_images(arc, tmp_path / "out")

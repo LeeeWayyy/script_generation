@@ -103,6 +103,8 @@ def _register(seen: dict, basename: str, source_member: str) -> str:
     ``index`` — so we reject the pair regardless of host.
     """
     nfc = _nfc(basename)
+    if has_windows_drive_prefix(nfc):
+        raise UnsafeArchiveError(f"drive-relative basename rejected: {basename!r}")
     if not _is_image(nfc):
         return ""  # non-image member: skip silently (exports carry stray files)
     folded = nfc.casefold()
