@@ -253,6 +253,11 @@ def test_video_without_frames_flag_skips_frame_extraction(monkeypatch, tmp_path)
 def test_auth_required_on_extraction_routes(monkeypatch, tmp_path):
     monkeypatch.setenv("TRANSCRIPT_TOKEN", "secret")
     with _make_app(monkeypatch, tmp_path) as client:
+        assert client.get("/health").status_code == 200
+        assert client.get("/docs").status_code == 401
+        assert client.get(
+            "/jobs", headers={"Authorization": "Bearer secret"}
+        ).status_code == 200
         # No Authorization header → 401 on ALL new endpoints.
         assert client.post("/extractions", data={"kind": "image_note"},
                            files={"file": ("e.zip", _zip_bytes({"a.jpg": b"x"}))}

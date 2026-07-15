@@ -173,6 +173,57 @@ def test_request_body_limit_counts_streamed_chunks_without_content_length():
     assert sent[0]["status"] == 413
 
 
+def test_bearer_auth_rejects_before_body_limit_or_receive():
+    import transcript.server as server
+
+    consumed = 0
+    called = False
+
+    async def receive():
+        nonlocal consumed
+        consumed += 1
+        return {"type": "http.request", "body": b"x" * 100, "more_body": False}
+
+    async def inner(scope, receive, send):
+        nonlocal called
+        called = True
+        await receive()
+
+    sent = []
+
+    async def send(message):
+        sent.append(message)
+
+    stack = server.BearerAuthMiddleware(
+        server.RequestBodyLimitMiddleware(inner, max_bytes=1), token="secret",
+    )
+    asyncio.run(stack(
+        {
+            "type": "http", "method": "POST", "path": "/jobs",
+            "headers": [(b"authorization", b"Bearer wrong"), (b"content-length", b"100")],
+        },
+        receive,
+        send,
+    ))
+    assert sent[0]["status"] == 401
+    assert consumed == 0
+    assert not called
+    sent.clear()
+    asyncio.run(stack(
+        {
+            "type": "http", "method": "POST", "path": "/jobs",
+            "headers": [
+                (b"authorization", b"Bearer secret"),
+                (b"authorization", b"Bearer secret"),
+            ],
+        },
+        receive,
+        send,
+    ))
+    assert sent[0]["status"] == 401
+    assert consumed == 0
+
+
 def test_bounded_queue_reports_position_and_cleans_rejected_upload(
     monkeypatch, tmp_path,
 ):
