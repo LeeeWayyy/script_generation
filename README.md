@@ -19,7 +19,8 @@ other/no captions ──► audio ──► WhisperX ──► align ──► d
 ```
 
 YouTube auto-generated captions are ignored. When human captions exist, their
-text is preserved and ASR is skipped; without diarization, audio is skipped too.
+text is preserved and ASR is skipped. Audio is downloaded only when alignment,
+diarization, or music detection needs it.
 
 | Stage      | Tool                                   |
 |------------|----------------------------------------|

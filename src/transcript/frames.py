@@ -22,6 +22,7 @@ import math
 import os
 import re
 import subprocess
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -57,6 +58,7 @@ TIMECODE_ROUND_DP = FRAME_POLICY["timecode_round_dp"]
 # Cadence floor (plan §B "cadence floor for long video"): below this, frame +
 # OCR cost explodes, so reject rather than sample faster.
 MIN_CADENCE_S = 0.5
+DEFAULT_FRAME_TIMEOUT_S = 3600.0
 
 
 @dataclass
@@ -97,6 +99,14 @@ def extract_frames(
     # emit every frame and then run OCR on each — a resource-exhaustion vector.
     if not math.isfinite(cadence_s) or cadence_s < MIN_CADENCE_S:
         raise ValueError(f"cadence_s must be >= {MIN_CADENCE_S} (got {cadence_s})")
+    try:
+        timeout = float(os.environ.get(
+            "TRANSCRIPT_FRAME_TIMEOUT_S", DEFAULT_FRAME_TIMEOUT_S,
+        ))
+    except ValueError as exc:
+        raise RuntimeError("frame extraction timeout must be numeric") from exc
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise RuntimeError("frame extraction timeout must be finite and greater than zero")
     ensure_tool("ffmpeg")
     dest_dir.mkdir(parents=True, exist_ok=True)
     out_template = str(dest_dir / "frame-%06d.jpg")
@@ -146,12 +156,18 @@ def extract_frames(
             subprocess, "CREATE_NEW_PROCESS_GROUP", 0
         )
 
-    proc = subprocess.Popen(cmd, **popen_kwargs)
-
+    deadline = time.monotonic() + timeout
+    proc = None
     try:
+        proc = subprocess.Popen(cmd, **popen_kwargs)
         while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError(
+                    f"ffmpeg frame extraction timed out after {timeout:g}s"
+                )
             try:
-                _, stderr = proc.communicate(timeout=0.1)
+                _, stderr = proc.communicate(timeout=min(0.1, remaining))
                 break
             except subprocess.TimeoutExpired as exc:
                 if frame_bytes() <= MAX_TOTAL_ASSET_BYTES:
@@ -162,7 +178,7 @@ def extract_frames(
                 ) from exc
     except BaseException:
         try:
-            if proc.returncode is None:
+            if proc is not None and proc.returncode is None:
                 _stop_process_tree(proc)
         finally:
             cleanup_frames()

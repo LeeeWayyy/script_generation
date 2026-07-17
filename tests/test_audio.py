@@ -1,4 +1,5 @@
 import subprocess
+from pathlib import Path
 
 import pytest
 
@@ -14,9 +15,10 @@ def test_audio_extraction_uses_bounded_process_group(monkeypatch, tmp_path):
 
         def __init__(self, cmd, **kwargs):
             captured.update(cmd=cmd, kwargs=kwargs)
+            self.output = Path(cmd[-1])
 
         def communicate(self, timeout=None):
-            (tmp_path / "input.16k.wav").write_bytes(b"wav")
+            self.output.write_bytes(b"wav")
             self.returncode = 0
             return None, ""
 
@@ -29,6 +31,7 @@ def test_audio_extraction_uses_bounded_process_group(monkeypatch, tmp_path):
     assert result.read_bytes() == b"wav"
     assert captured["kwargs"]["stderr"] is subprocess.PIPE
     assert captured["kwargs"]["text"] is True
+    assert captured["cmd"][captured["cmd"].index("-fs") + 1] == "5"
     if audio.os.name == "posix":
         assert captured["kwargs"]["start_new_session"] is True
 
@@ -46,6 +49,7 @@ def test_audio_cap_stops_process_and_cleans_partial_output(monkeypatch, tmp_path
 
         def __init__(self, cmd, **_kwargs):
             self.cmd = cmd
+            self.output = Path(cmd[-1])
             self.killed = False
             captured["process"] = self
 
@@ -53,7 +57,7 @@ def test_audio_cap_stops_process_and_cleans_partial_output(monkeypatch, tmp_path
             if self.killed:
                 self.returncode = -9
                 return None, ""
-            output.write_bytes(b"xxxx")
+            self.output.write_bytes(b"xxxx")
             raise subprocess.TimeoutExpired(self.cmd, timeout)
 
         def kill(self):
@@ -68,6 +72,32 @@ def test_audio_cap_stops_process_and_cleans_partial_output(monkeypatch, tmp_path
 
     assert captured["process"].killed is True
     assert not output.exists()
+
+
+def test_audio_failure_preserves_existing_output(monkeypatch, tmp_path):
+    media = tmp_path / "input.mp4"
+    output = tmp_path / "input.16k.wav"
+    output.write_bytes(b"existing")
+    captured = {}
+
+    class Process:
+        returncode = None
+
+        def __init__(self, cmd, **_kwargs):
+            captured["temp"] = Path(cmd[-1])
+
+        def communicate(self, timeout=None):
+            self.returncode = 1
+            return None, "invalid input"
+
+    monkeypatch.setattr(audio, "ensure_tool", lambda _name: None)
+    monkeypatch.setattr(audio.subprocess, "Popen", Process)
+
+    with pytest.raises(RuntimeError, match="ffmpeg failed"):
+        audio.extract_audio(media, tmp_path)
+
+    assert output.read_bytes() == b"existing"
+    assert not captured["temp"].exists()
 
 
 def test_audio_timeout_and_invalid_limits_fail_cleanly(monkeypatch, tmp_path):

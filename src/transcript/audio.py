@@ -6,6 +6,7 @@ import logging
 import math
 import os
 import subprocess
+import tempfile
 import time
 from pathlib import Path
 
@@ -42,81 +43,83 @@ def extract_audio(media_path: Path, work_dir: Path) -> Path:
     max_bytes, timeout = _audio_limits()
     work_dir.mkdir(parents=True, exist_ok=True)
     out_path = work_dir / (media_path.stem + ".16k.wav")
+    with tempfile.TemporaryDirectory(
+        prefix=".transcript-audio-", dir=work_dir, ignore_cleanup_errors=True,
+    ) as temp_dir:
+        temp_path = Path(temp_dir) / "output.wav"
+        cmd = [
+            "ffmpeg",
+            "-y",  # overwrite
+            "-i",
+            str(media_path),
+            "-vn",  # drop any video stream
+            "-ac",
+            "1",  # mono
+            "-ar",
+            str(TARGET_SAMPLE_RATE),
+            "-acodec",
+            "pcm_s16le",
+            "-fs",
+            str(max_bytes + 1),  # make truncation visible to the final > cap check
+            str(temp_path),
+        ]
 
-    cmd = [
-        "ffmpeg",
-        "-y",  # overwrite
-        "-i",
-        str(media_path),
-        "-vn",  # drop any video stream
-        "-ac",
-        "1",  # mono
-        "-ar",
-        str(TARGET_SAMPLE_RATE),
-        "-acodec",
-        "pcm_s16le",
-        str(out_path),
-    ]
+        log.info("Extracting audio -> %s", out_path.name)
+        popen_kwargs = {
+            "stdout": subprocess.DEVNULL,
+            "stderr": subprocess.PIPE,
+            "text": True,
+        }
+        if os.name == "posix":
+            popen_kwargs["start_new_session"] = True
+        elif os.name == "nt":
+            popen_kwargs["creationflags"] = getattr(
+                subprocess, "CREATE_NEW_PROCESS_GROUP", 0
+            )
 
-    log.info("Extracting audio -> %s", out_path.name)
-    popen_kwargs = {
-        "stdout": subprocess.DEVNULL,
-        "stderr": subprocess.PIPE,
-        "text": True,
-    }
-    if os.name == "posix":
-        popen_kwargs["start_new_session"] = True
-    elif os.name == "nt":
-        popen_kwargs["creationflags"] = getattr(
-            subprocess, "CREATE_NEW_PROCESS_GROUP", 0
-        )
-    try:
-        proc = subprocess.Popen(cmd, **popen_kwargs)
-    except OSError as exc:
-        raise RuntimeError(f"ffmpeg could not start: {exc}") from exc
+        def output_bytes() -> int:
+            try:
+                return temp_path.stat().st_size
+            except FileNotFoundError:
+                return 0
 
-    def output_bytes() -> int:
+        deadline = time.monotonic() + timeout
+        proc = None
         try:
-            return out_path.stat().st_size
-        except FileNotFoundError:
-            return 0
+            try:
+                proc = subprocess.Popen(cmd, **popen_kwargs)
+            except OSError as exc:
+                raise RuntimeError(f"ffmpeg could not start: {exc}") from exc
 
-    def cleanup_output() -> None:
-        try:
-            out_path.unlink(missing_ok=True)
-        except OSError:
-            pass
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError(
+                        f"ffmpeg audio extraction timed out after {timeout:g}s"
+                    )
+                try:
+                    _, stderr = proc.communicate(timeout=min(0.1, remaining))
+                    break
+                except subprocess.TimeoutExpired as exc:
+                    if output_bytes() <= max_bytes:
+                        continue
+                    raise RuntimeError(
+                        f"decoded audio exceeds the {max_bytes}-byte cap"
+                    ) from exc
 
-    deadline = time.monotonic() + timeout
-    try:
-        while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
+            if output_bytes() > max_bytes:
+                raise RuntimeError(f"decoded audio exceeds the {max_bytes}-byte cap")
+            if proc.returncode:
                 raise RuntimeError(
-                    f"ffmpeg audio extraction timed out after {timeout:g}s"
+                    f"ffmpeg failed to extract audio from {media_path}:\n{stderr}"
                 )
             try:
-                _, stderr = proc.communicate(timeout=min(0.1, remaining))
-                break
-            except subprocess.TimeoutExpired as exc:
-                if output_bytes() <= max_bytes:
-                    continue
-                raise RuntimeError(
-                    f"decoded audio exceeds the {max_bytes}-byte cap"
-                ) from exc
-    except BaseException:
-        try:
-            if proc.returncode is None:
+                temp_path.replace(out_path)
+            except OSError as exc:
+                raise RuntimeError(f"could not finalize extracted audio: {exc}") from exc
+        except BaseException:
+            if proc is not None and proc.returncode is None:
                 _stop_process_tree(proc)
-        finally:
-            cleanup_output()
-        raise
-
-    if output_bytes() > max_bytes:
-        cleanup_output()
-        raise RuntimeError(f"decoded audio exceeds the {max_bytes}-byte cap")
-    if proc.returncode:
-        cleanup_output()
-        raise RuntimeError(f"ffmpeg failed to extract audio from {media_path}:\n{stderr}")
+            raise
 
     return out_path

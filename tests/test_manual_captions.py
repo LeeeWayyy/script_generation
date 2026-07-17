@@ -129,21 +129,29 @@ def test_manual_caption_selection_parsing_and_speaker_turn_split(tmp_path):
     ]
 
 
-def test_manual_caption_path_skips_asr_and_audio(monkeypatch, tmp_path):
+def test_manual_caption_alignment_skips_asr_and_uses_audio(monkeypatch, tmp_path):
     import transcript
 
     caption = tmp_path / "video.en.json3"
     caption.write_text(json.dumps({"events": [
         {"tStartMs": 0, "dDurationMs": 1000, "segs": [{"utf8": "Authored text."}]}
     ]}), encoding="utf-8")
+    media = tmp_path / "video.webm"
+    audio = tmp_path / "video.wav"
     info = {"id": "video", "webpage_url": "https://youtube.com/watch?v=video"}
 
-    monkeypatch.setattr(transcript, "download_manual_caption",
-                        lambda *a, **k: (caption, "en", None, info))
+    def download(*args, **kwargs):
+        assert kwargs["with_audio"] is True
+        return caption, "en", media, info
+
+    def extract(media_path, *_args):
+        assert media_path == media
+        return audio
+
+    monkeypatch.setattr(transcript, "download_manual_caption", download)
     monkeypatch.setattr(transcript, "resolve_source",
                         lambda *a, **k: (_ for _ in ()).throw(AssertionError("ASR download ran")))
-    monkeypatch.setattr(transcript, "extract_audio",
-                        lambda *a, **k: (_ for _ in ()).throw(AssertionError("audio ran")))
+    monkeypatch.setattr(transcript, "extract_audio", extract)
     monkeypatch.setattr(transcript, "_ffmpeg_version", lambda: "6.0")
 
     class Engine:
@@ -152,7 +160,8 @@ def test_manual_caption_path_skips_asr_and_audio(monkeypatch, tmp_path):
         compute_type = "int8"
 
         def run_captions(self, audio_path, captions, **kwargs):
-            assert audio_path is None
+            assert audio_path == str(audio)
+            assert kwargs["align"] is True
             return Transcript(segments=captions, language=kwargs["language"])
 
     result = transcript.transcribe(

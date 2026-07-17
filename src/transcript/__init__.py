@@ -122,11 +122,12 @@ def transcribe(
 
     own_work_dir = work_dir is None
     work_path = Path(work_dir) if work_dir else Path(tempfile.mkdtemp(prefix="transcript-"))
+    needs_audio = align or diarize or detect_music
 
     try:
         caption_download = (
             download_manual_caption(
-                source, work_path, language=language, with_audio=diarize or detect_music,
+                source, work_path, language=language, with_audio=needs_audio,
             )
             if is_youtube_url(source) else None
         )
@@ -145,7 +146,7 @@ def transcribe(
                 log.warning("Manual caption track was empty; falling back to ASR.")
 
         if captions:
-            audio = extract_audio(media, work_path) if diarize or detect_music else None
+            audio = extract_audio(media, work_path) if needs_audio else None
             alignment_language = caption_language.split("-", 1)[0]
             result = eng.run_captions(
                 str(audio) if audio else None,

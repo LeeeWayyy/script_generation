@@ -3,6 +3,7 @@
 import io
 import tarfile
 import zipfile
+from contextlib import nullcontext
 
 import pytest
 
@@ -152,25 +153,28 @@ def test_directory_payload_counts_toward_uncompressed_cap(tmp_path, monkeypatch,
         arc.extract_images(path, tmp_path / "out")
 
 
-def test_negative_tar_member_size_cannot_reduce_uncompressed_budget(tmp_path, monkeypatch):
+def test_negative_tar_member_size_rejected(tmp_path, monkeypatch):
     import transcript.archive as arc
 
-    monkeypatch.setattr(arc, "MAX_TOTAL_UNCOMPRESSED", 8)
-    ignored = tarfile.TarInfo("ignored.txt")
-    ignored.size = -9
-    image = tarfile.TarInfo("ok.jpg")
-    image.size = 16
-    payload = b"x" * image.size
-    padding = b"\0" * (tarfile.BLOCKSIZE - len(payload))
+    with pytest.raises(UnsafeArchiveError, match="negative size"):
+        arc._Budget(8).take(-9)
+
+    image = tarfile.TarInfo("bad.jpg")
+    image.size = -9
+    with monkeypatch.context() as patch:
+        patch.setattr(arc.tarfile, "open", lambda _path: nullcontext([image]))
+        with pytest.raises(UnsafeArchiveError, match="negative size"):
+            arc._extract_tar(tmp_path / "fake.tar", tmp_path / "fake-out")
+
     path = tmp_path / "in.tar"
     path.write_bytes(
-        ignored.tobuf(format=tarfile.GNU_FORMAT)
-        + image.tobuf(format=tarfile.GNU_FORMAT)
-        + payload + padding
+        image.tobuf(format=tarfile.GNU_FORMAT)
         + b"\0" * (tarfile.BLOCKSIZE * 2)
     )
 
-    with pytest.raises(UnsafeArchiveError, match="negative size"):
+    # Newer Python patch releases reject this malformed TAR before iteration;
+    # either rejection path is safe, while the direct check above pins our guard.
+    with pytest.raises(UnsafeArchiveError):
         arc.extract_images(path, tmp_path / "out")
 
 

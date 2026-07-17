@@ -230,3 +230,51 @@ def test_frame_asset_cap_kills_ffmpeg_and_cleans_partial_frames(monkeypatch, tmp
     assert process.killed is True
     assert process.stop_timeout == PROCESS_STOP_TIMEOUT_S
     assert list(out_dir.glob("frame-*.jpg")) == []
+
+
+def test_frame_timeout_kills_ffmpeg_and_cleans_partial_frames(monkeypatch, tmp_path):
+    import subprocess
+
+    import pytest
+
+    import transcript.frames as frames
+
+    out_dir = tmp_path / "out"
+    captured = {}
+    monkeypatch.setattr("transcript.ingest.ensure_tool", lambda _name: None)
+    monkeypatch.setenv("TRANSCRIPT_FRAME_TIMEOUT_S", "2")
+
+    class Process:
+        returncode = None
+        pid = None
+        stdout = None
+        stderr = None
+
+        def __init__(self, cmd, **_kwargs):
+            self.cmd = cmd
+            self.killed = False
+            (out_dir / "frame-000001.jpg").write_bytes(b"partial")
+            captured["process"] = self
+
+        def communicate(self, *, timeout):
+            if self.killed:
+                self.returncode = -9
+                return None, ""
+            raise subprocess.TimeoutExpired(self.cmd, timeout)
+
+        def kill(self):
+            self.killed = True
+
+    monkeypatch.setattr(frames.subprocess, "Popen", Process)
+    times = iter((0.0, 3.0))
+    monkeypatch.setattr(frames.time, "monotonic", lambda: next(times))
+
+    with pytest.raises(RuntimeError, match="timed out after 2s"):
+        frames.extract_frames(tmp_path / "video.mp4", out_dir)
+
+    assert captured["process"].killed is True
+    assert list(out_dir.glob("frame-*.jpg")) == []
+
+    monkeypatch.setenv("TRANSCRIPT_FRAME_TIMEOUT_S", "inf")
+    with pytest.raises(RuntimeError, match="greater than zero"):
+        frames.extract_frames(tmp_path / "video.mp4", out_dir)

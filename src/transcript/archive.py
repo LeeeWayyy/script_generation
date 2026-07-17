@@ -194,6 +194,8 @@ def _extract_tar(archive_path: Path, dest_dir: Path) -> list[ExtractedMember]:
             if count > MAX_MEMBERS:
                 raise UnsafeArchiveError(f"archive has too many members (> {MAX_MEMBERS})")
             name = member.name
+            if member.size < 0:
+                raise UnsafeArchiveError("archive member has a negative size")
             _reject_path(name)  # validate before the dir-skip (see zip note above)
             if member.isdir():
                 budget.take(member.size)
