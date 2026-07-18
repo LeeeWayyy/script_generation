@@ -12,6 +12,10 @@ $ErrorActionPreference = "Stop"
 $HostAddr = if ($env:TRANSCRIPT_HOST) { $env:TRANSCRIPT_HOST } else { "0.0.0.0" }
 $Port     = if ($env:TRANSCRIPT_PORT) { $env:TRANSCRIPT_PORT } else { "8000" }
 $Model    = if ($env:TRANSCRIPT_MODEL) { $env:TRANSCRIPT_MODEL } else { "large-v3" }
+$ComputeType = if ($env:TRANSCRIPT_COMPUTE_TYPE) { $env:TRANSCRIPT_COMPUTE_TYPE } else { "float16" }
+$BatchSize   = if ($env:TRANSCRIPT_BATCH_SIZE) { $env:TRANSCRIPT_BATCH_SIZE } else { "16" }
+$BeamSize    = if ($env:TRANSCRIPT_BEAM_SIZE) { $env:TRANSCRIPT_BEAM_SIZE } else { "5" }
+$WarmModel   = if ($env:TRANSCRIPT_WARM_MODEL) { $env:TRANSCRIPT_WARM_MODEL } else { "1" }
 
 # --- auth token ------------------------------------------------------------
 if (-not $env:TRANSCRIPT_TOKEN) {
@@ -67,5 +71,18 @@ if ($ip) {
     Write-Host "On your Mac:  export TRANSCRIPT_SERVER=http://${ip}:${Port}" -ForegroundColor Cyan
 }
 
-Write-Host "Starting transcript-server (model=$Model) ..." -ForegroundColor Green
-transcript-server --host $HostAddr --port $Port --model $Model
+$ServerArgs = @(
+    "--host", $HostAddr,
+    "--port", $Port,
+    "--model", $Model,
+    "--compute-type", $ComputeType,
+    "--batch-size", $BatchSize,
+    "--beam-size", $BeamSize
+)
+if ($WarmModel -ne "0") {
+    $ServerArgs += "--warm-model"
+}
+
+Write-Host "Starting transcript-server (model=$Model, compute=$ComputeType, batch=$BatchSize, beam=$BeamSize, warm=$WarmModel) ..." -ForegroundColor Green
+& transcript-server @ServerArgs
+exit $LASTEXITCODE

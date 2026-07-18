@@ -1,3 +1,6 @@
+import sys
+from types import SimpleNamespace
+
 import pytest
 
 import transcript
@@ -83,3 +86,52 @@ def test_mps_remains_a_supported_cpu_fallback(monkeypatch):
     monkeypatch.delenv("HF_TOKEN", raising=False)
     engine = TranscriptionEngine(device="mps")
     assert engine.device == "cpu"
+
+
+def test_engine_warm_loads_once_and_forwards_beam_size(monkeypatch):
+    calls = []
+    model = object()
+
+    def load_model(*args, **kwargs):
+        calls.append((args, kwargs))
+        return model
+
+    monkeypatch.setitem(sys.modules, "whisperx", SimpleNamespace(load_model=load_model))
+    engine = TranscriptionEngine(
+        model="tiny", device="cpu", compute_type="int8", batch_size=8, beam_size=1,
+    )
+
+    engine.warm()
+    engine.warm()
+
+    assert engine._asr is model
+    assert calls == [(('tiny', 'cpu'), {
+        "compute_type": "int8", "asr_options": {"beam_size": 1},
+    })]
+
+
+def test_cpu_compute_fallback_keeps_beam_size(monkeypatch):
+    calls = []
+
+    def load_model(*args, **kwargs):
+        calls.append((args, kwargs))
+        if len(calls) == 1:
+            raise ValueError("float16 unavailable")
+        return object()
+
+    monkeypatch.setitem(sys.modules, "whisperx", SimpleNamespace(load_model=load_model))
+    engine = TranscriptionEngine(
+        model="tiny", device="cpu", compute_type="float16", beam_size=2,
+    )
+    engine.warm()
+
+    assert engine.compute_type == "int8"
+    assert [kwargs["asr_options"] for _, kwargs in calls] == [
+        {"beam_size": 2}, {"beam_size": 2},
+    ]
+
+
+@pytest.mark.parametrize("option", ["batch_size", "beam_size"])
+def test_engine_rejects_nonpositive_inference_sizes(option):
+    with pytest.raises(ValueError, match=option):
+        TranscriptionEngine(device="cpu", **{option: 0})

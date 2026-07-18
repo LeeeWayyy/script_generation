@@ -42,7 +42,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
 from . import __version__
-from .engine import DEFAULT_MODEL
+from .engine import DEFAULT_MODEL, _pkg_version
 from .types import is_windows_reserved_basename
 
 log = logging.getLogger("transcript.server")
@@ -454,13 +454,26 @@ class JobStore:
 class Worker(threading.Thread):
     _STOP = object()
 
-    def __init__(self, store: JobStore, model: str, device: Optional[str],
-                 extraction_store=None, *, max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE):
+    def __init__(
+        self,
+        store: JobStore,
+        model: str,
+        device: Optional[str],
+        extraction_store=None,
+        *,
+        compute_type: Optional[str] = None,
+        batch_size: int = 16,
+        beam_size: int = 5,
+        max_queue_size: int = DEFAULT_MAX_QUEUE_SIZE,
+    ):
         super().__init__(daemon=True)
         self.store = store
         self.extraction_store = extraction_store
         self.model = model
         self.device = device
+        self.compute_type = compute_type
+        self.batch_size = batch_size
+        self.beam_size = beam_size
         self.q: "queue.Queue[object]" = queue.Queue(maxsize=max_queue_size)
         self._submit_lock = threading.Lock()
         self._closing = False
@@ -515,9 +528,19 @@ class Worker(threading.Thread):
             from .engine import TranscriptionEngine
 
             log.info("Loading model '%s' (this happens once) ...", self.model)
-            self._engine = TranscriptionEngine(model=self.model, device=self.device)
+            self._engine = TranscriptionEngine(
+                model=self.model,
+                device=self.device,
+                compute_type=self.compute_type,
+                batch_size=self.batch_size,
+                beam_size=self.beam_size,
+            )
             log.info("Model ready on device=%s.", self._engine.device)
         return self._engine
+
+    def warm(self) -> None:
+        """Load model weights before the server reports startup complete."""
+        self._get_engine().warm()
 
     def _get_ocr_engine(self):
         if self._ocr_engine is None:
@@ -750,7 +773,15 @@ class Janitor(threading.Thread):
 # ---------------------------------------------------------------------------
 
 
-def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
+def create_app(
+    model: str = DEFAULT_MODEL,
+    device: Optional[str] = None,
+    *,
+    compute_type: Optional[str] = None,
+    batch_size: int = 16,
+    beam_size: int = 5,
+    warm_model: bool = False,
+):
     from .formats import FORMATS, render
 
     token = os.environ.get("TRANSCRIPT_TOKEN")
@@ -782,6 +813,9 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
             or not math.isfinite(extraction_ttl_s) or extraction_ttl_s <= 0
             or not math.isfinite(janitor_interval_s) or janitor_interval_s <= 0):
         raise ValueError("server queue/retention/janitor limits must be positive")
+    for name, value in (("batch_size", batch_size), ("beam_size", beam_size)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise ValueError(f"{name} must be a positive integer")
 
     store = JobStore(
         max_terminal_jobs=max_terminal_jobs, terminal_ttl_s=job_ttl_s,
@@ -791,6 +825,7 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
     )  # scans existing bundles on construction
     worker = Worker(
         store, model=model, device=device, extraction_store=extraction_store,
+        compute_type=compute_type, batch_size=batch_size, beam_size=beam_size,
         max_queue_size=max_queue_size,
     )
     janitor = Janitor(store, extraction_store, interval_s=janitor_interval_s)
@@ -801,6 +836,8 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
     @asynccontextmanager
     async def lifespan(_app):
         _sweep_stale_temp_dirs()
+        if warm_model:
+            worker.warm()
         worker.start()
         janitor.start()
         try:
@@ -838,6 +875,13 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
     app.state.job_store = store
     app.state.worker = worker
     app.state.extraction_store = extraction_store
+    versions = {
+        "transcript": __version__,
+        "torch": _pkg_version("torch"),
+        "whisperx": _pkg_version("whisperx"),
+        "faster_whisper": _pkg_version("faster-whisper"),
+        "ctranslate2": _pkg_version("ctranslate2"),
+    }
 
     def _public(job: Job) -> dict:
         position = worker.queue_position(job.id) if job.status == "queued" else None
@@ -858,9 +902,24 @@ def create_app(model: str = DEFAULT_MODEL, device: Optional[str] = None):
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "model": model, "queued_or_running": [
-            j.id for j in store.all() if j.status in ("queued", "running")
-        ]}
+        engine = worker._engine
+        return {
+            "status": "ok",
+            "model": model,
+            "queued_or_running": [
+                j.id for j in store.all() if j.status in ("queued", "running")
+            ],
+            "device": getattr(engine, "device", None) or device or "auto",
+            "compute_type": (
+                getattr(engine, "compute_type", None) or compute_type or "auto"
+            ),
+            "batch_size": batch_size,
+            "beam_size": beam_size,
+            "model_loaded": bool(
+                engine is not None and getattr(engine, "_asr", None) is not None
+            ),
+            "versions": versions,
+        }
 
     @app.post("/jobs")
     def create_job(
@@ -1285,7 +1344,35 @@ def main(argv: list[str] | None = None) -> int:
         help=f"Whisper model (default: {DEFAULT_MODEL}).",
     )
     parser.add_argument("--device", choices=["cuda", "cpu"], help="Force device (default: auto).")
+    parser.add_argument(
+        "--compute-type",
+        default=os.environ.get("TRANSCRIPT_COMPUTE_TYPE"),
+        help="CTranslate2 compute type (default: device-specific).",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=os.environ.get("TRANSCRIPT_BATCH_SIZE", 16),
+        help="ASR batch size (default: 16).",
+    )
+    parser.add_argument(
+        "--beam-size",
+        type=int,
+        default=os.environ.get("TRANSCRIPT_BEAM_SIZE", 5),
+        help="Decoder beam size (default: 5).",
+    )
+    parser.add_argument(
+        "--warm-model",
+        action="store_true",
+        default=os.environ.get("TRANSCRIPT_WARM_MODEL") == "1",
+        help="Load ASR/VAD weights before startup completes.",
+    )
     args = parser.parse_args(argv)
+
+    if args.batch_size <= 0:
+        parser.error("--batch-size must be positive")
+    if args.beam_size <= 0:
+        parser.error("--beam-size must be positive")
 
     if (not _is_loopback_host(args.host) and not os.environ.get("TRANSCRIPT_TOKEN")
             and not args.allow_open):
@@ -1297,7 +1384,14 @@ def main(argv: list[str] | None = None) -> int:
 
     import uvicorn
 
-    app = create_app(model=args.model, device=args.device)
+    app = create_app(
+        model=args.model,
+        device=args.device,
+        compute_type=args.compute_type,
+        batch_size=args.batch_size,
+        beam_size=args.beam_size,
+        warm_model=args.warm_model,
+    )
     uvicorn.run(app, host=args.host, port=args.port)
     return 0
 

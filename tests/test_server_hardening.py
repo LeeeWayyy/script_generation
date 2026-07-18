@@ -150,6 +150,71 @@ def test_extraction_ttl_reaches_store(monkeypatch, tmp_path):
     assert server.create_app().state.extraction_store.ttl_s == 123
 
 
+def test_health_reports_inference_config_without_loading_model(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    import transcript.server as server
+
+    app = server.create_app(
+        model="tiny", device="cpu", compute_type="int8", batch_size=8, beam_size=1,
+    )
+    with TestClient(app) as client:
+        health = client.get("/health").json()
+
+    assert app.state.worker._engine is None
+    assert health == {
+        "status": "ok",
+        "model": "tiny",
+        "queued_or_running": [],
+        "device": "cpu",
+        "compute_type": "int8",
+        "batch_size": 8,
+        "beam_size": 1,
+        "model_loaded": False,
+        "versions": health["versions"],
+    }
+    assert set(health["versions"]) == {
+        "transcript", "torch", "whisperx", "faster_whisper", "ctranslate2",
+    }
+
+
+def test_startup_warmup_forwards_config_and_loads_once(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRANSCRIPT_DATA_DIR", str(tmp_path / "store"))
+    import transcript.server as server
+
+    engines = []
+
+    class Engine:
+        def __init__(self, **kwargs):
+            self.kwargs = kwargs
+            self.device = kwargs["device"]
+            self.compute_type = kwargs["compute_type"]
+            self._asr = None
+            self.warm_calls = 0
+            engines.append(self)
+
+        def warm(self):
+            self.warm_calls += 1
+            self._asr = object()
+
+    monkeypatch.setattr("transcript.engine.TranscriptionEngine", Engine)
+    app = server.create_app(
+        model="tiny", device="cpu", compute_type="int8", batch_size=8,
+        beam_size=1, warm_model=True,
+    )
+    with TestClient(app) as client:
+        assert client.get("/health").json()["model_loaded"] is True
+
+    assert len(engines) == 1
+    assert engines[0].warm_calls == 1
+    assert engines[0].kwargs == {
+        "model": "tiny",
+        "device": "cpu",
+        "compute_type": "int8",
+        "batch_size": 8,
+        "beam_size": 1,
+    }
+
+
 def test_request_body_limit_counts_streamed_chunks_without_content_length():
     import transcript.server as server
 
@@ -495,7 +560,15 @@ def test_cli_requires_auth_or_opt_in_for_network_bind(monkeypatch):
     import transcript.server as server
 
     monkeypatch.delenv("TRANSCRIPT_TOKEN", raising=False)
-    monkeypatch.setattr(server, "create_app", lambda **_kwargs: "app")
+    for name in (
+        "TRANSCRIPT_COMPUTE_TYPE", "TRANSCRIPT_BATCH_SIZE", "TRANSCRIPT_BEAM_SIZE",
+        "TRANSCRIPT_WARM_MODEL",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    app_calls = []
+    monkeypatch.setattr(
+        server, "create_app", lambda **kwargs: app_calls.append(kwargs) or "app",
+    )
     calls = []
     monkeypatch.setattr(
         "uvicorn.run", lambda app, **kwargs: calls.append((app, kwargs)),
@@ -508,3 +581,15 @@ def test_cli_requires_auth_or_opt_in_for_network_bind(monkeypatch):
     assert server.main(["--host", "0.0.0.0", "--allow-open"]) == 0
     monkeypatch.setenv("TRANSCRIPT_TOKEN", "secret")
     assert server.main(["--host", "0.0.0.0"]) == 0
+    assert server.main([
+        "--compute-type", "int8", "--batch-size", "8", "--beam-size", "1",
+        "--warm-model",
+    ]) == 0
+    assert app_calls[-1] == {
+        "model": server.DEFAULT_MODEL,
+        "device": None,
+        "compute_type": "int8",
+        "batch_size": 8,
+        "beam_size": 1,
+        "warm_model": True,
+    }

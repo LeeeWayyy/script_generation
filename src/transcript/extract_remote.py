@@ -29,6 +29,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from ._remote_http import (
+    DEFAULT_POLL_SECONDS,
     build_headers,
     get_with_retry,
     is_transient_get_error,
@@ -483,7 +484,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--min-speakers", type=int)
     p.add_argument("--max-speakers", type=int)
     p.add_argument("--detect-music", action="store_true", help="Opt in to music tagging.")
-    p.add_argument("--poll", type=float, default=3.0)
+    p.add_argument("--poll", type=float, default=DEFAULT_POLL_SECONDS)
     p.add_argument("--timeout", type=float, default=3600.0)
     p.add_argument("-q", "--quiet", action="store_true")
     args = p.parse_args(argv)

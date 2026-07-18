@@ -20,6 +20,7 @@ import time
 from pathlib import Path
 
 from ._remote_http import (
+    DEFAULT_POLL_SECONDS,
     build_headers,
     get_with_retry,
     poll_until_done,
@@ -59,7 +60,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--min-speakers", type=int)
     p.add_argument("--max-speakers", type=int)
     p.add_argument("--detect-music", action="store_true", help="Opt in to music tagging.")
-    p.add_argument("--poll", type=float, default=3.0, help="Seconds between status checks.")
+    p.add_argument(
+        "--poll",
+        type=float,
+        default=DEFAULT_POLL_SECONDS,
+        help=f"Seconds between status checks (default: {DEFAULT_POLL_SECONDS}).",
+    )
     p.add_argument("--timeout", type=float, default=3600.0, help="Give up after N seconds.")
     p.add_argument("-q", "--quiet", action="store_true", help="Suppress progress on stderr.")
     args = p.parse_args(argv)

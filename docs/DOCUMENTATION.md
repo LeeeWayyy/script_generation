@@ -357,7 +357,8 @@ transcript-remote --job-id ab12cd34ef56 -f txt               # resume a job
 
 For a URL job, nothing uploads from the laptop — the GPU host fetches the media
 directly. `--timeout` controls submission/upload, each connection/read, polling,
-and result download; `--poll` controls the status interval. Progress is shown on
+and result download; `--poll` controls the status interval (default `0.25`
+seconds). Progress is shown on
 stderr unless `--quiet` is used. Speaker hints, `--language`, `--no-diarize`,
 `--no-align`, and `--detect-music` are sent to the server. Both clients report
 coarse stage changes and retry transient network failures plus HTTP 502/503 for
@@ -410,7 +411,7 @@ published.
 
 | Method & path | Auth | Body / params | Returns |
 |---------------|------|---------------|---------|
-| `GET /health` | none | — | `{status, model, queued_or_running[]}` |
+| `GET /health` | none | — | status, queue, active inference settings, model-loaded state, package versions |
 | `POST /jobs` | bearer | multipart: exactly one `file` or public HTTP(S) `url`; optional `diarize`, `align`, `language`, speaker hints, `detect_music` | transcript job status |
 | `GET /jobs` | bearer | — | list of jobs |
 | `GET /jobs/{id}` | bearer | — | status (`queued`, `running`, `done`, `error`) |
@@ -526,11 +527,16 @@ continues and records failure instead of silently changing the default path.
 | `--detect-music` | off | Explicitly run optional music classification/tagging. |
 | `-v, --verbose` | off | Verbose logging / full tracebacks. |
 
+`transcript-server` additionally accepts `--device`, `--compute-type`,
+`--batch-size`, `--beam-size`, and `--warm-model`. Warmup loads ASR/VAD before
+startup completes; alignment and diarization remain lazy.
+
 ### 9.2 Remote client flags
 
 Both clients accept `--server`, `--token`, `--job-id`, `--no-diarize`,
 `--no-align`, `--language`, `--min-speakers`, `--max-speakers`, `--detect-music`,
-`--poll`, `--timeout`, and `--quiet`. `--job-id` resumes an existing 12-character
+`--poll`, `--timeout`, and `--quiet`. Polling defaults to `0.25` seconds.
+`--job-id` resumes an existing 12-character
 job and cannot accompany submission options. `transcript-remote` additionally
 accepts `--format` and `--output`; `extract-remote` accepts the kind/source
 selectors documented in §7.3 plus `--out-dir`. Invalid speaker ranges and
@@ -552,6 +558,10 @@ the default pipeline.
 | `TRANSCRIPT_TOKEN` | server, client | Bearer auth token. |
 | `TRANSCRIPT_SERVER` | client | Server base URL. |
 | `TRANSCRIPT_HOST` / `TRANSCRIPT_PORT` / `TRANSCRIPT_MODEL` | launch scripts | Server bind + model. |
+| `TRANSCRIPT_COMPUTE_TYPE` | server CLI, Windows launcher | CTranslate2 compute type; Windows launcher default `float16`. |
+| `TRANSCRIPT_BATCH_SIZE` | server CLI, Windows launcher | ASR batch size; default `16`. |
+| `TRANSCRIPT_BEAM_SIZE` | server CLI, Windows launcher | Decoder beam size; default `5`. |
+| `TRANSCRIPT_WARM_MODEL=1` | server CLI, Windows launcher | Load ASR/VAD before startup; Windows launcher enables it by default. |
 | `TRANSCRIPT_TOKEN_FILE` | launch scripts | Persisted generated token path. |
 | `TRANSCRIPT_DATA_DIR` | server | Durable extraction root. |
 | `TRANSCRIPT_EXTRACTION_TTL_SECONDS` | server | Durable bundle retention since last access; default 604800 (7 days). |
@@ -630,8 +640,15 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
 - **Apple Silicon / CPU** works but uses CPU for ASR (no MPS backend in
   CTranslate2) and CPU for diarization. Fine for short clips; slower for long
   media. Compute type defaults to `int8` on CPU.
-- **Throughput knobs:** larger `--batch-size` (more VRAM, faster); a smaller
-  `--model` (faster, less accurate); `--no-align` and `--no-diarize` skip stages.
+- **Throughput knobs:** larger server `--batch-size` can improve GPU throughput
+  at the cost of VRAM; `--beam-size 1` decodes faster but can reduce accuracy; a
+  smaller `--model` is faster but less accurate. `--no-align` and
+  `--no-diarize` skip stages.
+- **Startup warmup:** `--warm-model` moves the first model load into server
+  startup and makes bad CUDA/model configuration fail fast. It improves the
+  first request's latency, not steady-state throughput.
+- **Measure changes:** use the pinned WER/CER + latency/RTF benchmark in §14
+  before changing model, beam, batch, compute type, or CTranslate2 version.
 
 ---
 
@@ -708,6 +725,29 @@ TRANSCRIPT_REAL_MEDIA_SMOKE=1 TRANSCRIPT_SMOKE_URL=https://example/media \
   TRANSCRIPT_SMOKE_MODEL=small PYTHONPATH=src \
   pytest -q tests/test_real_media_smoke.py
 ```
+
+### Accuracy and latency benchmark
+
+`benchmarks/run.py` runs the same SHA-256-pinned corpus through either the public
+local pipeline or the remote server. It reports normalized WER/CER, end-to-end
+latency, and real-time factor; alignment and diarization are disabled so the
+measurement isolates ASR. See `python benchmarks/run.py --help` for the manifest
+schema and all options.
+
+```bash
+# Mac/local model host
+PYTHONPATH=src python benchmarks/run.py /path/to/cases.json \
+  --backend local --model large-v3 --device cpu --compute-type int8 \
+  --max-wer 0.05 --max-rtf 1.0 --output mac.json
+
+# Thin client -> Windows GPU host; reads TRANSCRIPT_SERVER/TRANSCRIPT_TOKEN
+PYTHONPATH=src python benchmarks/run.py /path/to/cases.json \
+  --backend remote --max-wer 0.05 --max-rtf 0.1 --output windows.json
+```
+
+Hardware thresholds are deliberately opt-in rather than part of normal CI. Use
+human-verified real meeting audio before selecting a production model; synthetic
+speech is suitable only for repeatable smoke and latency checks.
 
 Conventions:
 - Keep `torch`/`whisperx` imports lazy (inside functions in `engine.py`).

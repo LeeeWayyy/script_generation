@@ -23,6 +23,34 @@ class _Response:
         return self.payload
 
 
+def test_remote_clients_share_fast_poll_default(monkeypatch, capsys):
+    class Requests:
+        RequestException = OSError
+
+    monkeypatch.setitem(__import__("sys").modules, "requests", Requests)
+    observed = {}
+
+    def stop_transcript_poll(*_args, **kwargs):
+        observed["transcript"] = kwargs["poll"]
+        raise RuntimeError("stop")
+
+    def stop_extraction_fetch(_requests, _base, _headers, _job_id, args, _note):
+        observed["extraction"] = args.poll
+        return 0
+
+    monkeypatch.setattr(remote, "poll_until_done", stop_transcript_poll)
+    monkeypatch.setattr(extract_remote, "_fetch_extraction", stop_extraction_fetch)
+
+    job_id = "0123456789ab"
+    assert remote.main(["--job-id", job_id, "-q"]) == 1
+    assert extract_remote.main(["--job-id", job_id, "-q"]) == 0
+    assert observed == {
+        "transcript": _remote_http.DEFAULT_POLL_SECONDS,
+        "extraction": _remote_http.DEFAULT_POLL_SECONDS,
+    }
+    capsys.readouterr()
+
+
 def test_transcript_client_uses_timeout_for_every_request(monkeypatch, capsys):
     calls = []
 

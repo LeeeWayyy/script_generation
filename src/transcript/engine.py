@@ -35,12 +35,18 @@ class TranscriptionEngine:
         device: Optional[str] = None,
         compute_type: Optional[str] = None,
         batch_size: int = 16,
+        beam_size: int = 5,
         hf_token: Optional[str] = None,
     ):
+        if isinstance(batch_size, bool) or not isinstance(batch_size, int) or batch_size <= 0:
+            raise ValueError("batch_size must be a positive integer")
+        if isinstance(beam_size, bool) or not isinstance(beam_size, int) or beam_size <= 0:
+            raise ValueError("beam_size must be a positive integer")
         self.device = detect_device(device)
         self.compute_type = compute_type or default_compute_type(self.device)
         self.model_name = model
         self.batch_size = batch_size
+        self.beam_size = beam_size
         self.hf_token = hf_token or os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
 
         self._asr = None
@@ -68,17 +74,29 @@ class TranscriptionEngine:
 
             try:
                 self._asr = whisperx.load_model(
-                    self.model_name, self.device, compute_type=self.compute_type
+                    self.model_name,
+                    self.device,
+                    compute_type=self.compute_type,
+                    asr_options={"beam_size": self.beam_size},
                 )
             except ValueError as exc:
                 # Some CPU builds reject float16; retry with int8 transparently.
                 if self.device == "cpu" and self.compute_type != "int8":
                     log.warning("compute_type %s unsupported on CPU; retrying with int8.", self.compute_type)
                     self.compute_type = "int8"
-                    self._asr = whisperx.load_model(self.model_name, self.device, compute_type="int8")
+                    self._asr = whisperx.load_model(
+                        self.model_name,
+                        self.device,
+                        compute_type="int8",
+                        asr_options={"beam_size": self.beam_size},
+                    )
                 else:
                     raise exc
         return self._asr
+
+    def warm(self) -> None:
+        """Load ASR/VAD weights now instead of delaying work until the first job."""
+        self._load_asr()
 
     def _load_align(self, language: str):
         if self._align_cache is not None and self._align_cache[0] == language:

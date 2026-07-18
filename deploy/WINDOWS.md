@@ -34,6 +34,21 @@ setx HF_TOKEN "hf_xxxxx"
 # (reopen the terminal so setx takes effect)
 ```
 
+The Windows launcher is tuned for the GPU host: `float16`, batch size `16`,
+beam size `5`, and startup model warmup. Override any value persistently, then
+reopen PowerShell:
+
+```powershell
+setx TRANSCRIPT_COMPUTE_TYPE "float16"
+setx TRANSCRIPT_BATCH_SIZE "16"
+setx TRANSCRIPT_BEAM_SIZE "5"
+setx TRANSCRIPT_WARM_MODEL "1"
+```
+
+Use beam size `1` for the fastest decoder only after the accuracy benchmark
+shows that its WER is acceptable. Increase batch size only while GPU memory and
+latency remain healthy. Set `TRANSCRIPT_WARM_MODEL=0` to restore lazy loading.
+
 For extraction OCR, explicitly allow PaddleOCR's first download on a trusted
 connected host, or point at a pinned cache containing `det`, `rec`, and `cls`
 subdirectories:
@@ -75,7 +90,7 @@ On first run it will:
 
 ```powershell
 # After downloading nssm.exe:
-nssm install transcript-server "C:\path\to\transcript\.venv\Scripts\transcript-server.exe" "--host 0.0.0.0 --port 8000 --model large-v3"
+nssm install transcript-server "C:\path\to\transcript\.venv\Scripts\transcript-server.exe" "--host 0.0.0.0 --port 8000 --model large-v3 --compute-type float16 --batch-size 16 --beam-size 5 --warm-model"
 nssm set transcript-server AppEnvironmentExtra HF_TOKEN=hf_xxx TRANSCRIPT_TOKEN=your_token
 nssm start transcript-server
 # logs: nssm set ... AppStdout / AppStderr to files, or use Event Viewer
@@ -112,3 +127,32 @@ Test connectivity first:
 ```bash
 curl http://<windows-lan-ip>:8000/health
 ```
+
+The response includes the active device, compute type, batch/beam settings,
+whether the model is loaded, and the installed Torch/WhisperX/faster-whisper/
+CTranslate2 versions. With the supplied Windows launcher, `model_loaded` should
+be `true` before the server becomes reachable.
+
+## 5. Safely evaluate a CTranslate2 upgrade
+
+Treat `4.8.1` as a candidate, not an in-place production upgrade. Record a
+baseline first with `benchmarks/run.py`, then test in a separate environment:
+
+```powershell
+cd C:\path\to\transcript
+python -m venv .venv-ct2-481
+.\.venv-ct2-481\Scripts\Activate.ps1
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cu128
+pip install -e ".[server]"
+pip install "ctranslate2==4.8.1"
+pip check
+
+$env:TRANSCRIPT_PORT = "8001"
+.\deploy\run-server.ps1
+```
+
+From the Mac, confirm `/health` reports the candidate version and rerun the same
+pinned benchmark corpus against port `8001`. Promote the environment only if
+WER/CER do not regress and median latency/RTF improve; otherwise keep the
+existing production environment. This also catches CUDA/driver incompatibility
+before changing the service.

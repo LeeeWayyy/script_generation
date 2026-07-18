@@ -16,6 +16,7 @@ from typing import Callable, Optional
 
 _JOB_ID_RE = re.compile(r"[0-9a-f]{12}\Z")
 _TRANSIENT_GET_STATUSES = {502, 503}
+DEFAULT_POLL_SECONDS = 0.25
 
 
 def build_headers(token: Optional[str]) -> dict:
