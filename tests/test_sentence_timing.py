@@ -16,6 +16,8 @@ def test_actual_acoustic_gap_stops_next_turn_leaking_into_final_word():
 
 def test_no_trim_for_overlap_short_gap_nonterminal_or_missing_timing():
     for word, turns in [
+        ({'word': 'God.', 'start': 0., 'end': 1.9},
+         {'start': [0., .5], 'end': [.15, 2.]}),  # drawn-out or severely misaligned
         ({'word': 'up.', 'start': 0., 'end': .9},
          {'start': [0., .1], 'end': [.6, 1.]}),  # overlapping speakers cover the gap
         ({'word': 'up.', 'start': 0., 'end': .9},

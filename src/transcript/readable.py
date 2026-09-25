@@ -41,14 +41,19 @@ def readable_transcript(transcript: Transcript) -> Transcript:
         # ponytail: punctuation/pause/length heuristics; use a language-aware
         # segmenter only if these conservative reading boundaries prove inadequate.
         starts = [0]
+        last_speaker = speaker(0)
         for i in range(1, len(tokens)):
             first = starts[-1]
             pause = timed(i - 1) and timed(i) and words[i].start - words[i - 1].end >= 0.8
             duration = timed(first) and timed(i) and words[i].end - words[first].start > 8
-            if (speaker(i) != speaker(i - 1) or pause or duration or i - first >= 20
+            changed = speaker(i) is not None and last_speaker is not None and speaker(i) != last_speaker
+            if (changed or pause or duration or i - first >= 20
                     or positions[i] - positions[first] >= 120
                     or re.search(r'[.!?。！？]["\u201d\u2019]*$', tokens[i - 1])):
                 starts.append(i)
+                last_speaker = speaker(i)
+            elif speaker(i) is not None:
+                last_speaker = speaker(i)
         stops = starts[1:] + [len(tokens)]
         for first, stop in zip(starts, stops):
             group_words = words[first:stop] if mapped else []
@@ -58,7 +63,8 @@ def readable_transcript(transcript: Transcript) -> Transcript:
             split = len(starts) > 1
             start = words[first].start if reliable else (None if split else source.start)
             end = words[stop - 1].end if reliable else (None if split else source.end)
-            label = speaker(first) if mapped else source.speaker
+            labels = {w.speaker for w in group_words}
+            label = (next(iter(labels)) if len(labels) == 1 else None) if mapped else source.speaker
             segments.append(replace(
                 source, text=source.text[positions[first] if first else 0:
                                          positions[stop] if stop < len(tokens) else len(source.text)].strip(),

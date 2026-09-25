@@ -85,3 +85,30 @@ def test_failed_alignment_metadata_and_unknown_word_speaker_are_honest():
     assert result.segments[1].speaker is None
     assert result.segments[1].start is None and result.segments[1].end is None
     assert result.meta['readable']['fallbacks'][0]['source_end'] == 4
+
+
+def test_missing_speaker_is_uncertainty_not_a_new_turn():
+    words = [Word('I', 0, .1), Word('like', .12, .3), Word('that.', .34, .5, speaker='A')]
+    result = readable_transcript(Transcript([Segment('I like that.', 0, .5, 'A', words)], 'en'))
+    assert len(result.segments) == 1
+    assert result.segments[0].text == 'I like that.'
+    assert result.segments[0].speaker is None
+    assert result.meta['readable']['fallbacks'][0]['speaker'] == 'unavailable'
+    words = [Word('I', 0, .1, speaker='A'), Word('think', .12, .3),
+             Word('no', .34, .5, speaker='B')]
+    result = readable_transcript(Transcript([Segment('I think no', 0, .5, 'A', words)], 'en'))
+    assert [s.text for s in result.segments] == ['I think', 'no']
+    assert [s.speaker for s in result.segments] == [None, 'B']
+
+
+def test_engine_does_not_assign_unknown_words_to_segment_majority():
+    from transcript.engine import _to_transcript
+    source = _to_transcript({'segments': [{
+        'text': 'I think no', 'start': 0, 'end': .5, 'speaker': 'B', 'words': [
+            {'word': 'I', 'start': 0, 'end': .1, 'speaker': 'A'},
+            {'word': 'think', 'start': .12, 'end': .3},
+            {'word': 'no', 'start': .34, 'end': .5, 'speaker': 'B'},
+        ],
+    }]}, language='en')
+    assert [s.text for s in source.segments] == ['I think', 'no']
+    assert [s.speaker for s in source.segments] == [None, 'B']

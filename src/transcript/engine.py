@@ -246,7 +246,7 @@ def _trim_sentence_tails(result: dict, diarization) -> list[dict]:
     for segment in result.get("segments", []):
         for word in segment.get("words", []):
             start, end = word.get("start"), word.get("end")
-            if (not valid(start) or not valid(end) or end - start < .5
+            if (not valid(start) or not valid(end) or not .5 <= end - start <= 1.
                     or not re.search(r'[.!?。！？]["\u201d\u2019]*$', word.get("word", ""))):
                 continue
             index = bisect_right(starts, start) - 1
@@ -254,9 +254,9 @@ def _trim_sentence_tails(result: dict, diarization) -> list[dict]:
                 continue
             stop = islands[index][1]
             next_start = starts[index + 1]
-            # ponytail: >=200ms all-speaker gap and >=40ms retained speech;
+            # ponytail: >=200ms all-speaker gap and 40–300ms retained speech;
             # finer boundaries need calibrated frame/phoneme evidence.
-            if stop - start < .04 or next_start - stop < .2 or end <= next_start:
+            if not .04 <= stop - start <= .3 or next_start - stop < .2 or end <= next_start:
                 continue
             word["end"] = stop
             if segment.get("end") == end:
@@ -302,7 +302,7 @@ def _split_speaker_turns(raw: dict) -> list[dict]:
     if not text or not words:
         return [raw]
 
-    speakers = [word.get("speaker") or raw.get("speaker") for word in words]
+    speakers = [word.get("speaker") for word in words]
     if len({speaker for speaker in speakers if speaker}) < 2:
         return [raw]
 
@@ -318,11 +318,14 @@ def _split_speaker_turns(raw: dict) -> list[dict]:
 
     groups: list[tuple[int, int, Optional[str]]] = []
     start = 0
+    last_speaker = speakers[0]
     for index in range(1, len(words)):
-        if speakers[index] != speakers[index - 1]:
-            groups.append((start, index, speakers[index - 1]))
+        if speakers[index] is not None and last_speaker is not None and speakers[index] != last_speaker:
+            groups.append((start, index, last_speaker))
             start = index
-    groups.append((start, len(words), speakers[-1]))
+        if speakers[index] is not None:
+            last_speaker = speakers[index]
+    groups.append((start, len(words), last_speaker))
 
     split = []
     for group_index, (word_start, word_end, speaker) in enumerate(groups):
@@ -336,7 +339,7 @@ def _split_speaker_turns(raw: dict) -> list[dict]:
                            if word.get("start") is not None), raw.get("start")),
             "end": next((word.get("end") for word in reversed(group_words)
                          if word.get("end") is not None), raw.get("end")),
-            "speaker": speaker,
+            "speaker": speaker if all(w.get("speaker") == speaker for w in group_words) else None,
             "words": group_words,
         })
         split.append(piece)

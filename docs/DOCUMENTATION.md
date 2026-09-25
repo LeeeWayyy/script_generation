@@ -919,8 +919,8 @@ speaker or timestamp errors. A joined ambiguous sentence could still contain a
 real rapid interruption: consumers must retain the uncertainty metadata.
 
 When diarization is enabled, the engine now also checks sentence-final aligned
-words that last at least 500 ms and cross an all-speaker speech gap of at least
-200 ms into the next speech island. If at least 40 ms of speech remains after
+words that last 500–1000 ms and cross an all-speaker speech gap of at least
+200 ms into the next speech island. If 40–300 ms of speech remains after
 the word start, it ends the word at the first island's end **before** assigning
 speakers. Overlapping speakers are unioned, so another active speaker is not
 mistaken for silence. Non-terminal words and short gaps are left alone.
@@ -930,3 +930,11 @@ stretched word from borrowing the next response's speaker; it is still a model
 estimate, not manually calibrated timing. Formatting old JSON cannot perform
 this acoustic adjustment; new inference (or re-alignment/diarization with audio)
 is required. Saved JSON can still receive the reading-continuity correction.
+
+Long or naturally drawn-out words are excluded from this timing adjustment;
+it targets brief sentence-final sounds stretched into the following response.
+
+Missing word speaker labels are uncertainty, not evidence of a new speaker.
+The readable view does not split merely at known/unknown transitions; it still
+splits between differing known speakers, even across unknown words. A row that
+contains unknown word assignments has `speaker:null` and a fallback entry.
