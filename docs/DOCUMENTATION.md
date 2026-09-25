@@ -885,9 +885,10 @@ tests establish a general improvement in acoustic diarization accuracy.
 original speaker fragments. It joins only a capitalized sentence ending in a
 period, with 2–8 aligned words, at most 3 fragments, and total duration at most
 1.25 seconds. Every word gap must be nonnegative and at most 120 ms; each changed
-speaker continuation must start lowercase and last at most 300 ms. Clause-ending
+speaker continuation must start lowercase and have at least one adjacent fragment
+lasting at most 300 ms. Clause-ending
 punctuation, question/exclamation endings, common interjections, unknown speakers,
-incomplete/overlapping timing, and sustained new turns keep their boundaries.
+incomplete/overlapping timing, and pairs of sustained fragments keep their boundaries.
 These thresholds are conservative reading heuristics, not speaker confidence.
 They do not cover all languages, unpunctuated speech, or longer disputed sentences.
 
@@ -906,3 +907,26 @@ flip, and exclusive diarization did not eliminate it. That comparison motivates
 treating the label as fallible; it does not prove acoustic identity. The two
 reported phrases also have explicit user confirmation. Broader model accuracy
 still needs listening-based evaluation, and reviewed repairs remain available.
+
+
+Fresh host validation also exposed alignment stretching: in the 20-second excerpt,
+"up." extends to 94.794 rather than the earlier full-interview estimate 94.280.
+The rule therefore tests for a brief fragment on either side of the internal
+change; it does not interpret a stretched trailing word as speaker confidence.
+It preserves the supplied word times rather than claiming to correct alignment.
+Consequently this fixes the demonstrated reading fragmentation, not all acoustic
+speaker or timestamp errors. A joined ambiguous sentence could still contain a
+real rapid interruption: consumers must retain the uncertainty metadata.
+
+When diarization is enabled, the engine now also checks sentence-final aligned
+words that last at least 500 ms and cross an all-speaker speech gap of at least
+200 ms into the next speech island. If at least 40 ms of speech remains after
+the word start, it ends the word at the first island's end **before** assigning
+speakers. Overlapping speakers are unioned, so another active speaker is not
+mistaken for silence. Non-terminal words and short gaps are left alone.
+`meta.timing_adjustments` retains the original end, adjusted end, word/start,
+reason, and `timing_precision:model_estimate`. This prevents the demonstrated
+stretched word from borrowing the next response's speaker; it is still a model
+estimate, not manually calibrated timing. Formatting old JSON cannot perform
+this acoustic adjustment; new inference (or re-alignment/diarization with audio)
+is required. Saved JSON can still receive the reading-continuity correction.

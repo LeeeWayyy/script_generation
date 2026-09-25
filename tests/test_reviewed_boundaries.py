@@ -117,7 +117,7 @@ def test_automatic_sentence_continuity_without_review_or_text_rewriting():
     ('Hello.', 'there.', .04, .20, 'en'),  # completed sentence
     ('I made', 'it up.', .20, .22, 'en'),  # pause
     ('I made', 'it up.', -.02, .22, 'en'),  # overlapping speech
-    ('I made', 'it up.', .04, .50, 'en'),  # sustained second turn
+    ('I made', 'it up.', .04, 1.10, 'en'),  # sustained second turn
     ('I made', 'It up.', .04, .22, 'en'),  # capitalized new utterance
     ('I made,', 'it up.', .04, .22, 'en'),  # explicit clause boundary
     ('I made', 'it up?', .04, .22, 'en'),  # question/echo
@@ -144,3 +144,34 @@ def test_automatic_rule_does_not_promote_missing_timing_or_unknown_speakers():
         source.segments[1].words[0] = replace(source.segments[1].words[0], **{field: value})
         result = readable_transcript(source)
         assert not any(s.text == 'I made it up.' for s in result.segments)
+
+
+def test_both_sustained_fragments_remain_separate():
+    from transcript.readable import readable_transcript
+    source = Transcript([
+        Segment('You', 0, .4, 'A', [Word('You', 0, .4, speaker='A')]),
+        Segment('too.', .44, .94, 'B', [Word('too.', .44, .94, speaker='B')]),
+    ], 'en')
+    assert readable_transcript(source).segments == source.segments
+
+
+def test_fresh_host_alignment_stretch_does_not_make_a_false_turn():
+    from transcript.engine import _to_transcript
+    from transcript.readable import readable_transcript
+    # Actual 85–105s fresh host excerpt: the final word is aligned too widely
+    # to justify treating tail duration alone as a sustained speaker turn.
+    words = [
+        {'word': 'I', 'start': 8.754, 'end': 8.834, 'speaker': 'A'},
+        {'word': 'made', 'start': 8.854, 'end': 9.034, 'speaker': 'A'},
+        {'word': 'it', 'start': 9.054, 'end': 9.114, 'speaker': 'B'},
+        {'word': 'up.', 'start': 9.194, 'end': 9.794, 'speaker': 'B'},
+    ]
+    source = _to_transcript({'segments': [{
+        'text': 'I made it up.', 'start': 8.754, 'end': 9.794, 'words': words,
+    }]}, language='en')
+    assert len(source.segments) == 2
+    result = readable_transcript(source)
+    assert len(result.segments) == 1
+    assert result.segments[0].text == 'I made it up.'
+    assert (result.segments[0].start, result.segments[0].end) == (8.754, 9.794)
+    assert result.segments[0].speaker is None

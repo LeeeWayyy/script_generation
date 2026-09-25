@@ -8,7 +8,10 @@ multi-gigabyte ML stack.
 from __future__ import annotations
 
 import logging
+import math
 import os
+import re
+from bisect import bisect_right
 from typing import Optional
 
 from .device import default_compute_type, detect_device
@@ -206,14 +209,64 @@ class TranscriptionEngine:
             except Exception as exc:
                 log.warning("Word alignment failed (%s); continuing without word timestamps.", exc)
 
+        timing_adjustments = []
         if diarize:
             log.info("Diarizing (identifying speakers) ...")
             diarizer = self._load_diarizer()
             diarize_segments = diarizer(audio, min_speakers=min_speakers, max_speakers=max_speakers)
+            timing_adjustments = _trim_sentence_tails(result, diarize_segments)
             result = whisperx.assign_word_speakers(diarize_segments, result)
 
-        return _stamp(_to_transcript(result, language=language), align=align,
-                      align_ok=align_ok, diarize=diarize)
+        transcript = _stamp(_to_transcript(result, language=language), align=align,
+                            align_ok=align_ok, diarize=diarize)
+        if timing_adjustments:
+            transcript.meta["timing_adjustments"] = timing_adjustments
+        return transcript
+
+
+def _trim_sentence_tails(result: dict, diarization) -> list[dict]:
+    """Stop a stretched final word from including the next speech island.
+
+    Uses gaps in the union of all speakers, never ASR score as speaker confidence.
+    Original alignment is retained in provenance; these remain model estimates.
+    """
+    def valid(t):
+        return isinstance(t, (int, float)) and not isinstance(t, bool) and math.isfinite(t)
+
+    islands = []
+    for start, end in sorted(zip(diarization["start"], diarization["end"])):
+        if not valid(start) or not valid(end) or not 0 <= start < end:
+            continue
+        if islands and start <= islands[-1][1]:
+            islands[-1][1] = max(islands[-1][1], end)
+        else:
+            islands.append([start, end])
+    starts = [span[0] for span in islands]
+    adjustments = []
+    for segment in result.get("segments", []):
+        for word in segment.get("words", []):
+            start, end = word.get("start"), word.get("end")
+            if (not valid(start) or not valid(end) or end - start < .5
+                    or not re.search(r'[.!?。！？]["\u201d\u2019]*$', word.get("word", ""))):
+                continue
+            index = bisect_right(starts, start) - 1
+            if index < 0 or index + 1 >= len(islands):
+                continue
+            stop = islands[index][1]
+            next_start = starts[index + 1]
+            # ponytail: >=200ms all-speaker gap and >=40ms retained speech;
+            # finer boundaries need calibrated frame/phoneme evidence.
+            if stop - start < .04 or next_start - stop < .2 or end <= next_start:
+                continue
+            word["end"] = stop
+            if segment.get("end") == end:
+                segment["end"] = stop
+            adjustments.append({
+                "word": word["word"], "start": start, "original_end": end, "end": stop,
+                "reason": "sentence_tail_crossed_diarization_speech_gap",
+                "timing_precision": "model_estimate",
+            })
+    return adjustments
 
 
 def _pkg_version(name: str) -> Optional[str]:

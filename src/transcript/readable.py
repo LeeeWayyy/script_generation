@@ -122,7 +122,8 @@ def _join_sentence_continuations(transcript: Transcript) -> Transcript:
         for left, right in zip(group, group[1:]):
             if (left.speaker == right.speaker or not right.text[:1].islower()
                     or re.search(r'[,;:\-—]$', left.text)
-                    or right.words[-1].end - right.words[0].start > .30 + 1e-6):
+                    or min(left.words[-1].end - left.words[0].start,
+                           right.words[-1].end - right.words[0].start) > .30 + 1e-6):
                 break
             joins.append(right.start)
         else:
