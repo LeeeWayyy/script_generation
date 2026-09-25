@@ -753,3 +753,78 @@ Conventions:
 - Keep `torch`/`whisperx` imports lazy (inside functions in `engine.py`).
 - Keep legacy transcript serialization separate from extraction envelopes.
 - Line length 100; `ruff` configured in `pyproject.toml`.
+
+### Readable, speaker-aware JSON for reading apps
+
+Submit `POST /jobs` as multipart form data with `url` (or `file`),
+`align=true`, and `diarize=true`. These flags already exist and default to true;
+clients must not override them to false when requesting word timing and speakers.
+Optionally send `language=en` when known. Leave `min_speakers`/`max_speakers`
+unset unless the speaker count is known. The host needs its Hugging Face token
+and access to the diarization model required by its installed WhisperX version.
+Diarization failures fail the job; alignment failures retain coarse segments and
+set `meta.align_succeeded=false` (null means alignment was not run).
+
+After completion, request:
+
+```text
+GET /jobs/{id}/result?format=json&readable=true
+```
+
+This opt-in view uses existing word alignment and speaker assignments to break
+at speaker changes, punctuation, pauses of at least 0.8 seconds, or approximately
+20 words / 120 characters / 8 seconds. It never merges source segments or rewrites
+speech. These are reading heuristics, not guaranteed grammatical sentences;
+a single indivisible token can exceed a limit. It adds no model inference.
+The default result endpoint and cached transcript remain unchanged. The readable
+option is JSON-only because subtitle formats cannot represent unknown times.
+
+Illustrative result (times and words are examples, not measured interview output):
+
+```json
+{
+  "segments": [
+    {"text": "Hello.", "start": 1.2, "end": 1.7,
+     "speaker": "SPEAKER_00",
+     "words": [{"word": "Hello.", "start": 1.2, "end": 1.7,
+                "score": 0.95, "speaker": "SPEAKER_00"}]}
+  ],
+  "language": "en",
+  "meta": {
+    "align_requested": true, "align_succeeded": true,
+    "diarize_requested": true, "diarize_succeeded": true,
+    "readable": {"version": 1, "punctuation_restored": false, "fallbacks": []}
+  }
+}
+```
+
+When alignment is unavailable or words cannot be mapped to the source text,
+text still breaks into short units. Newly split units have `start:null,end:null`
+unless all their word timings are valid and ordered. Unsplit units can retain
+original coarse timestamps. `meta.readable.fallbacks` lists affected output
+`segment_index`, `source_segment_index`, `source_start`, `source_end`, and timing
+precision (`word`, `source_segment`, or `unavailable`) and speaker precision
+(`word`, `source_segment`, or `unavailable`). If word text cannot be mapped, the first fallback for that source also retains
+`source_words` for inspection. Use source bounds only for coarse
+seeking, never as individual word timing. Unknown speakers stay null; coarse
+segment labels do not prove that every exchange has been separated. Anonymous
+IDs are consistent within a result, not guaranteed across reprocessing; real
+names require user confirmation. Preserve `words`, `speaker`, and `meta` in clients.
+
+Human captions follow the same reading rules and use the existing audio alignment
+when requested. Without audio alignment, caption cue times remain coarse. This
+view performs no independent caption timing calibration. It does not restore
+punctuation or capitalization: a separate restoration model adds inference
+latency and can alter meaning, names, or sentence boundaries. Evaluate that
+separately against audio before offering it as an explicit editing feature.
+Alignment and diarization themselves add GPU work; no latency or accuracy claim
+is made without a measured run on the host.
+
+For Windows deployment, install the updated project in the server virtual
+environment (`python -m pip install -e ".[server]"`). Before restarting, inspect
+`GET /jobs` with the existing authentication and wait for queued/running jobs to
+finish; save needed results because legacy jobs live in memory. Restart the
+server from that environment with Deno available. Resubmit jobs originally sent
+with `align=false,diarize=false` using both flags true: formatting cannot recover
+missing word timings or speakers from their old results. Existing completed jobs
+can use the readable view while resident in a server running the updated code.
