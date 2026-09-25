@@ -58,6 +58,7 @@ def test_single_speaker_caption_and_pause():
 
 def test_result_opt_in_keeps_legacy_and_cached_result(monkeypatch, tmp_path):
     from transcript.server import Job, create_app
+    monkeypatch.delenv('TRANSCRIPT_TOKEN', raising=False)
     monkeypatch.setenv('TRANSCRIPT_DATA_DIR', str(tmp_path))
     app = create_app()
     transcript = Transcript([Segment(' '.join(['hello'] * 45), 0, 30)])

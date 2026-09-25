@@ -1,4 +1,5 @@
 """Opt-in reading units; never rewrite speech or interpolate word timing."""
+from collections import Counter
 from dataclasses import asdict, replace
 import math
 import re
@@ -73,10 +74,60 @@ def readable_transcript(transcript: Transcript) -> Transcript:
                     "speaker": "word" if mapped and label else (
                         "source_segment" if label else "unavailable"),
                 })
-    return replace(transcript, segments=segments, meta={
+    result = replace(transcript, segments=segments, meta={
         **transcript.meta,
         "readable": {"version": 1, "punctuation_restored": False, "fallbacks": fallback},
     })
+    return _join_sentence_continuations(result)
+
+
+def _join_sentence_continuations(transcript: Transcript) -> Transcript:
+    """Treat a brief mid-sentence label change as uncertain, not an infallible turn.
+
+    ponytail: conservative English punctuation/case heuristic, not a speaker
+    classifier. Broader languages/longer sentences need acoustic boundary evidence.
+    """
+    if (transcript.language or "").split("-")[0].lower() != "en":
+        return transcript
+    interjections = {
+        "yes", "no", "yeah", "yep", "nope", "oh", "ok", "okay", "right", "sure",
+        "wow", "thanks", "huh", "what", "why", "well", "hey", "sorry", "wait",
+        "stop", "go", "really", "exactly", "hmm", "uh", "um",
+    }
+    start_counts = Counter(s.start for s in transcript.segments)
+    sentence, boundaries = [], []
+    for segment in transcript.segments:
+        sentence.append(segment)
+        if not re.search(r'[.!?。！？]["\u201d\u2019]*$', segment.text):
+            continue
+        group, sentence = sentence, []
+        if len(group) < 2 or len(group) > 3 or not segment.text.endswith("."):
+            continue
+        words = [w for s in group for w in s.words]
+        if (not 2 <= len(words) <= 8 or not group[0].text[:1].isupper()
+                or any(not s.words or s.speaker is None for s in group)
+                or any(not isinstance(t, (int, float)) or not math.isfinite(t)
+                       for w in words for t in (w.start, w.end))
+                or any(w.start < 0 or w.end < w.start for w in words)
+                or any(start_counts[s.start] != 1 for s in group[1:])
+                or words[-1].end - words[0].start > 1.25
+                or any(not 0 <= b.start - a.end <= .12 + 1e-6
+                       for a, b in zip(words, words[1:]))):
+            continue
+        # Preserve explicit interjections and punctuation-delimited exchanges,
+        # even when both are shorter than the unstable fragment being repaired.
+        if any(s.words[0].word.lower().strip(".,!?;:\"'") in interjections for s in group):
+            continue
+        joins = []
+        for left, right in zip(group, group[1:]):
+            if (left.speaker == right.speaker or not right.text[:1].islower()
+                    or re.search(r'[,;:\-—]$', left.text)
+                    or right.words[-1].end - right.words[0].start > .30 + 1e-6):
+                break
+            joins.append(right.start)
+        else:
+            boundaries.extend(joins)
+    return _join_boundaries(transcript, boundaries, basis="short_sentence_continuity_heuristic")
 
 
 def join_reviewed_boundaries(transcript: Transcript, boundaries: list[float]) -> Transcript:
@@ -85,6 +136,12 @@ def join_reviewed_boundaries(transcript: Transcript, boundaries: list[float]) ->
     Apply to an already-readable result. This is a human correction, not speaker
     inference: original word assignments survive, and conflicting row labels become null.
     """
+    return _join_boundaries(transcript, boundaries, basis="user_confirmed_sentence_continuity")
+
+
+def _join_boundaries(transcript: Transcript, boundaries: list[float], *, basis: str) -> Transcript:
+    if not boundaries:
+        return transcript
     if (any(not isinstance(t, (int, float)) or isinstance(t, bool)
             or not math.isfinite(t) or t < 0 for t in boundaries)
             or len(set(boundaries)) != len(boundaries)):
@@ -123,7 +180,7 @@ def join_reviewed_boundaries(transcript: Transcript, boundaries: list[float]) ->
             corrections.append({
                 "segment_index": len(segments) - 1, "boundary_start": source.start,
                 "input_segment_indices": [i - 1, i],
-                "basis": "user_confirmed_sentence_continuity",
+                "basis": basis,
                 "speaker_assignments_changed": False,
             })
         indices[i] = len(segments) - 1
@@ -137,15 +194,16 @@ def join_reviewed_boundaries(transcript: Transcript, boundaries: list[float]) ->
             fallbacks.append({
                 "segment_index": index, "source_start": segment.start, "source_end": segment.end,
                 "timing": "word", "speaker": "unavailable",
-                "reason": "reviewed_continuity_with_uncertain_speaker_assignment",
+                "reason": basis + "_with_uncertain_speaker_assignment",
             })
-    readable.update({
-        "fallbacks": fallbacks,
-        "reviewed_joins": [
-            {**c, "segment_index": indices[c["segment_index"]]}
-            for c in readable.get("reviewed_joins", [])
-        ] + corrections,
-    })
+    readable["fallbacks"] = fallbacks
+    for key in ("reviewed_joins", "sentence_continuity_joins"):
+        if key in readable:
+            readable[key] = [{**c, "segment_index": indices[c["segment_index"]]}
+                             for c in readable[key]]
+    key = ("reviewed_joins" if basis == "user_confirmed_sentence_continuity"
+           else "sentence_continuity_joins")
+    readable[key] = readable.get(key, []) + corrections
     return replace(transcript, segments=segments, meta={**transcript.meta, "readable": readable})
 
 

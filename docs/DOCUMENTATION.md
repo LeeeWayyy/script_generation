@@ -773,8 +773,8 @@ GET /jobs/{id}/result?format=json&readable=true
 
 This opt-in view uses existing word alignment and speaker assignments to break
 at speaker changes, punctuation, pauses of at least 0.8 seconds, or approximately
-20 words / 120 characters / 8 seconds. It never merges source segments or rewrites
-speech. These are reading heuristics, not guaranteed grammatical sentences;
+20 words / 120 characters / 8 seconds. It preserves source segments except for the narrow sentence-continuity rule
+described below, and never rewrites speech. These are reading heuristics, not guaranteed grammatical sentences;
 a single indivisible token can exceed a limit. It adds no model inference.
 The default result endpoint and cached transcript remain unchanged. The readable
 option is JSON-only because subtitle formats cannot represent unknown times.
@@ -836,8 +836,9 @@ WhisperX 3.8.6 selects the speaker with the largest overlap for each word; the
 saved transcript does not retain competing overlap evidence or speaker confidence.
 `Word.score` is an alignment/ASR score and must not be used as speaker confidence.
 A 40 ms gap and an incomplete sentence alone cannot distinguish noisy labels from
-a real interruption. Automatic sentence-aware boundary quality remains unresolved;
-we do not smooth all short switches, force a speaker count, or merge interjections.
+a real interruption. General acoustic speaker accuracy remains uncertain. The conservative
+sentence-continuity rule below addresses brief internal label flips; we do not
+smooth all short switches or force a speaker count.
 
 When a user has explicitly confirmed that two adjacent reading rows belong to one
 continuous sentence, repair the exported **readable JSON** without inference or a
@@ -876,3 +877,32 @@ provides [exclusive diarization](https://huggingface.co/pyannote/speaker-diariza
 intended for reconciliation with transcript timestamps, but switching to it is not
 implemented or validated here. Neither these two human corrections nor structural
 tests establish a general improvement in acoustic diarization accuracy.
+
+
+#### Automatic short-sentence continuity
+
+`readable=true` now examines complete, punctuated English sentences across the
+original speaker fragments. It joins only a capitalized sentence ending in a
+period, with 2–8 aligned words, at most 3 fragments, and total duration at most
+1.25 seconds. Every word gap must be nonnegative and at most 120 ms; each changed
+speaker continuation must start lowercase and last at most 300 ms. Clause-ending
+punctuation, question/exclamation endings, common interjections, unknown speakers,
+incomplete/overlapping timing, and sustained new turns keep their boundaries.
+These thresholds are conservative reading heuristics, not speaker confidence.
+They do not cover all languages, unpunctuated speech, or longer disputed sentences.
+
+Joined rows keep every original word, score, timing, and conflicting speaker
+assignment. Row `speaker` becomes null, with an explicit unavailable-speaker
+fallback. `meta.readable.sentence_continuity_joins` records each removed boundary
+with `basis:short_sentence_continuity_heuristic`, separately from human-reviewed
+repairs. Apps should keep these rows intact without displaying speaker labels,
+and must not call a heuristic join a verified single-speaker turn. Other short
+exchanges remain separate. Original `/result?format=json` output is unchanged.
+
+This is deliberately a small deterministic correction rather than new acoustic
+inference: saved raw results can be reformatted with the updated readable view.
+The 85–105 second host acoustic comparison reproduced a 186 ms internal speaker
+flip, and exclusive diarization did not eliminate it. That comparison motivates
+treating the label as fallible; it does not prove acoustic identity. The two
+reported phrases also have explicit user confirmation. Broader model accuracy
+still needs listening-based evaluation, and reviewed repairs remain available.

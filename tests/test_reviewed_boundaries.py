@@ -84,3 +84,63 @@ def test_true_short_exchanges_preserved_without_explicit_review():
         Segment('okay', .44, .7, 'A', [Word('okay', .44, .7, .99, 'A')]),
     ])
     assert join_reviewed_boundaries(source, []).segments == source.segments
+
+
+def test_automatic_sentence_continuity_without_review_or_text_rewriting():
+    from transcript.readable import readable_transcript
+    source = interview()
+    result = readable_transcript(source)
+    assert [s.text for s in result.segments] == [
+        'I made it up.', 'No,', 'Alice, go', 'ahead.', 'Tell him.',
+    ]
+    # The artificial standalone "No," has no sentence end, so the following
+    # phrase is deliberately not eligible. Real interview "No, ... saying."
+    # is sentence-terminated, as checked below.
+    source.segments[2] = replace(source.segments[2], text='No.',
+                                 words=[replace(source.segments[2].words[0], word='No.')])
+    result = readable_transcript(source)
+    assert [s.text for s in result.segments] == [
+        'I made it up.', 'No.', 'Alice, go ahead.', 'Tell him.',
+    ]
+    assert result.segments[0].start == 93.76 and result.segments[0].end == 94.28
+    assert result.segments[2].start == 98.442 and result.segments[2].end == 99.183
+    assert result.segments[0].speaker is None
+    assert 'reviewed_joins' not in result.meta['readable']
+    assert all(c['basis'] == 'short_sentence_continuity_heuristic'
+               for c in result.meta['readable']['sentence_continuity_joins'])
+    assert [w for s in result.segments for w in s.words] == [w for s in source.segments for w in s.words]
+
+
+@pytest.mark.parametrize('left,right,gap,right_duration,language', [
+    ('Go', 'no.', .04, .10, 'en'),  # fast, real interjection
+    ('I agree', 'yeah.', .04, .10, 'en'),
+    ('Hello.', 'there.', .04, .20, 'en'),  # completed sentence
+    ('I made', 'it up.', .20, .22, 'en'),  # pause
+    ('I made', 'it up.', -.02, .22, 'en'),  # overlapping speech
+    ('I made', 'it up.', .04, .50, 'en'),  # sustained second turn
+    ('I made', 'It up.', .04, .22, 'en'),  # capitalized new utterance
+    ('I made,', 'it up.', .04, .22, 'en'),  # explicit clause boundary
+    ('I made', 'it up?', .04, .22, 'en'),  # question/echo
+    ('I made', 'it up.', .04, .22, 'es'),  # unsupported language
+])
+def test_automatic_rule_preserves_rapid_turns_and_uncertain_context(
+        left, right, gap, right_duration, language):
+    from transcript.readable import readable_transcript
+    start = .26 + gap
+    source = Transcript([
+        Segment(left, 0, .26, 'A', [Word(left, 0, .26, .01, 'A')]),
+        Segment(right, start, start + right_duration, 'B',
+                [Word(right, start, start + right_duration, 1., 'B')]),
+    ], language)
+    result = readable_transcript(source)
+    assert result.segments == source.segments
+    assert not result.meta['readable'].get('sentence_continuity_joins')
+
+
+def test_automatic_rule_does_not_promote_missing_timing_or_unknown_speakers():
+    from transcript.readable import readable_transcript
+    for field, value in [('start', None), ('speaker', None)]:
+        source = interview()
+        source.segments[1].words[0] = replace(source.segments[1].words[0], **{field: value})
+        result = readable_transcript(source)
+        assert not any(s.text == 'I made it up.' for s in result.segments)
