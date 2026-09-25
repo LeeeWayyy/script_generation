@@ -77,3 +77,104 @@ def readable_transcript(transcript: Transcript) -> Transcript:
         **transcript.meta,
         "readable": {"version": 1, "punctuation_restored": False, "fallbacks": fallback},
     })
+
+
+def join_reviewed_boundaries(transcript: Transcript, boundaries: list[float]) -> Transcript:
+    """Join only explicitly reviewed row boundaries, identified by the right row's start.
+
+    Apply to an already-readable result. This is a human correction, not speaker
+    inference: original word assignments survive, and conflicting row labels become null.
+    """
+    if (any(not isinstance(t, (int, float)) or isinstance(t, bool)
+            or not math.isfinite(t) or t < 0 for t in boundaries)
+            or len(set(boundaries)) != len(boundaries)):
+        raise ValueError("Reviewed boundaries must be unique finite nonnegative times")
+    targets = set()
+    for boundary in boundaries:
+        matches = [i for i, s in enumerate(transcript.segments) if s.start == boundary]
+        if len(matches) != 1 or matches[0] == 0:
+            raise ValueError(f"Boundary {boundary} must identify exactly one non-first row")
+        targets.add(matches[0])
+    segments, indices, corrections = [], {}, []
+    for i, source in enumerate(transcript.segments):
+        if i not in targets:
+            segments.append(source)
+        else:
+            left = segments[-1]
+            words = left.words + source.words
+            # No timing guesses or ASR-score-as-speaker-confidence. A reviewed
+            # join still needs intact, monotonic word intervals for precise seeking.
+            valid = all(
+                isinstance(t, (int, float)) and not isinstance(t, bool) and math.isfinite(t)
+                for w in words for t in (w.start, w.end)
+            )
+            if (not left.words or not source.words or not valid
+                    or any(w.start < 0 or w.start > w.end for w in words)
+                    or any(b.start < a.end for a, b in zip(words, words[1:]))
+                    or left.start != words[0].start or left.end != left.words[-1].end
+                    or source.start != source.words[0].start or source.end != words[-1].end):
+                raise ValueError(f"Boundary {source.start} lacks intact ordered word timing")
+            labels = {w.speaker for w in words}
+            label = next(iter(labels)) if len(labels) == 1 else None
+            segments[-1] = replace(
+                left, text=left.text.rstrip() + " " + source.text.lstrip(), end=source.end,
+                words=words, speaker=label, music=left.music or source.music,
+            )
+            corrections.append({
+                "segment_index": len(segments) - 1, "boundary_start": source.start,
+                "input_segment_indices": [i - 1, i],
+                "basis": "user_confirmed_sentence_continuity",
+                "speaker_assignments_changed": False,
+            })
+        indices[i] = len(segments) - 1
+    readable = dict(transcript.meta.get("readable", {}))
+    fallbacks = [{**f, "segment_index": indices[f["segment_index"]]}
+                 for f in readable.get("fallbacks", [])]
+    reviewed_indices = {c["segment_index"] for c in corrections}
+    for index in sorted(reviewed_indices):
+        segment = segments[index]
+        if segment.speaker is None:
+            fallbacks.append({
+                "segment_index": index, "source_start": segment.start, "source_end": segment.end,
+                "timing": "word", "speaker": "unavailable",
+                "reason": "reviewed_continuity_with_uncertain_speaker_assignment",
+            })
+    readable.update({
+        "fallbacks": fallbacks,
+        "reviewed_joins": [
+            {**c, "segment_index": indices[c["segment_index"]]}
+            for c in readable.get("reviewed_joins", [])
+        ] + corrections,
+    })
+    return replace(transcript, segments=segments, meta={**transcript.meta, "readable": readable})
+
+
+def main():
+    """Repair an exported readable JSON file without modifying the server or library."""
+    import argparse
+    import json
+    from pathlib import Path
+    from .types import Segment, Word
+
+    parser = argparse.ArgumentParser(description=join_reviewed_boundaries.__doc__)
+    parser.add_argument("input", type=Path)
+    parser.add_argument("output", type=Path)
+    parser.add_argument("--join-at", type=float, nargs="+", required=True)
+    args = parser.parse_args()
+    data = json.loads(args.input.read_text(encoding="utf-8"))
+    transcript = Transcript(
+        segments=[Segment(**{**s, "words": [Word(**w) for w in s.get("words", [])]})
+                  for s in data["segments"]], language=data.get("language"), meta=data.get("meta", {}),
+    )
+    try:
+        result = join_reviewed_boundaries(transcript, args.join_at)
+        output = json.dumps(result.to_dict(), indent=2, ensure_ascii=False, allow_nan=False)
+        # Never overwrite a saved result or an active library, even if paths alias.
+        with args.output.open("x", encoding="utf-8") as stream:
+            stream.write(output + "\n")
+    except (ValueError, FileExistsError) as exc:
+        parser.error(str(exc))
+
+
+if __name__ == "__main__":
+    main()

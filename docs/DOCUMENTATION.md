@@ -828,3 +828,51 @@ server from that environment with Deno available. Resubmit jobs originally sent
 with `align=false,diarize=false` using both flags true: formatting cannot recover
 missing word timings or speakers from their old results. Existing completed jobs
 can use the readable view while resident in a server running the updated code.
+
+#### Repairing a reviewed false speaker boundary
+
+Word-level diarization labels are estimates, not infallible turn boundaries.
+WhisperX 3.8.6 selects the speaker with the largest overlap for each word; the
+saved transcript does not retain competing overlap evidence or speaker confidence.
+`Word.score` is an alignment/ASR score and must not be used as speaker confidence.
+A 40 ms gap and an incomplete sentence alone cannot distinguish noisy labels from
+a real interruption. Automatic sentence-aware boundary quality remains unresolved;
+we do not smooth all short switches, force a speaker count, or merge interjections.
+
+When a user has explicitly confirmed that two adjacent reading rows belong to one
+continuous sentence, repair the exported **readable JSON** without inference or a
+server restart:
+
+```sh
+python -m transcript.readable input-readable.json repaired.json --join-at 94.060 98.943
+```
+
+Each time identifies the **right row's exact start**, not a fuzzy time window.
+Only those boundaries are joined. Missing/ambiguous boundaries, missing or unordered
+word times, and mismatched coarse row bounds are rejected. Output must be a new
+file; an existing result or active library is never overwritten. Do not apply
+`readable_transcript()` again to this repaired view, since raw word labels remain
+unchanged and would reintroduce the original breaks.
+
+Original text, words, scores, and word timestamps/labels survive. The joined row
+covers the first word start through the last word end. Conflicting speaker labels
+produce `speaker:null`, a fallback with `speaker:unavailable`, and a reason marking
+reviewed continuity with uncertain speaker assignment. `meta.readable.reviewed_joins`
+records the boundary, input row indices, output row index, and
+`basis:user_confirmed_sentence_continuity`. Existing fallback indices are remapped.
+This is not a claim that the speaker identities have been acoustically corrected.
+
+For interview job `5451f7c29851`, the user confirmed these two sentences:
+
+| Input readable rows (zero-based) | Repaired text | Original outer word bounds |
+| --- | --- | --- |
+| 32–33 | I made it up. | 93.760–94.280 |
+| 38–39 | Alice, go ahead. | 98.442–99.183 |
+
+Saved results can be repaired this way without rediarization. Correcting unknown
+speaker assignments automatically requires acoustic evidence; it cannot be inferred
+reliably from the saved winning labels. For future investigation, Community-1 also
+provides [exclusive diarization](https://huggingface.co/pyannote/speaker-diarization-community-1#exclusive-speaker-diarization)
+intended for reconciliation with transcript timestamps, but switching to it is not
+implemented or validated here. Neither these two human corrections nor structural
+tests establish a general improvement in acoustic diarization accuracy.
