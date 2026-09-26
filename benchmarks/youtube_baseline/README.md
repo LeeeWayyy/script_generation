@@ -46,3 +46,26 @@ History, arts and education form a six-video holdout per language. Other topics
 form the calibration subset. Do not tune rules to individual video IDs or fix
 transcript text by hard-coded substitutions. Freeze input metadata, code/version
 provenance and all first-run artifacts before comparing general algorithm changes.
+
+## Reassess and check the actual app
+
+```sh
+python -m benchmarks.youtube_baseline.report benchmarks/youtube_baseline/manifest.json benchmarks/youtube_baseline/results
+swiftc -parse-as-library -swift-version 5 "$SCRIPT_VIEWING_ROOT/App/Models.swift" "$SCRIPT_VIEWING_ROOT/App/TranscriptPresentation.swift" benchmarks/youtube_baseline/check_app.swift -o /tmp/check-baseline-app
+/tmp/check-baseline-app benchmarks/youtube_baseline/results/*.readable.json > benchmarks/youtube_baseline/results/app-parser-checks.json
+```
+
+The Swift adapter calls production parsing and cue logic. No client validation is
+weakened. It catches individual case failures so all cases are reported, and
+counts aligned entries versus usable cues instead of treating one cue per row
+as complete timing coverage. Preserve the app source revision alongside results.
+
+Compare a candidate reading algorithm against the frozen first run without
+changing text, timestamps, word labels, or baseline files:
+
+```sh
+PYTHONPATH=src python -m benchmarks.youtube_baseline.compare benchmarks/youtube_baseline/manifest.json benchmarks/youtube_baseline/results benchmarks/youtube_baseline/results/candidate
+```
+
+Use a different output directory for a fresh inference run. Existing completed
+cases are reused, including failures; a rerun must not erase original evidence.

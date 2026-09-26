@@ -773,7 +773,10 @@ GET /jobs/{id}/result?format=json&readable=true
 
 This opt-in view uses existing word alignment and speaker assignments to break
 at speaker changes, punctuation, pauses of at least 0.8 seconds, or approximately
-20 words / 120 characters / 8 seconds. It preserves source segments except for the narrow sentence-continuity rule
+20 words / 120 characters / 8 seconds. A length-only break can wait for an
+English sentence ending within four remaining aligned words when the entire row
+still fits eight seconds; speaker changes and pauses retain their boundaries.
+It preserves source segments except for the narrow sentence-continuity rule
 described below, and never rewrites speech. These are reading heuristics, not guaranteed grammatical sentences;
 a single indivisible token can exceed a limit. It adds no model inference.
 The default result endpoint and cached transcript remain unchanged. The readable
@@ -878,6 +881,12 @@ intended for reconciliation with transcript timestamps, but switching to it is n
 implemented or validated here. Neither these two human corrections nor structural
 tests establish a general improvement in acoustic diarization accuracy.
 
+
+With diarization requested, an empty speech-activity result now fails the job
+with a clear error instead of publishing empty or acoustically unsupported
+captions. This is a reliability guard, not proof that the source contains no
+speech; quiet or difficult speech can also require review. Existing stored
+results are preserved, including earlier failed-quality outputs.
 
 #### Japanese character alignment
 

@@ -20,3 +20,20 @@ def test_baseline_rejects_contract_regressions_without_claiming_accuracy():
     assert 'readable_changed_word_data' in result['errors']
     raw['meta']['transcript_source'] = 'youtube_manual_captions'
     assert 'creator_captions_used' in assess(raw, readable, case)['errors']
+
+
+def test_frozen_corpus_has_twenty_per_language_and_caption_evidence():
+    import json
+    from collections import Counter
+    from pathlib import Path
+    manifest = json.loads((Path(__file__).parents[1] / 'benchmarks/youtube_baseline/manifest.json').read_text())
+    cases = manifest['cases']
+    assert Counter(c['language'] for c in cases) == {'en': 20, 'ja': 20}
+    assert len({c['video_id'] for c in cases}) == 40
+    for language in ('en', 'ja'):
+        group = [c for c in cases if c['language'] == language]
+        assert len({c['topic'] for c in group}) == 10
+        assert len({c['format'] for c in group}) >= 6
+        assert {c['length_bucket'] for c in group} == {'short', 'medium', 'long', 'extended'}
+        assert Counter(c['split'] for c in group) == {'calibration': 14, 'holdout': 6}
+        assert all(c['creator_caption_languages'] == [] and c['caption_checked_at'] for c in group)

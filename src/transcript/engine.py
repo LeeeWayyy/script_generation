@@ -214,6 +214,11 @@ class TranscriptionEngine:
             log.info("Diarizing (identifying speakers) ...")
             diarizer = self._load_diarizer()
             diarize_segments = diarizer(audio, min_speakers=min_speakers, max_speakers=max_speakers)
+            if len(diarize_segments["start"]) == 0:
+                raise RuntimeError(
+                    "No reliable speech activity was detected; refusing to publish "
+                    "unverified captions. Check that the source contains audible speech."
+                )
             timing_adjustments = _trim_sentence_tails(result, diarize_segments)
             result = whisperx.assign_word_speakers(diarize_segments, result)
 

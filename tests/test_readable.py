@@ -56,6 +56,21 @@ def test_single_speaker_caption_and_pause():
     assert [s.text for s in result.segments] == ['Hello', 'again']
 
 
+def test_soft_length_limit_keeps_short_sentence_tail_but_not_other_speaker():
+    tokens = ('In this video we are going to look at the factors that influence '
+              'the speed of sound and how to measure it.').split()
+    words = [Word(token, i * .2, (i + 1) * .2, speaker='A')
+             for i, token in enumerate(tokens)]
+    source = Transcript([Segment(' '.join(tokens), 0, len(words) * .2, 'A', words)], 'en')
+    result = readable_transcript(source)
+    assert len(result.segments) == 1
+    assert result.segments[0].text == source.segments[0].text
+    words[-1].speaker = 'B'
+    result = readable_transcript(source)
+    assert result.segments[-1].text == 'it.'
+    assert result.segments[-1].speaker == 'B'
+
+
 def test_result_opt_in_keeps_legacy_and_cached_result(monkeypatch, tmp_path):
     from transcript.server import Job, create_app
     monkeypatch.delenv('TRANSCRIPT_TOKEN', raising=False)

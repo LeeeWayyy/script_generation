@@ -68,6 +68,14 @@ def readable_transcript(transcript: Transcript) -> Transcript:
             # limits only at phrase boundaries, retaining pauses and observed turns.
             length = (duration or (not japanese and i - first >= 20)
                       or positions[i] - positions[first] >= 120)
+            # A soft length limit must not strand a short sentence ending such
+            # as "it.". Speaker changes, pauses, and the 8-second limit still win.
+            if length and mapped and not japanese and timed(first):
+                ending = next((j for j in range(i, min(i + 4, len(tokens)))
+                               if re.search(r'[.!?]["\u201d\u2019]*$', tokens[j])), None)
+                if (ending is not None and timed(ending)
+                        and words[ending].end - words[first].start <= 8):
+                    length = False
             if (changed or pause or (length and (not japanese or positions[i] in phrase_starts))
                     or re.search(r'[.!?。！？]["\u201d\u2019]*$', tokens[i - 1])):
                 starts.append(i)

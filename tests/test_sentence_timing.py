@@ -1,6 +1,22 @@
 from transcript.engine import _trim_sentence_tails
 
 
+def test_no_speech_does_not_publish_empty_or_hallucinated_captions(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import pytest
+    from transcript.engine import TranscriptionEngine
+
+    monkeypatch.setitem(sys.modules, 'whisperx', SimpleNamespace())
+    engine = object.__new__(TranscriptionEngine)
+    engine._load_diarizer = lambda: lambda *args, **kwargs: {'start': [], 'end': []}
+    for segments in ([], [{'text': 'Thank you.', 'start': 100., 'end': 101.}]):
+        with pytest.raises(RuntimeError, match='No reliable speech activity'):
+            engine._align_and_diarize([], {'segments': segments}, language='en',
+                                     diarize=True, min_speakers=None, max_speakers=None,
+                                     align=False)
+
+
 def test_actual_acoustic_gap_stops_next_turn_leaking_into_final_word():
     # Rounded actual 85–105s acoustic islands, local excerpt time.
     turns = {'start': [8.688, 8.992, 9.177, 9.278, 9.599],
