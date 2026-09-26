@@ -26,6 +26,7 @@ must be rerun against the same video and compared with the retained baseline.
 ## Acceptance means all requirements, for every row
 
 - Successful full audio-based inference, alignment and diarization; no caption reuse.
+- Spoken words only: sung lyrics and invented speech during music are failures.
 - Unchanged speech/word metadata between raw and readable views.
 - Production app JSON limits, nondecreasing starts, valid bounds, unique in-range
   fallback indices, and valid fallback source bounds.

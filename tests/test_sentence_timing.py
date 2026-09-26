@@ -1,6 +1,20 @@
 from transcript.engine import _trim_sentence_tails
 
 
+def test_empty_asr_refuses_output_even_without_diarization(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    import pytest
+    from transcript.engine import TranscriptionEngine
+
+    monkeypatch.setitem(sys.modules, 'whisperx', SimpleNamespace(load_audio=lambda _: []))
+    engine = object.__new__(TranscriptionEngine)
+    engine.batch_size = 16
+    engine._load_asr = lambda: SimpleNamespace(transcribe=lambda *a, **k: {'segments': []})
+    with pytest.raises(RuntimeError, match='No reliable speech activity'):
+        engine.run('music.wav', diarize=False, language='ja')
+
+
 def test_no_speech_does_not_publish_empty_or_hallucinated_captions(monkeypatch):
     import sys
     from types import SimpleNamespace

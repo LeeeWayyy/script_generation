@@ -37,7 +37,8 @@ dev = [
 local = [
     "budoux>=0.7,<1",
     # ASR + alignment + diarization, all self-hosted.
-    "whisperx>=3.1.1",
+    # The spoken-audio detector uses WhisperX's current VAD adapter contract.
+    "whisperx>=3.8.6",
     # Source downloading (YouTube + thousands of sites).
     "yt-dlp>=2024.1.0",
 ]

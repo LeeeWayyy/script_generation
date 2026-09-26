@@ -74,6 +74,7 @@ class TranscriptionEngine:
     def _load_asr(self):
         if self._asr is None:
             import whisperx
+            from .speech import SpeechVad
 
             try:
                 self._asr = whisperx.load_model(
@@ -81,6 +82,7 @@ class TranscriptionEngine:
                     self.device,
                     compute_type=self.compute_type,
                     asr_options={"beam_size": self.beam_size},
+                    vad_model=SpeechVad(),
                 )
             except ValueError as exc:
                 # Some CPU builds reject float16; retry with int8 transparently.
@@ -92,6 +94,7 @@ class TranscriptionEngine:
                         self.device,
                         compute_type="int8",
                         asr_options={"beam_size": self.beam_size},
+                        vad_model=SpeechVad(),
                     )
                 else:
                     raise exc
@@ -150,6 +153,11 @@ class TranscriptionEngine:
         log.info("Transcribing ...")
         asr = self._load_asr()
         result = asr.transcribe(audio, batch_size=self.batch_size, language=language)
+        if not any(s.get("text", "").strip() for s in result.get("segments", [])):
+            raise RuntimeError(
+                "No reliable speech activity was detected; refusing to publish "
+                "unverified captions. Check that the source contains audible speech."
+            )
         detected_language = result.get("language", language)
 
         return self._align_and_diarize(

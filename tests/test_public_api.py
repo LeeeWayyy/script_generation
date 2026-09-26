@@ -91,6 +91,8 @@ def test_mps_remains_a_supported_cpu_fallback(monkeypatch):
 def test_engine_warm_loads_once_and_forwards_beam_size(monkeypatch):
     calls = []
     model = object()
+    vad = object()
+    monkeypatch.setitem(sys.modules, "transcript.speech", SimpleNamespace(SpeechVad=lambda: vad))
 
     def load_model(*args, **kwargs):
         calls.append((args, kwargs))
@@ -106,12 +108,13 @@ def test_engine_warm_loads_once_and_forwards_beam_size(monkeypatch):
 
     assert engine._asr is model
     assert calls == [(('tiny', 'cpu'), {
-        "compute_type": "int8", "asr_options": {"beam_size": 1},
+        "compute_type": "int8", "asr_options": {"beam_size": 1}, "vad_model": vad,
     })]
 
 
 def test_cpu_compute_fallback_keeps_beam_size(monkeypatch):
     calls = []
+    monkeypatch.setitem(sys.modules, "transcript.speech", SimpleNamespace(SpeechVad=object))
 
     def load_model(*args, **kwargs):
         calls.append((args, kwargs))
