@@ -205,6 +205,7 @@ class TranscriptionEngine:
         import whisperx
 
         align_ok: Optional[bool] = None
+        alignment_adjustments = []
         if align and language:
             align_ok = False
             try:
@@ -213,6 +214,7 @@ class TranscriptionEngine:
                 result = whisperx.align(
                     result["segments"], model_a, metadata, audio, self.device, return_char_alignments=False
                 )
+                alignment_adjustments = _deduplicate_alignment_boundaries(result)
                 align_ok = True
             except Exception as exc:
                 log.warning("Word alignment failed (%s); continuing without word timestamps.", exc)
@@ -234,7 +236,42 @@ class TranscriptionEngine:
                             align_ok=align_ok, diarize=diarize)
         if timing_adjustments:
             transcript.meta["timing_adjustments"] = timing_adjustments
+        if alignment_adjustments:
+            transcript.meta["alignment_adjustments"] = alignment_adjustments
         return transcript
+
+
+def _deduplicate_alignment_boundaries(result: dict) -> list[dict]:
+    """Remove an aligner's inclusive-end character repeated in the next sentence.
+
+    Require exact text coverage and identical word evidence in the adjacent row;
+    never discard an unmatched word merely to make the readable mapper succeed.
+    """
+    adjustments = []
+    segments = result.get("segments", [])
+    for index, (left, right) in enumerate(zip(segments, segments[1:])):
+        words, following = left.get("words", []), right.get("words", [])
+        if len(words) < 2 or not following or words[-1] != following[0]:
+            continue
+        duplicate = words[-1]
+        text = "".join(left.get("text", "").split())
+        covered = "".join("".join(w.get("word", "") for w in words[:-1]).split())
+        end, next_start = words[-2].get("end"), duplicate.get("start")
+        if (not text or covered != text or not duplicate.get("word", "").strip()
+                or not right.get("text", "").lstrip().startswith(duplicate["word"])
+                or any(not isinstance(t, (int, float)) or isinstance(t, bool)
+                       or not math.isfinite(t) for t in (end, next_start))
+                or end > next_start):
+            continue
+        adjustments.append({"source_segment_index": index,
+                            "reason": "duplicated_alignment_boundary_character",
+                            "original_end": left.get("end"), "end": end,
+                            "duplicate_word": dict(duplicate)})
+        left["words"] = words[:-1]
+        left["end"] = end
+    if adjustments and "word_segments" in result:
+        result["word_segments"] = [w for s in segments for w in s.get("words", [])]
+    return adjustments
 
 
 def _trim_sentence_tails(result: dict, diarization) -> list[dict]:

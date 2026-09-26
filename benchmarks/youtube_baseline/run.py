@@ -165,6 +165,7 @@ def run(manifest_path, output, server):
             rows.append(row)
             continue
         started = time.monotonic()
+        operation = 'waiting_for_idle'
         try:
             if not row.get('job_id'):
                 # Preserve the real service configuration and queue; never restart
@@ -172,21 +173,24 @@ def run(manifest_path, output, server):
                 while get('/health')['queued_or_running']:
                     time.sleep(5)
                 options = {'language': case['language'], 'align': 'true', 'diarize': 'true'}
+                operation = 'submitting'
                 if 'media' in case:
                     from .freeze import verified_audio
                     audio = verified_audio(case, manifest_path.parent)
                     with audio.open('rb') as stream:
-                        response = session.post(base + '/jobs', data=options,
+                        # Use a fresh socket for uploads after long polling runs.
+                        response = requests.post(base + '/jobs', headers=session.headers, data=options,
                                                 files={'file': (case['id'] + '.wav', stream)},
                                                 timeout=300)
                 else:
-                    response = session.post(base + '/jobs',
+                    response = requests.post(base + '/jobs', headers=session.headers,
                                             data={**options, 'url': case['url']}, timeout=60)
                 response.raise_for_status()
                 row['job_id'] = response.json()['id']
                 row['submitted_at'] = datetime.now(timezone.utc).isoformat()
                 save(path, row)
             deadline = time.monotonic() + 7200
+            operation = 'polling'
             while True:
                 status = get('/jobs/' + row['job_id'])
                 if status['status'] in ('done', 'error'):
@@ -197,7 +201,9 @@ def run(manifest_path, output, server):
             row['server_status'] = status
             if status['status'] == 'error':
                 raise RuntimeError(status.get('error', 'server error'))
+            operation = 'fetching_raw'
             raw = get('/jobs/' + row['job_id'] + '/result', params={'format': 'json'})
+            operation = 'fetching_readable'
             readable = get('/jobs/' + row['job_id'] + '/result', params={'format': 'json', 'readable': 'true'})
             save(output / (case['id'] + '.raw.json'), raw)
             save(output / (case['id'] + '.readable.json'), readable)
@@ -206,7 +212,7 @@ def run(manifest_path, output, server):
             row['server_elapsed_s'] = status['finished_at'] - status['started_at']
             row['realtime_factor'] = row['server_elapsed_s'] / case['duration_s']
         except Exception as exc:
-            row.update(status='error', error=str(exc))
+            row.update(status='error', error=str(exc), failed_operation=operation)
         row['client_elapsed_s'] = time.monotonic() - started
         save(path, row)
         rows.append(row)

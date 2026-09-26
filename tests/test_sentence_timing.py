@@ -1,6 +1,41 @@
 from transcript.engine import _trim_sentence_tails
 
 
+def test_alignment_boundary_duplicate_is_removed_only_with_exact_evidence():
+    from copy import deepcopy
+    from transcript.engine import _deduplicate_alignment_boundaries, _to_transcript
+    from transcript.readable import readable_transcript
+
+    words = [{'word': c, 'start': i / 10, 'end': (i + 1) / 10,
+              'score': .9, 'speaker': 'A'} for i, c in enumerate('えぇ!?')]
+    original = {'segments': [
+        {'text': 'えぇ!', 'start': 0., 'end': .4, 'speaker': 'A', 'words': words},
+        {'text': '?', 'start': .3, 'end': .4, 'speaker': 'A', 'words': [dict(words[-1])]},
+    ], 'word_segments': words + [dict(words[-1])]}
+    data = deepcopy(original)
+    changes = _deduplicate_alignment_boundaries(data)
+    assert len(changes) == 1 and changes[0]['duplicate_word'] == words[-1]
+    assert data['segments'][0]['end'] == .3
+    assert data['word_segments'] == words
+    raw = _to_transcript(data, language='en')  # no ML/language-model dependency
+    readable = readable_transcript(raw)
+    assert [w for s in readable.segments for w in s.words] == [w for s in raw.segments for w in s.words]
+    assert ''.join(s.text for s in readable.segments) == 'えぇ!?'
+    assert _deduplicate_alignment_boundaries(data) == []
+
+    for mutation in ('covered_by_text', 'different_evidence', 'overlap'):
+        data = deepcopy(original)
+        if mutation == 'covered_by_text':
+            data['segments'][0]['text'] += '?'
+        elif mutation == 'different_evidence':
+            data['segments'][1]['words'][0]['score'] = .8
+        else:
+            data['segments'][0]['words'][-2]['end'] = .35
+        before = deepcopy(data)
+        assert _deduplicate_alignment_boundaries(data) == []
+        assert data == before
+
+
 def test_empty_asr_refuses_output_even_without_diarization(monkeypatch):
     import sys
     from types import SimpleNamespace
