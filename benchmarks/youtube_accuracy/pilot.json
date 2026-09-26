@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "purpose": "Creator-reference pilot before the 20 English + 20 Japanese accuracy corpus",
+  "cases": [
+    {
+      "id": "en-business-pilot",
+      "video_id": "sibESmao22A",
+      "url": "https://www.youtube.com/watch?v=sibESmao22A",
+      "language": "en",
+      "topic": "business",
+      "format": "interview",
+      "duration_s": 399,
+      "split": "calibration"
+    },
+    {
+      "id": "en-conversation-pilot",
+      "video_id": "R1vskiVDwl4",
+      "url": "https://www.youtube.com/watch?v=R1vskiVDwl4",
+      "language": "en",
+      "topic": "communication",
+      "format": "presentation",
+      "duration_s": 704,
+      "split": "holdout"
+    },
+    {
+      "id": "ja-science-pilot",
+      "video_id": "sC7surMCxGA",
+      "url": "https://www.youtube.com/watch?v=sC7surMCxGA",
+      "language": "ja",
+      "topic": "science",
+      "format": "demonstration",
+      "duration_s": 182,
+      "split": "calibration"
+    },
+    {
+      "id": "ja-history-pilot",
+      "video_id": "4fh6_ax0obI",
+      "url": "https://www.youtube.com/watch?v=4fh6_ax0obI",
+      "language": "ja",
+      "topic": "history",
+      "format": "presentation",
+      "duration_s": 1151,
+      "split": "holdout"
+    }
+  ]
+}

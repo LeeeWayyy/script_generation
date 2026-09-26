@@ -53,6 +53,12 @@ def normalize_text(text: str) -> str:
 
 def edit_distance(reference: list[str] | str, hypothesis: list[str] | str) -> int:
     """Levenshtein distance with linear memory."""
+    try:
+        from rapidfuzz.distance import Levenshtein
+    except ImportError:
+        pass
+    else:
+        return Levenshtein.distance(reference, hypothesis)
     # ponytail: O(m*n) is fine beside model inference; use a native scorer if it
     # becomes measurable on very large, single-file references.
     previous = list(range(len(hypothesis) + 1))
