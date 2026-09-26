@@ -1,0 +1,727 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-26T22:07:50.337129+00:00",
+  "cases": [
+    {
+      "id": "en-reference-01",
+      "video_id": "w4sLAQvEH-M",
+      "url": "https://www.youtube.com/watch?v=w4sLAQvEH-M",
+      "title": "The Longest-Running Evolution Experiment",
+      "channel": "Veritasium",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "science",
+      "format": "explanation",
+      "duration_s": 1037,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:07:53.734370+00:00",
+      "selection_query": "Veritasium science experiment",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-02",
+      "video_id": "1Xp_imnO6WE",
+      "url": "https://www.youtube.com/watch?v=1Xp_imnO6WE",
+      "title": "5 Fun Physics Phenomena",
+      "channel": "Veritasium",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "science",
+      "format": "explanation",
+      "duration_s": 327,
+      "creator_caption_languages": [
+        "en-GB"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:00.621528+00:00",
+      "selection_query": "Veritasium science experiment",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-03",
+      "video_id": "ncOr6JSTMlw",
+      "url": "https://www.youtube.com/watch?v=ncOr6JSTMlw",
+      "title": "The Seven Greatest Riddles in History | Full Documentary",
+      "channel": "Get.factual",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "history",
+      "format": "documentary",
+      "duration_s": 3254,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:04.019671+00:00",
+      "selection_query": "history documentary subtitled",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-04",
+      "video_id": "KMLz0eIihcY",
+      "url": "https://www.youtube.com/watch?v=KMLz0eIihcY",
+      "title": "Pol Pot - The Khmer Rouge & the Killing Fields Documentary",
+      "channel": "The People Profiles",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "history",
+      "format": "documentary",
+      "duration_s": 3293,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:09.938419+00:00",
+      "selection_query": "history documentary subtitled",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-05",
+      "video_id": "ZJy1ajvMU1k",
+      "url": "https://www.youtube.com/watch?v=ZJy1ajvMU1k",
+      "title": "How To Master 5 Basic Cooking Skills | Gordon Ramsay",
+      "channel": "Gordon Ramsay",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "cooking",
+      "format": "demonstration",
+      "duration_s": 460,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:18.239670+00:00",
+      "selection_query": "chef cooking technique explained",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-06",
+      "video_id": "JTmMz5BT094",
+      "url": "https://www.youtube.com/watch?v=JTmMz5BT094",
+      "title": "Chefs use this technique...should you?",
+      "channel": "MinuteFood",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "cooking",
+      "format": "demonstration",
+      "duration_s": 447,
+      "creator_caption_languages": [
+        "en-US"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:24.879873+00:00",
+      "selection_query": "chef cooking technique explained",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-07",
+      "video_id": "xkLAhU74f3s",
+      "url": "https://www.youtube.com/watch?v=xkLAhU74f3s",
+      "title": "Physics of Computer Chips - Computerphile",
+      "channel": "Computerphile",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "technology",
+      "format": "explanation",
+      "duration_s": 719,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:29.923399+00:00",
+      "selection_query": "Computerphile computer science",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-08",
+      "video_id": "qT8NyyRgLDQ",
+      "url": "https://www.youtube.com/watch?v=qT8NyyRgLDQ",
+      "title": "Computer Science ∩ Mathematics (Type Theory) - Computerphile",
+      "channel": "Computerphile",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "technology",
+      "format": "explanation",
+      "duration_s": 955,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:38.791593+00:00",
+      "selection_query": "Computerphile computer science",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-09",
+      "video_id": "58HdRSTAFec",
+      "url": "https://www.youtube.com/watch?v=58HdRSTAFec",
+      "title": "European Travel Skills: Packing Light - Rick Steves' Europe Travel Guide",
+      "channel": "Rick Steves' Europe",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "travel",
+      "format": "presentation",
+      "duration_s": 250,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:42.975248+00:00",
+      "selection_query": "Rick Steves travel guide",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-10",
+      "video_id": "GvzdLolM4rY",
+      "url": "https://www.youtube.com/watch?v=GvzdLolM4rY",
+      "title": "Planning a Smart Itinerary - Rick Steves’ Europe Travel Guide - Travel Bite",
+      "channel": "Rick Steves' Europe",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "travel",
+      "format": "presentation",
+      "duration_s": 389,
+      "creator_caption_languages": [
+        "en-US"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:45.748014+00:00",
+      "selection_query": "Rick Steves travel guide",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-11",
+      "video_id": "2DlmJT0uE5E",
+      "url": "https://www.youtube.com/watch?v=2DlmJT0uE5E",
+      "title": "WHAT CHANGED? | Toni McCann — Run for Herself",
+      "channel": "Suunto",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "sports",
+      "format": "interview",
+      "duration_s": 387,
+      "creator_caption_languages": [
+        "en-GB"
+      ],
+      "caption_checked_at": "2026-09-26T22:08:57.231205+00:00",
+      "selection_query": "athlete interview Suunto",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-12",
+      "video_id": "sibESmao22A",
+      "url": "https://www.youtube.com/watch?v=sibESmao22A",
+      "title": "How I Built KIND Into A Multibillion-Dollar Business",
+      "channel": "CNBC Make It",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "business",
+      "format": "interview",
+      "duration_s": 399,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:15.393478+00:00",
+      "selection_query": "CNBC Make It founder interview",
+      "split": "calibration",
+      "reference_quality_note": "Pilot comparison found suspect wording; retain as diagnostic, not trusted ground truth without review."
+    },
+    {
+      "id": "en-reference-13",
+      "video_id": "Ep21f3ncvBk",
+      "url": "https://www.youtube.com/watch?v=Ep21f3ncvBk",
+      "title": "Canva: She founded a unicorn by 30. Now she's taking on the tech giants | Make It International",
+      "channel": "CNBC International",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "business",
+      "format": "interview",
+      "duration_s": 440,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:22.593460+00:00",
+      "selection_query": "CNBC Make It founder interview",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-14",
+      "video_id": "2fbrl6WoIyo",
+      "url": "https://www.youtube.com/watch?v=2fbrl6WoIyo",
+      "title": "Lec 1 | MIT 9.00SC Introduction to Psychology, Spring 2011",
+      "channel": "MIT OpenCourseWare",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "education",
+      "format": "lecture",
+      "duration_s": 2984,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:24.469771+00:00",
+      "selection_query": "MIT OpenCourseWare lecture psychology",
+      "split": "calibration"
+    },
+    {
+      "id": "en-reference-15",
+      "video_id": "B4a0WdGp52g",
+      "url": "https://www.youtube.com/watch?v=B4a0WdGp52g",
+      "title": "24. Attention and Awareness",
+      "channel": "MIT OpenCourseWare",
+      "language": "en",
+      "audio_language": "en-US",
+      "topic": "education",
+      "format": "lecture",
+      "duration_s": 3403,
+      "creator_caption_languages": [
+        "en-j3PyPqV-e1s"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:26.304238+00:00",
+      "selection_query": "MIT OpenCourseWare lecture psychology",
+      "split": "holdout"
+    },
+    {
+      "id": "en-reference-16",
+      "video_id": "D9Ihs241zeg",
+      "url": "https://www.youtube.com/watch?v=D9Ihs241zeg",
+      "title": "Chimamanda Ngozi Adichie: The Danger of a Single Story | TED",
+      "channel": "TED",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 1156,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:38.631650+00:00",
+      "selection_query": "TED interview author",
+      "split": "holdout"
+    },
+    {
+      "id": "en-reference-17",
+      "video_id": "86x-u-tz0MA",
+      "url": "https://www.youtube.com/watch?v=86x-u-tz0MA",
+      "title": "Your elusive creative genius | Elizabeth Gilbert",
+      "channel": "TED",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 1169,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:40.973185+00:00",
+      "selection_query": "TED interview author",
+      "split": "holdout"
+    },
+    {
+      "id": "ja-reference-01",
+      "video_id": "sC7surMCxGA",
+      "url": "https://www.youtube.com/watch?v=sC7surMCxGA",
+      "title": "【こども科学実験】水素と酸素からなんで水ができるの？",
+      "channel": "かなチャンTV（神奈川県公式）",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "science",
+      "format": "demonstration",
+      "duration_s": 182,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:10:43.442802+00:00",
+      "selection_query": "科学 実験 字幕 かなチャン",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-02",
+      "video_id": "OyJiVZEitx8",
+      "url": "https://www.youtube.com/watch?v=OyJiVZEitx8",
+      "title": "映像で災害を体験しよう！(火山編　手話・日本語字幕入り)",
+      "channel": "かなチャンTV（神奈川県公式）",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "science",
+      "format": "demonstration",
+      "duration_s": 807,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:11:15.614587+00:00",
+      "selection_query": "科学 実験 字幕 かなチャン",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-03",
+      "video_id": "Y_wZ8EiQwM8",
+      "url": "https://www.youtube.com/watch?v=Y_wZ8EiQwM8",
+      "title": "【下剋上 展示中】なぜ？下の者が上を倒す戦国大名｜時空ガラス博物館",
+      "channel": "歴パロ",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "history",
+      "format": "presentation",
+      "duration_s": 1010,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:11:29.870313+00:00",
+      "selection_query": "歴史 解説 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-04",
+      "video_id": "g9QZcJGK5Ek",
+      "url": "https://www.youtube.com/watch?v=g9QZcJGK5Ek",
+      "title": "【戦国時代】132 忙しい人のための戦国時代【日本史】",
+      "channel": "Japanese History / YouTube High School",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "history",
+      "format": "presentation",
+      "duration_s": 555,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:11:31.810372+00:00",
+      "selection_query": "歴史 解説 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-05",
+      "video_id": "_IoR_8tapag",
+      "url": "https://www.youtube.com/watch?v=_IoR_8tapag",
+      "title": "Real Japanese Vlog in 🌺Okinawa🌺",
+      "channel": "Miku Real Japanese",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "travel",
+      "format": "vlog",
+      "duration_s": 605,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:12:55.344134+00:00",
+      "selection_query": "Miku Real Japanese vlog",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-06",
+      "video_id": "-sFufbYc3OM",
+      "url": "https://www.youtube.com/watch?v=-sFufbYc3OM",
+      "title": "Easy Japanese vlog  with @SayuriSaying",
+      "channel": "Miku Real Japanese",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "travel",
+      "format": "vlog",
+      "duration_s": 998,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:12:57.706157+00:00",
+      "selection_query": "Miku Real Japanese vlog",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-07",
+      "video_id": "cjtmDEG-B7U",
+      "url": "https://www.youtube.com/watch?v=cjtmDEG-B7U",
+      "title": "人生の価値は、何を得るかではなく、何を残すかにある。 | Kazunari Taguchi | TEDxHimi",
+      "channel": "TEDx Talks",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "education",
+      "format": "presentation",
+      "duration_s": 971,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:14:58.009021+00:00",
+      "selection_query": "TEDx 日本語 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-08",
+      "video_id": "EzXvih454dM",
+      "url": "https://www.youtube.com/watch?v=EzXvih454dM",
+      "title": "時間という財産: Hidetaka Nagaoka at TEDxSaku",
+      "channel": "TEDx Talks",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "education",
+      "format": "presentation",
+      "duration_s": 1183,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:14:59.961344+00:00",
+      "selection_query": "TEDx 日本語 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-09",
+      "video_id": "S0nFno271P4",
+      "url": "https://www.youtube.com/watch?v=S0nFno271P4",
+      "title": "Be a confident Japanese speaker!  Learn Japanese from natural conversation with もしもしゆうすけ(formal)",
+      "channel": "Sayuri Saying",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 247,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:15:12.434755+00:00",
+      "selection_query": "もしもしゆうすけ 対談 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-10",
+      "video_id": "ubMjSNCKB5s",
+      "url": "https://www.youtube.com/watch?v=ubMjSNCKB5s",
+      "title": "25 Minutes of Intermediate Japanese Listening Comprehension with もしもしゆうすけ　日本語学習者中級者リスニング練習",
+      "channel": "Sayuri Saying",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 1592,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:15:14.212578+00:00",
+      "selection_query": "もしもしゆうすけ 対談 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-11",
+      "video_id": "q97cN05msjg",
+      "url": "https://www.youtube.com/watch?v=q97cN05msjg",
+      "title": "【日本語散歩Vlog♯11】失敗したことがある人に伝えたい事",
+      "channel": "あかね的日本語教室",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "travel",
+      "format": "vlog",
+      "duration_s": 688,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:16:02.303357+00:00",
+      "selection_query": "Akane 日本語教室 vlog",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-12",
+      "video_id": "Bwe7zLSPtXA",
+      "url": "https://www.youtube.com/watch?v=Bwe7zLSPtXA",
+      "title": "【日本語散歩Vlog#8】最近よく眠れていますか？",
+      "channel": "あかね的日本語教室",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "travel",
+      "format": "vlog",
+      "duration_s": 814,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:16:10.267235+00:00",
+      "selection_query": "Akane 日本語教室 vlog",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-13",
+      "video_id": "snBPHHX1h50",
+      "url": "https://www.youtube.com/watch?v=snBPHHX1h50",
+      "title": "Can you understand a casual conversation between two Japanese students?",
+      "channel": "Onomappu",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "education",
+      "format": "explanation",
+      "duration_s": 441,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:16:13.375025+00:00",
+      "selection_query": "Onomappu 日本語 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-14",
+      "video_id": "S1Xjc3z_k2s",
+      "url": "https://www.youtube.com/watch?v=S1Xjc3z_k2s",
+      "title": "Your Japanese is TOO POLITE - How to be more CASUAL | 敬語",
+      "channel": "Onomappu",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "education",
+      "format": "explanation",
+      "duration_s": 461,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:16:15.222748+00:00",
+      "selection_query": "Onomappu 日本語 字幕",
+      "split": "calibration"
+    },
+    {
+      "id": "ja-reference-15",
+      "video_id": "JFjoG2tOUcg",
+      "url": "https://www.youtube.com/watch?v=JFjoG2tOUcg",
+      "title": "How much can you understand? Natural Japanese conversation",
+      "channel": "Miku Real Japanese",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 820,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:16:27.687070+00:00",
+      "selection_query": "Miku Real Japanese conversation podcast",
+      "split": "holdout"
+    },
+    {
+      "id": "ja-reference-16",
+      "video_id": "p7WcmchkZIs",
+      "url": "https://www.youtube.com/watch?v=p7WcmchkZIs",
+      "title": "Japanese listening practice @NihongoDekita",
+      "channel": "Miku Real Japanese",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 1052,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:16:33.772765+00:00",
+      "selection_query": "Miku Real Japanese conversation podcast",
+      "split": "holdout"
+    },
+    {
+      "id": "en-reference-18",
+      "video_id": "iG9CE55wbtY",
+      "url": "https://www.youtube.com/watch?v=iG9CE55wbtY",
+      "title": "Do schools kill creativity? | Sir Ken Robinson | TED",
+      "channel": "TED",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "culture",
+      "format": "presentation",
+      "duration_s": 1203,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:18:59.488770+00:00",
+      "selection_query": "TED talk creativity Ken Robinson",
+      "split": "holdout"
+    },
+    {
+      "id": "en-reference-19",
+      "video_id": "g4IAa8wZlqU",
+      "url": "https://www.youtube.com/watch?v=g4IAa8wZlqU",
+      "title": "Why schools need to embrace kids' creativity | Sir Ken Robinson",
+      "channel": "TED",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "culture",
+      "format": "presentation",
+      "duration_s": 135,
+      "creator_caption_languages": [
+        "en"
+      ],
+      "caption_checked_at": "2026-09-26T22:19:01.743683+00:00",
+      "selection_query": "TED talk creativity Ken Robinson",
+      "split": "holdout"
+    },
+    {
+      "id": "en-reference-20",
+      "video_id": "NNnIGh9g6fA",
+      "url": "https://www.youtube.com/watch?v=NNnIGh9g6fA",
+      "title": "1. Introduction to Human Behavioral Biology",
+      "channel": "Stanford",
+      "language": "en",
+      "audio_language": "en",
+      "topic": "education",
+      "format": "lecture",
+      "duration_s": 3434,
+      "creator_caption_languages": [
+        "en-qlPKC2UN_YU"
+      ],
+      "caption_checked_at": "2026-09-26T22:19:03.514728+00:00",
+      "selection_query": "Stanford human behavioral biology lecture",
+      "split": "holdout"
+    },
+    {
+      "id": "ja-reference-17",
+      "video_id": "C_NOkYXwVPY",
+      "url": "https://www.youtube.com/watch?v=C_NOkYXwVPY",
+      "title": "30 min [Intermediate] Japanese Immersion 🎧 | Routines and Household Chores w@yuyunihongopodcast",
+      "channel": "Sayuri Saying",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 1721,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:19:11.360386+00:00",
+      "selection_query": "Sayuri Saying 日本語 ポッドキャスト 30分",
+      "split": "holdout"
+    },
+    {
+      "id": "ja-reference-18",
+      "video_id": "apZ52RAjwVc",
+      "url": "https://www.youtube.com/watch?v=apZ52RAjwVc",
+      "title": "First Impressions in Japanese 🇯🇵 What to Say (and Avoid!) in Casual vs Polite Speech | N3–N2",
+      "channel": "Sayuri Saying",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "culture",
+      "format": "conversation",
+      "duration_s": 1968,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:19:15.137108+00:00",
+      "selection_query": "Sayuri Saying 日本語 ポッドキャスト 30分",
+      "split": "holdout"
+    },
+    {
+      "id": "ja-reference-19",
+      "video_id": "oRuV7vfSEjo",
+      "url": "https://www.youtube.com/watch?v=oRuV7vfSEjo",
+      "title": "Japanese Podcast #138 強くありたい",
+      "channel": "Learn Japanese with Noriko",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "education",
+      "format": "conversation",
+      "duration_s": 520,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:19:31.526169+00:00",
+      "selection_query": "Learn Japanese with Noriko conversation Japanese subtitles",
+      "split": "holdout"
+    },
+    {
+      "id": "ja-reference-20",
+      "video_id": "hp9X223BOQM",
+      "url": "https://www.youtube.com/watch?v=hp9X223BOQM",
+      "title": "Japanese Podcast Season 3-29 スイス人のウルスさん「出会いと結婚について」＆「話せばわかる」#日本語ポッドキャスト",
+      "channel": "Learn Japanese with Noriko",
+      "language": "ja",
+      "audio_language": "ja",
+      "topic": "education",
+      "format": "conversation",
+      "duration_s": 2447,
+      "creator_caption_languages": [
+        "ja"
+      ],
+      "caption_checked_at": "2026-09-26T22:19:41.089690+00:00",
+      "selection_query": "Learn Japanese with Noriko conversation Japanese subtitles",
+      "split": "holdout"
+    }
+  ]
+}

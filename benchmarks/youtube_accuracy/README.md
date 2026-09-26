@@ -2,7 +2,12 @@
 
 This corpus is separate from the unchanged 40 no-creator-caption regression
 videos. The initial four-video pilot checks the reference/scoring pipeline;
-the target accuracy corpus is 20 English and 20 Japanese videos.
+`manifest.json` selects 20 English and 20 Japanese videos, with 14 calibration
+and 6 holdout cases per language. Topics include science, history, food,
+technology, travel, business and everyday conversation; durations span about
+2–57 minutes. Selection used caption/audio metadata, not transcription scores.
+The Windows full run is in `youtube-accuracy/full-v1` (frozen inputs) and
+`youtube-accuracy/full-baseline` (audio-only API outputs).
 
 Freeze creator captions and their corresponding audio on Windows:
 
@@ -31,3 +36,20 @@ Keep calibration and holdout sets separate. Diagnose calibration mismatches,
 test general fixes, then measure the holdout without tuning to its individual
 answers. Preserve the original results and use new output directories for
 candidate runs. Never import benchmark transcripts into the user's app library.
+
+## Initial calibration decisions
+
+`pilot-results.json` retains the four baseline scores and native decoder trials.
+The native decoder with previous-text context disabled slightly improved Japanese
+calibration CER (2.60% to 2.29%), but worsened Japanese holdout CER (5.39% to 6.33%)
+and English calibration WER (7.95% to 8.23%). It was rejected. Beam 10 produced
+the same pilot calibration text as beam 5. Previous-text conditioning produced
+severe English repetition in the WhisperX subclass experiment and was rejected.
+The production decoder remains unchanged.
+
+The KIND business video's creator captions contain suspect wording, recorded in
+the manifest and reports. It remains visible as a diagnostic case; its differences
+must not be treated as proven generation errors or silently removed from scores.
+The full corpus still requires reference-quality review. Neither pilot reference
+agreement nor previous reproducibility checks establish acoustic timing, speaker
+accuracy, or the spoken-only requirement. Accuracy acceptance remains incomplete.

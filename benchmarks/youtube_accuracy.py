@@ -119,6 +119,8 @@ def report(manifest, results):
         reference = verify_reference(case, manifest.parent)
         path = results / (case['id'] + '.raw.json')
         row = {'case': case['id'], 'language': case['language'], 'split': case['split']}
+        if case.get('reference_quality_note'):
+            row['reference_quality_note'] = case['reference_quality_note']
         if path.exists():
             generated = json.loads(path.read_text(encoding='utf-8'))
             row.update(assess(reference, generated, case['language']))
@@ -129,6 +131,19 @@ def report(manifest, results):
     result = {'scoring_version': 2, 'cases': len(cases), 'scored': sum('wer' in r for r in rows),
               'normalized_reference_exact_matches': sum(r.get('normalized_reference_exact_match', False) for r in rows),
               'rows': rows}
+    result['groups'] = []
+    for language, split in sorted({(r['language'], r['split']) for r in rows}):
+        group = [r for r in rows if (r['language'], r['split']) == (language, split)]
+        scored = [r for r in group if 'wer' in r]
+        unit = 'char' if language == 'ja' else 'word'
+        denominator = sum(r['reference_' + unit + 's'] for r in scored)
+        result['groups'].append({
+            'language': language, 'split': split, 'cases': len(group), 'scored': len(scored),
+            'primary_metric': 'cer' if language == 'ja' else 'wer',
+            'reference_weighted_error_rate': (sum(r[unit + '_errors'] for r in scored) / denominator
+                                               if denominator else None),
+            'reference_quality_flagged': sum('reference_quality_note' in r for r in group),
+        })
     save(results / 'reference-scores-v2.json', result)
     return result
 

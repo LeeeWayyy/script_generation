@@ -38,3 +38,26 @@ def test_english_normalization_preserves_currency_and_numeric_errors():
     assert correct['wer'] == 0 and correct['strict_v1_score']['wer'] > 0
     assert measure('sixteen', 'sixty')['wer'] > 0
     assert measure('ten thousand dollars', '10,000')['wer'] > 0
+
+
+def test_report_keeps_missing_cases_and_reference_quality_flags(tmp_path):
+    import json
+    from benchmarks.run import _sha256
+    from benchmarks.youtube_accuracy import report
+    cases = []
+    for name in ('done', 'missing'):
+        case = {'id': name, 'language': 'ja', 'split': 'calibration',
+                'reference_quality_note': 'Unreviewed wording'}
+        for field in ('media', 'reference', 'reference_captions'):
+            path = tmp_path / (name + field)
+            path.write_text('地球の自転', encoding='utf-8')
+            case[field], case[field + '_sha256'] = path.name, _sha256(path)
+        cases.append(case)
+    manifest = tmp_path / 'pinned.json'
+    manifest.write_text(json.dumps({'cases': cases}))
+    (tmp_path / 'done.raw.json').write_text(json.dumps({'segments': [{'text': '地球の時点'}]}))
+    result = report(manifest, tmp_path)
+    assert result['scored'] == 1 and result['cases'] == 2
+    assert result['groups'][0]['reference_weighted_error_rate'] == 2 / 5
+    assert result['groups'][0]['reference_quality_flagged'] == 2
+    assert result['rows'][1]['status'] == 'no_generated_result'
