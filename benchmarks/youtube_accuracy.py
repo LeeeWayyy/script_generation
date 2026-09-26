@@ -1,11 +1,13 @@
 """Freeze creator references separately; score audio-only server results."""
 import argparse
+import hashlib
+from importlib.metadata import version
 import json
 import re
 import wave
 from pathlib import Path
 
-from benchmarks.run import _sha256, normalize_text, score
+from benchmarks.run import _sha256, edit_distance, normalize_text, score
 from benchmarks.youtube_baseline.freeze import verified_audio
 from benchmarks.youtube_baseline.run import save
 
@@ -82,8 +84,28 @@ def assess(reference, generated, language):
         raise ValueError('Reference leakage: generated output used captions')
     hypothesis = '\n'.join(s['text'] for s in generated['segments'])
     result = score(reference, hypothesis)
+    strict_v1 = dict(result)
+    normalization = 'benchmarks.run.normalize_text v1; creator annotations retained'
+    if language == 'en':
+        from transformers.models.whisper.english_normalizer import EnglishTextNormalizer
+        normalizer = EnglishTextNormalizer({})
+        expected, actual = normalizer(reference), normalizer(hypothesis)
+        reference_words, hypothesis_words = expected.split(), actual.split()
+        reference_chars, hypothesis_chars = expected.replace(' ', ''), actual.replace(' ', '')
+        if not reference_words:
+            raise ValueError('Reference has no words after English normalization')
+        word_errors = edit_distance(reference_words, hypothesis_words)
+        char_errors = edit_distance(reference_chars, hypothesis_chars)
+        result = {'wer': word_errors / len(reference_words),
+                  'cer': char_errors / len(reference_chars),
+                  'word_errors': word_errors, 'reference_words': len(reference_words),
+                  'char_errors': char_errors, 'reference_chars': len(reference_chars),
+                  'normalized_hypothesis_sha256': hashlib.sha256(actual.encode()).hexdigest()}
+        normalization = ('Whisper EnglishTextNormalizer, empty spelling map; transformers '
+                         + version('transformers') + '; bracketed annotations removed')
     metric = 'cer' if language == 'ja' else 'wer'
-    return {**result, 'primary_metric': metric,
+    return {**result, 'primary_metric': metric, 'strict_v1_score': strict_v1,
+            'normalization': normalization,
             'normalized_reference_exact_match': result[metric] == 0,
             'reference_status': 'creator_provided_not_independently_reviewed',
             'speaker_accuracy': None, 'acoustic_timing_accuracy': None,
@@ -104,11 +126,10 @@ def report(manifest, results):
         else:
             row['status'] = 'no_generated_result'
         rows.append(row)
-    result = {'cases': len(cases), 'scored': sum('wer' in r for r in rows),
+    result = {'scoring_version': 2, 'cases': len(cases), 'scored': sum('wer' in r for r in rows),
               'normalized_reference_exact_matches': sum(r.get('normalized_reference_exact_match', False) for r in rows),
-              'normalization': 'benchmarks.run.normalize_text v1; creator annotations retained',
               'rows': rows}
-    save(results / 'reference-scores.json', result)
+    save(results / 'reference-scores-v2.json', result)
     return result
 
 

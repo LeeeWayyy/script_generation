@@ -28,3 +28,13 @@ def test_reference_hashes_cannot_change_silently(tmp_path):
     (tmp_path / 'reference').write_text('corrected without recording', encoding='utf-8')
     with pytest.raises(ValueError, match='reference changed'):
         verify_reference(case, tmp_path)
+
+
+def test_english_normalization_preserves_currency_and_numeric_errors():
+    pytest.importorskip('transformers.models.whisper.english_normalizer')
+    def measure(reference, text):
+        return assess(reference, {'segments': [{'text': text}]}, 'en')
+    correct = measure('ten thousand dollars and 100 percent', '$10,000 and 100%')
+    assert correct['wer'] == 0 and correct['strict_v1_score']['wer'] > 0
+    assert measure('sixteen', 'sixty')['wer'] > 0
+    assert measure('ten thousand dollars', '10,000')['wer'] > 0

@@ -17,10 +17,13 @@ as prompts, supplied for alignment, or retrieved through the URL transcription
 path. Raw creator captions, reference text and audio are independently hashed.
 Changed references require a recorded new corpus version, never a silent edit.
 
-English uses WER; Japanese uses CER. The existing frozen text normalizer handles
-case, punctuation and Unicode width. Initial scores retain creator annotations,
-so non-speech labels and edited captions must be examined as possible reference
-differences. Creator-provided does not itself establish human authorship,
+English uses WER with the installed Whisper English normalizer, retaining currency
+and percent units and equating spoken/written number forms. Its version and empty
+spelling map are recorded. Japanese uses CER with the existing Unicode normalizer.
+Version 2 scores retain the initial strict v1 scores for comparison and are written
+to `reference-scores-v2.json`, preserving the initial report. Non-speech labels,
+orthographic choices and edited captions remain possible reference differences.
+Creator-provided does not itself establish human authorship,
 verbatim completeness, correct speakers, word timing, or spoken-only content.
 Those requirements are reported separately, not inferred from WER/CER.
 
