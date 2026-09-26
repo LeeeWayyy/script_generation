@@ -26,7 +26,7 @@ def test_frozen_corpus_has_twenty_per_language_and_caption_evidence():
     import json
     from collections import Counter
     from pathlib import Path
-    manifest = json.loads((Path(__file__).parents[1] / 'benchmarks/youtube_baseline/manifest.json').read_text())
+    manifest = json.loads((Path(__file__).parents[1] / 'benchmarks/youtube_baseline/manifest.json').read_text(encoding='utf-8'))
     cases = manifest['cases']
     assert Counter(c['language'] for c in cases) == {'en': 20, 'ja': 20}
     assert len({c['video_id'] for c in cases}) == 40
