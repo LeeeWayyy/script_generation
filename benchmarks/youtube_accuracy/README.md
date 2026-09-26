@@ -8,6 +8,7 @@ technology, travel, business and everyday conversation; durations span about
 2–57 minutes. Selection used caption/audio metadata, not transcription scores.
 The Windows full run is in `youtube-accuracy/full-v1` (frozen inputs) and
 `youtube-accuracy/full-baseline` (audio-only API outputs).
+`frozen-inputs.json` records the exact audio/reference hashes for all 40 inputs.
 
 Freeze creator captions and their corresponding audio on Windows:
 
@@ -16,6 +17,22 @@ Freeze creator captions and their corresponding audio on Windows:
 .\.venv\Scripts\python.exe -m benchmarks.youtube_baseline.run C:\Users\leewe\transcript-validation\youtube-accuracy\pilot\pinned.json --output C:\Users\leewe\transcript-validation\youtube-accuracy\baseline
 .\.venv\Scripts\python.exe -m benchmarks.youtube_accuracy score C:\Users\leewe\transcript-validation\youtube-accuracy\pilot\pinned.json C:\Users\leewe\transcript-validation\youtube-accuracy\baseline
 ```
+
+For a fresh full-corpus reproduction, with the server running and its token in
+the environment, use a new output directory:
+
+```powershell
+$benchmarkRoot = 'C:\Users\leewe\transcript-validation\youtube-accuracy'
+.\.venv\Scripts\python.exe -m benchmarks.youtube_accuracy freeze benchmarks\youtube_accuracy\manifest.json "$benchmarkRoot\full-v1"
+.\.venv\Scripts\python.exe -m benchmarks.youtube_baseline.repeat "$benchmarkRoot\full-v1\pinned.json" "$benchmarkRoot\new-repeat" --runs 2
+.\.venv\Scripts\python.exe -m benchmarks.youtube_accuracy score "$benchmarkRoot\full-v1\pinned.json" "$benchmarkRoot\new-repeat\run-1"
+.\.venv\Scripts\python.exe -m benchmarks.youtube_accuracy score "$benchmarkRoot\full-v1\pinned.json" "$benchmarkRoot\new-repeat\run-2"
+```
+
+Reuse the frozen audio for exact reproduction: a new YouTube download may differ.
+Compare its hashes to `frozen-inputs.json` before comparing runs. The repeat test
+performs new inference; it ignores only execution-specific source/job identifiers.
+It does not restart the server or establish cross-machine/cross-version identity.
 
 Only frozen audio bytes are uploaded to generation. References are never passed
 as prompts, supplied for alignment, or retrieved through the URL transcription
@@ -31,6 +48,12 @@ orthographic choices and edited captions remain possible reference differences.
 Creator-provided does not itself establish human authorship,
 verbatim completeness, correct speakers, word timing, or spoken-only content.
 Those requirements are reported separately, not inferred from WER/CER.
+Caption tracks that start after 20% or end before 80% of the media receive a
+coverage warning. This is a review screen, not proof that a gap contains speech.
+The disaster simulation case `ja-reference-02` has only 203 reference characters
+and captions ending near 402 seconds of 807; retain it as a diagnostic, not a
+valid full-video accuracy reference. Aggregate scores retain all selected cases,
+including flagged ones, and must not be presented as ground-truth ASR accuracy.
 
 Keep calibration and holdout sets separate. Diagnose calibration mismatches,
 test general fixes, then measure the holdout without tuning to its individual
