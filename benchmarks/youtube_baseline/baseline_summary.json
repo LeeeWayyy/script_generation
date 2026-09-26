@@ -1,0 +1,755 @@
+{
+  "manifest_sha256": "54431b9211bb66a686749c2da756860d57fe989dcae1e1d68e3f49d938800672",
+  "cases": [
+    {
+      "id": "en-science-short",
+      "video_id": "dW1yQDeF2WU",
+      "language": "en",
+      "duration_s": 98,
+      "job_id": "5c0c9b401eea",
+      "functional_pass": false,
+      "errors": [
+        "empty_transcript",
+        "diarize_succeeded_not_true"
+      ],
+      "quality_warnings": [
+        "early_transcript_end_requires_listening"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "19e5e88077f43c77a8de31e5937230b26e6cc595b450d7716446cc9c807d71ba",
+      "readable_sha256": "470c069c4d61391d9e80196c2d41bd78dbf29466f2fd9def9ea82f831423083f",
+      "server_elapsed_s": 8.912764310836792,
+      "realtime_factor": 0.09094657460037543
+    },
+    {
+      "id": "en-science-medium",
+      "video_id": "2mlBh5d1IUY",
+      "language": "en",
+      "duration_s": 362,
+      "job_id": "6758b0b00a4e",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "1ee9084218234fe5aecafc8f63eca0d7684104bfe720e9984717070e200ce4e9",
+      "readable_sha256": "57e8327c84e338e4103e462dd517d287ce609e8064b6b91e437defa85e20b0b8",
+      "server_elapsed_s": 10.904750108718872,
+      "realtime_factor": 0.030123619084858763
+    },
+    {
+      "id": "en-history-short",
+      "video_id": "-Jbsu8nngoQ",
+      "language": "en",
+      "duration_s": 174,
+      "job_id": "df644791db07",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "a2b88a0c739118b4bd91c2a45bf24f92ab88566b4496d95956696f29c491462b",
+      "readable_sha256": "dc43cb0219d0abaf8bcb9720e1e33a3c014317d70335c417641edb94dd1cdb1c",
+      "server_elapsed_s": 7.6810595989227295,
+      "realtime_factor": 0.044144020683463965
+    },
+    {
+      "id": "en-history-long",
+      "video_id": "avagSCdkiDs",
+      "language": "en",
+      "duration_s": 1492,
+      "job_id": "bd0a3aca5451",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "8b46151f54f549c386b9c7f02e8e1ba9d6c2d6eebe1bc523114818f987ecc527",
+      "readable_sha256": "453e85f3581f33c96eb8615263281c18565bff1f2a8d9175a57ec849aec42fe3",
+      "server_elapsed_s": 35.61857891082764,
+      "realtime_factor": 0.023873042165434073
+    },
+    {
+      "id": "en-cooking-short",
+      "video_id": "iW6D3kUA2EE",
+      "language": "en",
+      "duration_s": 268,
+      "job_id": "d4093d99ac37",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "2917dac26632e9ed779bbb9e1df0fe77e93715e1cbadd07a7606d32439b30ecc",
+      "readable_sha256": "6e1ac5cd59e9052ff17bdb1cffee0f7753612a6b77f368872b4b63485ffa68a1",
+      "server_elapsed_s": 10.65697717666626,
+      "realtime_factor": 0.03976484021144127
+    },
+    {
+      "id": "en-cooking-medium",
+      "video_id": "8A_i-PFRieQ",
+      "language": "en",
+      "duration_s": 591,
+      "job_id": "9e00876567ed",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "6fbfd59ea1fcdcaa3c61fc707447cd91a2ca2e5757a56a1042f1566f4e0039fd",
+      "readable_sha256": "d7f07e041ceb3ff95f56785037d56de3f66a7ae1525cc6469c09ddce4de71c23",
+      "server_elapsed_s": 17.356428146362305,
+      "realtime_factor": 0.029367898724809313
+    },
+    {
+      "id": "en-technology-medium",
+      "video_id": "89cGQjB5R4M",
+      "language": "en",
+      "duration_s": 638,
+      "job_id": "f45f0bdc31e2",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "423d67d17bca2cad9a16c34faac90428cf71a4f1d2464909aa64c206059cbb31",
+      "readable_sha256": "9dc7815c0469a90fd60075caa9f4c60c17452f159fbbd3dcee69c1c5866ee1c8",
+      "server_elapsed_s": 19.159423828125,
+      "realtime_factor": 0.03003044487166928
+    },
+    {
+      "id": "en-technology-long",
+      "video_id": "9Os0o3wzS_I",
+      "language": "en",
+      "duration_s": 1307,
+      "job_id": "2c5148cc3b44",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "006f3102054621f30a0fb52877a4e6e644efd3523869a223ce55407871c03b4e",
+      "readable_sha256": "50fed3b42b5774b16250e4b8caca68fde6f94742d6023ae26655d86bcc7ce04c",
+      "server_elapsed_s": 31.592679977416992,
+      "realtime_factor": 0.0241719051089648
+    },
+    {
+      "id": "en-travel-medium",
+      "video_id": "uIAFcC9Nz90",
+      "language": "en",
+      "duration_s": 851,
+      "job_id": "4f07caa23217",
+      "functional_pass": false,
+      "errors": [
+        "diarize_succeeded_not_true"
+      ],
+      "quality_warnings": [
+        "repeated_text_requires_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "cffe8816de23fdf397e8c0b1e774ca9281d4ff529cd23b2eece07beff3715a0b",
+      "readable_sha256": "34d926ddb8fb469e4c04f963bf72cae69ab99fda83e4303cdac60993d694222b",
+      "server_elapsed_s": 7.823156356811523,
+      "realtime_factor": 0.009192898186617537
+    },
+    {
+      "id": "en-sports-short",
+      "video_id": "CHsC9ZfDa3I",
+      "language": "en",
+      "duration_s": 226,
+      "job_id": "862c11e20c94",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "7c624ec9d32380ea1e07ca44f5e34e02045a65d8601d105192a694ec2b8e75a3",
+      "readable_sha256": "7cedcb668045acab0c48babc2c542d25e5c8f3d9f4b5d31f7eee1aa5c79ac360",
+      "server_elapsed_s": 8.04305624961853,
+      "realtime_factor": 0.03558874446733863
+    },
+    {
+      "id": "en-sports-medium",
+      "video_id": "tqdG_t4WbOE",
+      "language": "en",
+      "duration_s": 699,
+      "job_id": "62b8069519de",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "4bbde8fbd3ef0d4d89d8ef6909679dda83650d6a81a123b1b4a80deef83fe669",
+      "readable_sha256": "f5f005eaa2d517bed1650b2427d5e6a97d3d0178eb348cdf5576363b94f1aa74",
+      "server_elapsed_s": 20.047173023223877,
+      "realtime_factor": 0.028679789732795245
+    },
+    {
+      "id": "en-arts-medium",
+      "video_id": "O8avPiL5tug",
+      "language": "en",
+      "duration_s": 501,
+      "job_id": "f50ece38dbf6",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "ca97266d2c53a88bf47b90ebc3577884a22a6029373d81dde27d07f182b4c9a9",
+      "readable_sha256": "868373fed11809f88f2e3f9767a7b35964e51e6aeb17820213a8d9fcbfc7379e",
+      "server_elapsed_s": 19.28088903427124,
+      "realtime_factor": 0.0384848084516392
+    },
+    {
+      "id": "en-arts-long",
+      "video_id": "WSL1cinlTF0",
+      "language": "en",
+      "duration_s": 1548,
+      "job_id": "8cab16ed34d7",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "81099be4b7272341b897de5dd0052d4d621489a85da2bafa131b4cb983d1f9cb",
+      "readable_sha256": "e32a108ce0cc504276d66dbedd60e3cb3aeeaaa99cba27374d661bb9b274712e",
+      "server_elapsed_s": 30.498364210128784,
+      "realtime_factor": 0.019701785665457872
+    },
+    {
+      "id": "en-business-medium",
+      "video_id": "LCmiKLMk2SI",
+      "language": "en",
+      "duration_s": 349,
+      "job_id": "68131c265637",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "bd2ac8cb3979c03c1b85bc801ee35333159b9922a5fe1f33a65cc3ae1586d826",
+      "readable_sha256": "8dabcc16ac6222a41e505df516b3c06d8a431abf2f7407eaf8a3ed5fb2135772",
+      "server_elapsed_s": 13.736847400665283,
+      "realtime_factor": 0.03936059427124723
+    },
+    {
+      "id": "en-business-long",
+      "video_id": "B73ebBNrjmg",
+      "language": "en",
+      "duration_s": 1283,
+      "job_id": "ba23f0a411d8",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "repeated_text_requires_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "b1220828e7b0b3cdf371844466df58329382b6383774c2ac257c2a89fdc46726",
+      "readable_sha256": "3ff687fd2c69882bd5e8be3016573d7e41d6a88b18dac80a8015e3478f59706d",
+      "server_elapsed_s": 34.13163661956787,
+      "realtime_factor": 0.02660299035040364
+    },
+    {
+      "id": "en-education-extended",
+      "video_id": "5IAcLGsFuxA",
+      "language": "en",
+      "duration_s": 3318,
+      "job_id": "78b163dfa36d",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "0fa9f550d8e557f1f028677793e2347a8f56985f090e671d399737b42dd101a6",
+      "readable_sha256": "e0cd8eadb3bc0cd953fd95665efec0b68d75e9129eb1507c6c0ffceaf12be248",
+      "server_elapsed_s": 71.7731065750122,
+      "realtime_factor": 0.021631436580775227
+    },
+    {
+      "id": "en-culture-medium",
+      "video_id": "iB9q_zEYc94",
+      "language": "en",
+      "duration_s": 384,
+      "job_id": "56a8e49cdbc4",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "cb2619dcd5c3db6254e86e75f0be4f6ee1f8210e321b760c3092bf778b09b4a1",
+      "readable_sha256": "593875a16af436c794d0bddc530de7c266d4673b82e5d5be510558253e2a6f25",
+      "server_elapsed_s": 17.8892879486084,
+      "realtime_factor": 0.0465866873661677
+    },
+    {
+      "id": "en-culture-extended",
+      "video_id": "8IYgHbTNLE0",
+      "language": "en",
+      "duration_s": 2947,
+      "job_id": "1636bd9d754a",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "52fcde03055bee26868212a1960253ca28fb10591a7ec16f089ea2279fdd0c8f",
+      "readable_sha256": "815eeac223da53fb82766639f1e9f2688fc91a4e0bb0245092dfccb2422d9d65",
+      "server_elapsed_s": 72.47032952308655,
+      "realtime_factor": 0.02459122141943894
+    },
+    {
+      "id": "ja-science-short",
+      "video_id": "6uEpZMDzp5E",
+      "language": "ja",
+      "duration_s": 180,
+      "job_id": "89b3a34ddc9f",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "ea25b63630559f66d0ba562159dfe2cc3787c926054d5313770bba7c7561f04d",
+      "readable_sha256": "97c91346a60797ef6c3d2106a21e08f016e7d92b42ad62f0bd84dee43d24e7ad",
+      "server_elapsed_s": 20.7217378616333,
+      "realtime_factor": 0.11512076589796279
+    },
+    {
+      "id": "ja-science-medium",
+      "video_id": "XDuWBQLVOFI",
+      "language": "ja",
+      "duration_s": 798,
+      "job_id": "65ec20bbd49d",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "47c78f55f7ffca2adb47e55f543d99e201b355e651da837ec76a1829b70aeb41",
+      "readable_sha256": "6667ba00e2a42c9da98af3793681f3674d1a89fa31ec51747401820d166aba25",
+      "server_elapsed_s": 22.049081325531006,
+      "realtime_factor": 0.02763042772622933
+    },
+    {
+      "id": "ja-history-short",
+      "video_id": "U4A4LY6lXG0",
+      "language": "ja",
+      "duration_s": 136,
+      "job_id": "3d5b46cd20ea",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "4155491c9843b7cf7c164c46953e5c57f5cbbac0473c8b98b6f130fc82bd5ec5",
+      "readable_sha256": "99b49a067fa23bdcb96a700bcd2436c530e4136b57d7f7815b77f38359a32f5d",
+      "server_elapsed_s": 8.582871913909912,
+      "realtime_factor": 0.06310935230816112
+    },
+    {
+      "id": "ja-history-long",
+      "video_id": "JD2zGEyXAlk",
+      "language": "ja",
+      "duration_s": 1456,
+      "job_id": "f5cda1cca5e7",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "64ffa85529d1d55b4d8336d9c519b67f261e3daef0f2486cce89cfecd72ae653",
+      "readable_sha256": "e56b47d5ddab971e3fce0c5d9f78362ab2df5acf05803849fa672cb3d5bc405d",
+      "server_elapsed_s": 38.9244384765625,
+      "realtime_factor": 0.026733817635001718
+    },
+    {
+      "id": "ja-cooking-short",
+      "video_id": "KQG9PcNY6tc",
+      "language": "ja",
+      "duration_s": 76,
+      "job_id": "6d889e69fd49",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "d288ac9ad07b883b251f86c95ddb43bc953198e62ea2523651e055fc42451cf7",
+      "readable_sha256": "743c256c59fb9c7a6278bba042d72d0e5d2386c819ea79bcc5fcd6f4073fc017",
+      "server_elapsed_s": 10.93053412437439,
+      "realtime_factor": 0.1438228174259788
+    },
+    {
+      "id": "ja-cooking-medium",
+      "video_id": "eWPKGjPvY24",
+      "language": "ja",
+      "duration_s": 807,
+      "job_id": "4d9b26a62671",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "6378ea38019152658c0986e537fd6c4a8f18e940598c572eac3dcfb2da10c15e",
+      "readable_sha256": "6131a3244055ec763c01f1f5c06b566d6b5ea5e3a35cb7a281eb8c39f26972f6",
+      "server_elapsed_s": 23.60209059715271,
+      "realtime_factor": 0.02924670458135404
+    },
+    {
+      "id": "ja-technology-medium",
+      "video_id": "OKIG2FB_5Ak",
+      "language": "ja",
+      "duration_s": 513,
+      "job_id": "de35f8b40fbc",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "8d6dde328021478feed351b88eeca659c5b689eb47fbf9ddec88e7716b2bda59",
+      "readable_sha256": "22e1a2cc25a51affc9abcabaed49b822731006b82947f6c31b556509774dd64a",
+      "server_elapsed_s": 24.407620429992676,
+      "realtime_factor": 0.047578207465872664
+    },
+    {
+      "id": "ja-technology-long",
+      "video_id": "Hl8UNYrp0Vg",
+      "language": "ja",
+      "duration_s": 1159,
+      "job_id": "ce1f44e11238",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "f9acc0f8314c5d3a49f36097d75d976286b560550f32e6577d5dda3340fb2667",
+      "readable_sha256": "99e3ad1a2f03fc8887f7fefb960e6f8cc0a08645f6663c7e02647ae179047612",
+      "server_elapsed_s": 41.16516971588135,
+      "realtime_factor": 0.03551783409480703
+    },
+    {
+      "id": "ja-travel-medium",
+      "video_id": "3nkpYnRnqgo",
+      "language": "ja",
+      "duration_s": 717,
+      "job_id": "fffdfa3238d9",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "9331e7af32d87ffb519e496e99c8be78a694a51c5e47a6be7bcc0378000ccc46",
+      "readable_sha256": "1c7b4191c69c14d2c892c46f1d32ac268f598aa3818b52a3be2d74f871932651",
+      "server_elapsed_s": 14.473690509796143,
+      "realtime_factor": 0.020186458172658496
+    },
+    {
+      "id": "ja-sports-short",
+      "video_id": "04-yGPf8DOk",
+      "language": "ja",
+      "duration_s": 106,
+      "job_id": "34ca76586662",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "early_transcript_end_requires_listening"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "99dfb8a52a24bc236519fb190d4e4c37b482a04f3bc7d87701e746b482e69722",
+      "readable_sha256": "1912827e96a40507e2d079187a91b0afc566f43cc178ea79288aa8b4e3d94848",
+      "server_elapsed_s": 11.213886260986328,
+      "realtime_factor": 0.10579137982062574
+    },
+    {
+      "id": "ja-sports-medium",
+      "video_id": "U_6HRHq5dyM",
+      "language": "ja",
+      "duration_s": 474,
+      "job_id": "676bb089c682",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "5add8e37acb65335ae1ada1334016643e38c2ed1fbb9e4890f55dd8bb0c45e3f",
+      "readable_sha256": "f4eb0f77b4352812a1049715023aaa79fca112179c41e0dd0a62153dfc936d40",
+      "server_elapsed_s": 17.431140422821045,
+      "realtime_factor": 0.036774557854052835
+    },
+    {
+      "id": "ja-arts-long",
+      "video_id": "h7uUA_kXuFI",
+      "language": "ja",
+      "duration_s": 1646,
+      "job_id": "41dacbd0bbf8",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "93d0250d7fb2ba8125558a58d118a362aae276fc8354192524a182540e17418e",
+      "readable_sha256": "1b8889d1886cda90f2b687586153a5e5d1f2c1af416c4bae3b975bf0378bd07a",
+      "server_elapsed_s": 41.709197998046875,
+      "realtime_factor": 0.025339731469044273
+    },
+    {
+      "id": "ja-business-medium",
+      "video_id": "1JPcZad1zmc",
+      "language": "ja",
+      "duration_s": 381,
+      "job_id": "26d484c055dc",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "2fd8e3755927c9dfe4a2d61e8c1b7ebdf0fd7b9e2074151340f18baf2d06a5e3",
+      "readable_sha256": "5015d9d7fc6497bba9cc6da8ae66a377081d2739a6a8c97c81dd1cf10ffb9e20",
+      "server_elapsed_s": 12.470136165618896,
+      "realtime_factor": 0.032730016182726765
+    },
+    {
+      "id": "ja-business-long",
+      "video_id": "wnh6gEO6KX0",
+      "language": "ja",
+      "duration_s": 1033,
+      "job_id": "c6faeb606b4f",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "0b25837ecf07e6ff14f43443e5a6350b59436440cfc5f9c802151c7b17ca1af4",
+      "readable_sha256": "62c15b1697b29a63ad2d914f5bc8bb68199a7cb0ea2cd53af3fabb3883395132",
+      "server_elapsed_s": 32.870962142944336,
+      "realtime_factor": 0.03182087332327622
+    },
+    {
+      "id": "ja-education-medium",
+      "video_id": "_2XsKmh6oB0",
+      "language": "ja",
+      "duration_s": 588,
+      "job_id": "6236d463fa37",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "7c4b433e067dcf3701f95c403d59ad2311778e07feb7f0a344e2a0c18bfe9949",
+      "readable_sha256": "e6fde1a0b4548e73f894088dad046fd0a5f62c7fb4830b693d6bc01f4bdeb819",
+      "server_elapsed_s": 24.407041788101196,
+      "realtime_factor": 0.041508574469559856
+    },
+    {
+      "id": "ja-education-extended",
+      "video_id": "S6MhDswbuDs",
+      "language": "ja",
+      "duration_s": 3024,
+      "job_id": "c59efa960c89",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "6cbdbad7acecc8764c9774703eefee53dd8cce1f590bb2d70d81b41ab2c8a89f",
+      "readable_sha256": "290579d21503e7c5979204f8334edcac6944abcbd1f8751550444a6f907c88ad",
+      "server_elapsed_s": 76.81941723823547,
+      "realtime_factor": 0.025403246441215433
+    },
+    {
+      "id": "ja-culture-medium",
+      "video_id": "yn-U20B2saQ",
+      "language": "ja",
+      "duration_s": 728,
+      "job_id": "8667908e3023",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "042d6c0ac9e01900486c5c63e1d512969f1614a8cd9b377341d8eaec46735e30",
+      "readable_sha256": "da72b078b52f66a000f25775ac3e9d1aac89ea5af45a19343cdee52a6f369d1e",
+      "server_elapsed_s": 29.222979307174683,
+      "realtime_factor": 0.04014145509227292
+    },
+    {
+      "id": "ja-culture-extended",
+      "video_id": "jdyR8n4jYsI",
+      "language": "ja",
+      "duration_s": 3388,
+      "job_id": "18c17fe586fd",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "81246f156264bea3ae36374c9168254e2165b44227f36310a930c0c3b67a83d6",
+      "readable_sha256": "94c0a8b086223d432bca65d47c9382ca9e3a4c1ab33b30b705fc644e64ddf326",
+      "server_elapsed_s": 101.10257887840271,
+      "realtime_factor": 0.029841375111689113
+    },
+    {
+      "id": "en-travel-short",
+      "video_id": "QBpRYapgXUM",
+      "language": "en",
+      "duration_s": 286,
+      "job_id": "5ce5495079f4",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "b7d11e1faf106a9be24875018472daeecbf2fd6159a418047438295e51bd1a1a",
+      "readable_sha256": "ea31b7d8c81a06c45e8b9eb4b5c1f6bbbb1980f295a5b73100eecac5f1bafc96",
+      "server_elapsed_s": 17.071268558502197,
+      "realtime_factor": 0.05968975020455314
+    },
+    {
+      "id": "en-education-medium",
+      "video_id": "IL9Cr71r2oo",
+      "language": "en",
+      "duration_s": 534,
+      "job_id": "e6e552965b90",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "a46fe4c07d0c3961dac3b3fd614a499f4fe635b2304bed454ad45d0e5c4cb6ad",
+      "readable_sha256": "77a3e4c0f7a20809e27389ebc091229eb9b8f66c91b2cb6e41a38caf317e1b0a",
+      "server_elapsed_s": 20.91843891143799,
+      "realtime_factor": 0.03917310657572657
+    },
+    {
+      "id": "ja-travel-short",
+      "video_id": "TJE20tNCqzE",
+      "language": "ja",
+      "duration_s": 180,
+      "job_id": "0c46931e461a",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "434645a0f30b47e1ed2f1e3f89e997635df57adbd5315462d344aa62c60171bc",
+      "readable_sha256": "6965743baccae618f2c2518262a01350e57401bedcb8c2746df73f60c1af85d4",
+      "server_elapsed_s": 14.498329401016235,
+      "realtime_factor": 0.0805462744500902
+    },
+    {
+      "id": "ja-arts-medium",
+      "video_id": "ohSqfn8JTbE",
+      "language": "ja",
+      "duration_s": 745,
+      "job_id": "6319da51efbf",
+      "functional_pass": true,
+      "errors": [],
+      "quality_warnings": [
+        "short_rows_require_review",
+        "unknown_word_speakers"
+      ],
+      "independently_reviewed_rows": 0,
+      "raw_sha256": "e5c4f0147c3e035d892e607c2976e4e13f741b585d58ec70b5a26b50e50d4574",
+      "readable_sha256": "b2698390c7f9ae67de5798dd153166acf409453a4167e3abfc1de60524c121a8",
+      "server_elapsed_s": 26.020936965942383,
+      "realtime_factor": 0.03492743216905018
+    }
+  ],
+  "languages": {
+    "en": 20,
+    "ja": 20
+  },
+  "input_hours": 9.9975,
+  "completed": 40,
+  "functional_passed": 38,
+  "acceptance_passed": 0,
+  "acceptance_status": "NOT_ACCEPTED: unresolved functional failures and/or independent review requirements",
+  "review_flags": 842,
+  "baseline_generation_commit": "d6785c3",
+  "baseline_runner_commit": "29aa3b3",
+  "candidate_code_commit": "7c15136",
+  "host_regression_tests_passed": 104,
+  "raw_result_count": 40,
+  "baseline_readable_rows": 7919,
+  "candidate_readable_rows": 7780,
+  "candidate_changed_cases": 17,
+  "app_parser_passed": 39,
+  "app_aligned_entries": 134858,
+  "app_usable_word_cues": 134858,
+  "total_server_elapsed_s": 1068.1900579929352,
+  "production_app_revision": "ca1b10982b97e8b722d69eba4e66505806efe167",
+  "case_count": 40,
+  "hardware": {
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "driver": "591.86",
+    "gpu_memory_mib": 32607
+  },
+  "live_verification": {
+    "preserved_jobs": 50,
+    "compared_readable_cases": 40,
+    "unauthenticated_status": 401,
+    "fresh_checks": [
+      {
+        "video_id": "dW1yQDeF2WU",
+        "job_id": "f86ae2e6dff5",
+        "status": "correctly_rejected",
+        "error": "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech."
+      },
+      {
+        "video_id": "uIAFcC9Nz90",
+        "job_id": "66ecc654adfe",
+        "status": "correctly_rejected",
+        "error": "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech."
+      },
+      {
+        "video_id": "2mlBh5d1IUY",
+        "job_id": "896bfffa3649",
+        "status": "done",
+        "sentence_tail_intact": true
+      }
+    ]
+  },
+  "candidate_app_parser_passed": 39,
+  "production_app_sources_sha256": {
+    "Models.swift": "224d1340d5138e5dc78ada857d3d856af98210da861c8cacf31ed5780e877693",
+    "TranscriptPresentation.swift": "28a10b78faa437697e8f7a2cfd87e9e82c44ffcd19f897df042b89b8191be1bf"
+  },
+  "schema_version": 1
+}
