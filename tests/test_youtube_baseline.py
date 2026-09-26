@@ -62,3 +62,24 @@ def test_repeat_comparison_ignores_execution_identity_but_not_caption_changes():
     assert semantic_result(a) == semantic_result(b)
     b['segments'][0]['end'] = 1.001
     assert semantic_result(a) != semantic_result(b)
+
+
+def test_repeat_comparison_rejects_raw_drift_hidden_by_readable_output(tmp_path):
+    from benchmarks.youtube_baseline.repeat import compare_runs
+    from benchmarks.youtube_baseline.run import save
+    manifest = tmp_path / 'manifest.json'
+    save(manifest, {'cases': [{'id': 'sample', 'media_sha256': 'fixed-input'}]})
+    payload = {'segments': [{'text': 'Hello.', 'start': 0, 'end': 1}], 'language': 'en'}
+    for index in (1, 2):
+        root = tmp_path / f'run-{index}'
+        root.mkdir()
+        save(root / 'sample.json', {'status': 'done'})
+        for kind in ('raw', 'readable'):
+            save(root / f'sample.{kind}.json', payload)
+    assert compare_runs(manifest, tmp_path, 2)['exact_caption_repeatability_passed'] == 1
+    payload['segments'][0]['end'] = 1.001
+    save(tmp_path / 'run-2/sample.raw.json', payload)
+    result = compare_runs(manifest, tmp_path, 2)
+    assert result['exact_caption_repeatability_passed'] == 0
+    assert result['rows'][0]['exact_readable_repeatability_pass']
+    assert not result['rows'][0]['exact_raw_repeatability_pass']

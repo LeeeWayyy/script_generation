@@ -16,7 +16,7 @@ def compare_runs(manifest, output, count):
     cases = json.loads(manifest.read_text(encoding='utf-8'))['cases']
     rows = []
     for case in cases:
-        hashes, statuses, errors = [], [], []
+        hashes, raw_hashes, statuses, errors = [], [], [], []
         for index in range(1, count + 1):
             root = output / f'run-{index}'
             path = root / (case['id'] + '.json')
@@ -28,13 +28,19 @@ def compare_runs(manifest, output, count):
             if row.get('status') == 'done':
                 payload = json.loads((root / (case['id'] + '.readable.json')).read_text(encoding='utf-8'))
                 hashes.append(digest(semantic_result(payload)))
+                raw = json.loads((root / (case['id'] + '.raw.json')).read_text(encoding='utf-8'))
+                raw_hashes.append(digest(semantic_result(raw)))
             else:
                 errors.append(row.get('error'))
-        stable = (len(hashes) == count and len(set(hashes)) == 1)
+        readable_stable = len(hashes) == count and len(set(hashes)) == 1
+        raw_stable = len(raw_hashes) == count and len(set(raw_hashes)) == 1
         repeated_error = (len(errors) == count and len(set(errors)) == 1 and all(s == 'error' for s in statuses))
         rows.append({'case': case['id'], 'media_sha256': case['media_sha256'],
                      'statuses': statuses, 'content_hashes': hashes,
-                     'exact_caption_repeatability_pass': stable,
+                     'raw_content_hashes': raw_hashes,
+                     'exact_readable_repeatability_pass': readable_stable,
+                     'exact_raw_repeatability_pass': raw_stable,
+                     'exact_caption_repeatability_pass': readable_stable and raw_stable,
                      'repeatable_error': repeated_error, 'errors': errors})
     result = {'runs': count, 'cases': len(cases),
               'exact_caption_repeatability_passed': sum(r['exact_caption_repeatability_pass'] for r in rows),

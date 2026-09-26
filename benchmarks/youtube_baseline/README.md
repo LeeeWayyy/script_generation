@@ -87,7 +87,7 @@ Ensure the actual Deno executable is on PATH; a broken Windows WinGet link
 does not provide a working JavaScript runtime.
 
 The second command uploads the same verified bytes for three new inference
-passes. It compares all caption text, word data, timing, speaker labels and
+passes. It compares both raw and readable files: all caption text, word data, timing, speaker labels and
 metadata, excluding execution IDs and source paths. An identical error is
 reported separately and never counts as successful caption generation.
 Repeatability does not establish accuracy; both gates must pass independently.
