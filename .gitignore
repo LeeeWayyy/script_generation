@@ -27,3 +27,6 @@ transcript-*/
 # Claude Code local settings
 .claude/settings.local.json
 .claude/
+
+# Local YouTube acceptance evidence (large generated transcripts)
+benchmarks/youtube_baseline/results/
