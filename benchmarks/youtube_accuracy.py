@@ -121,6 +121,16 @@ def report(manifest, results):
         row = {'case': case['id'], 'language': case['language'], 'split': case['split']}
         if case.get('reference_quality_note'):
             row['reference_quality_note'] = case['reference_quality_note']
+        if 'duration_s' in case:
+            from transcript.ingest import parse_json3_caption
+            captions = parse_json3_caption(manifest.parent / case['reference_captions'])
+            first = min((s.start for s in captions), default=0)
+            last = max((s.end for s in captions), default=0)
+            row['reference_caption_bounds_s'] = [first, last]
+            # A screening warning, not a claim that every gap contains speech.
+            if first > case['duration_s'] * .2 or last < case['duration_s'] * .8:
+                row['reference_quality_note'] = (row.get('reference_quality_note', '')
+                    + ' Caption timestamps cover only part of the media; review before using as full-video ground truth.').strip()
         if path.exists():
             generated = json.loads(path.read_text(encoding='utf-8'))
             row.update(assess(reference, generated, case['language']))

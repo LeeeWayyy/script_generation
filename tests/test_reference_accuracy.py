@@ -47,10 +47,13 @@ def test_report_keeps_missing_cases_and_reference_quality_flags(tmp_path):
     cases = []
     for name in ('done', 'missing'):
         case = {'id': name, 'language': 'ja', 'split': 'calibration',
-                'reference_quality_note': 'Unreviewed wording'}
+                'duration_s': 100}
         for field in ('media', 'reference', 'reference_captions'):
             path = tmp_path / (name + field)
-            path.write_text('地球の自転', encoding='utf-8')
+            text = (json.dumps({'events': [{'tStartMs': 0, 'dDurationMs': 20000,
+                                           'segs': [{'utf8': '地球の自転'}]}]})
+                    if field == 'reference_captions' else '地球の自転')
+            path.write_text(text, encoding='utf-8')
             case[field], case[field + '_sha256'] = path.name, _sha256(path)
         cases.append(case)
     manifest = tmp_path / 'pinned.json'
@@ -60,4 +63,5 @@ def test_report_keeps_missing_cases_and_reference_quality_flags(tmp_path):
     assert result['scored'] == 1 and result['cases'] == 2
     assert result['groups'][0]['reference_weighted_error_rate'] == 2 / 5
     assert result['groups'][0]['reference_quality_flagged'] == 2
+    assert result['rows'][0]['reference_caption_bounds_s'] == [0, 20]
     assert result['rows'][1]['status'] == 'no_generated_result'
