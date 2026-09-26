@@ -892,7 +892,10 @@ These joins preserve text without inserting spaces, and preserve every original
 word label, score, and timestamp. Conflicting labels make the row speaker null.
 `meta.readable.sentence_continuity_joins` uses
 `basis:japanese_phrase_continuity_heuristic`; this is linguistic evidence, not
-verified speaker identity. Raw results remain unchanged. Saved jobs benefit from
+verified speaker identity. Each final segment has at most one fallback record.
+Joined rows consolidate uncertainty into that record; `source_fallbacks` retains
+original input records (whose indices refer to the input view), while join events
+remain in `sentence_continuity_joins` or `reviewed_joins`. Raw results remain unchanged. Saved jobs benefit from
 the readable view without repeating download or inference. Install the updated
 `local`/`server` extra to include the lightweight BudouX dependency.
 

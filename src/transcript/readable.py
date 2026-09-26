@@ -246,18 +246,26 @@ def _join_boundaries(transcript: Transcript, boundaries: list[float], *, basis: 
             })
         indices[i] = len(segments) - 1
     readable = dict(transcript.meta.get("readable", {}))
-    fallbacks = [{**f, "segment_index": indices[f["segment_index"]]}
-                 for f in readable.get("fallbacks", [])]
+    # Several input rows can map to one output row. Its fallback describes the
+    # final row once; retain input uncertainty separately as provenance.
+    by_index = {}
+    for fallback in readable.get("fallbacks", []):
+        index = indices[fallback["segment_index"]]
+        by_index.setdefault(index, []).append(fallback)
     reviewed_indices = {c["segment_index"] for c in corrections}
     for index in sorted(reviewed_indices):
         segment = segments[index]
-        if segment.speaker is None:
-            fallbacks.append({
+        if segment.speaker is None or index in by_index:
+            sources = by_index.get(index, [])
+            by_index[index] = [{
                 "segment_index": index, "source_start": segment.start, "source_end": segment.end,
-                "timing": "word", "speaker": "unavailable",
-                "reason": basis + "_with_uncertain_speaker_assignment",
-            })
-    readable["fallbacks"] = fallbacks
+                "timing": "word", "speaker": "word" if segment.speaker else "unavailable",
+                "reason": basis + ("_with_uncertain_speaker_assignment"
+                                   if segment.speaker is None else ""),
+                **({"source_fallbacks": sources} if sources else {}),
+            }]
+    readable["fallbacks"] = [{**items[0], "segment_index": index}
+                             for index, items in by_index.items()]
     for key in ("reviewed_joins", "sentence_continuity_joins"):
         if key in readable:
             readable[key] = [{**c, "segment_index": indices[c["segment_index"]]}

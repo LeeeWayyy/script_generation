@@ -28,6 +28,13 @@ def test_japanese_real_fragments_and_short_exchanges():
     assert all(s.start == s.words[0].start and s.end == s.words[-1].end for s in result.segments)
     assert all(j['basis'] == 'japanese_phrase_continuity_heuristic'
                for j in result.meta['readable']['sentence_continuity_joins'])
+    fallbacks = result.meta['readable']['fallbacks']
+    assert len({f['segment_index'] for f in fallbacks}) == len(fallbacks)
+    joined = next(f for f in fallbacks if f['segment_index'] == 2)
+    assert joined['timing'] == 'word' and joined['speaker'] == 'unavailable'
+    assert joined['source_fallbacks'][0]['speaker'] == 'unavailable'
+    assert joined['source_start'] == result.segments[2].start
+    assert joined['source_end'] == result.segments[2].end
 
 
 def test_japanese_pauses_missing_timing_and_complete_replies_stay_separate():

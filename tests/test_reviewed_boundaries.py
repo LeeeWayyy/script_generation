@@ -175,3 +175,18 @@ def test_fresh_host_alignment_stretch_does_not_make_a_false_turn():
     assert result.segments[0].text == 'I made it up.'
     assert (result.segments[0].start, result.segments[0].end) == (8.754, 9.794)
     assert result.segments[0].speaker is None
+
+
+def test_join_consolidates_input_fallbacks_without_losing_provenance():
+    source = interview()
+    original = [{'segment_index': i, 'timing': 'word', 'speaker': 'unavailable',
+                 'source_segment_index': i} for i in (0, 1)]
+    source.meta['readable']['fallbacks'] = original
+    result = join_reviewed_boundaries(source, [94.060])
+    fallbacks = result.meta['readable']['fallbacks']
+    assert len(fallbacks) == 1
+    assert fallbacks[0]['segment_index'] == 0
+    assert fallbacks[0]['speaker'] == 'unavailable'
+    assert fallbacks[0]['timing'] == 'word'
+    assert fallbacks[0]['source_fallbacks'] == original
+    assert source.meta['readable']['fallbacks'] == original
