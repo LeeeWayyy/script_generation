@@ -69,3 +69,24 @@ PYTHONPATH=src python -m benchmarks.youtube_baseline.compare benchmarks/youtube_
 
 Use a different output directory for a fresh inference run. Existing completed
 cases are reused, including failures; a rerun must not erase original evidence.
+
+## Reproduce inference from identical audio
+
+Run these modules from the repository root on the GPU host:
+
+```powershell
+.\.venv\Scripts\python.exe -m benchmarks.youtube_baseline.freeze benchmarks\youtube_baseline\manifest.json C:\Users\leewe\transcript-validation\youtube-baseline\frozen
+.\.venv\Scripts\python.exe -m benchmarks.youtube_baseline.repeat C:\Users\leewe\transcript-validation\youtube-baseline\frozen\pinned.json C:\Users\leewe\transcript-validation\youtube-baseline\repeatability
+```
+
+The first command retains decoded 16-kHz mono PCM audio and SHA-256 hashes,
+and rechecks creator-caption eligibility. Resuming verifies existing audio;
+changed inputs are rejected. Keep this corpus directory with the results.
+Ensure the actual Deno executable is on PATH; a broken Windows WinGet link
+does not provide a working JavaScript runtime.
+
+The second command uploads the same verified bytes for three new inference
+passes. It compares all caption text, word data, timing, speaker labels and
+metadata, excluding execution IDs and source paths. An identical error is
+reported separately and never counts as successful caption generation.
+Repeatability does not establish accuracy; both gates must pass independently.

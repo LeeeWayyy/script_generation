@@ -171,10 +171,17 @@ def run(manifest_path, output, server):
                 # it or launch a second GPU model for benchmarking.
                 while get('/health')['queued_or_running']:
                     time.sleep(5)
-                response = session.post(base + '/jobs', data={
-                    'url': case['url'], 'language': case['language'],
-                    'align': 'true', 'diarize': 'true',
-                }, timeout=60)
+                options = {'language': case['language'], 'align': 'true', 'diarize': 'true'}
+                if 'media' in case:
+                    from .freeze import verified_audio
+                    audio = verified_audio(case, manifest_path.parent)
+                    with audio.open('rb') as stream:
+                        response = session.post(base + '/jobs', data=options,
+                                                files={'file': (case['id'] + '.wav', stream)},
+                                                timeout=300)
+                else:
+                    response = session.post(base + '/jobs',
+                                            data={**options, 'url': case['url']}, timeout=60)
                 response.raise_for_status()
                 row['job_id'] = response.json()['id']
                 row['submitted_at'] = datetime.now(timezone.utc).isoformat()

@@ -37,3 +37,28 @@ def test_frozen_corpus_has_twenty_per_language_and_caption_evidence():
         assert {c['length_bucket'] for c in group} == {'short', 'medium', 'long', 'extended'}
         assert Counter(c['split'] for c in group) == {'calibration': 14, 'holdout': 6}
         assert all(c['creator_caption_languages'] == [] and c['caption_checked_at'] for c in group)
+
+
+def test_pinned_input_rejects_changed_audio(tmp_path):
+    import hashlib
+    import pytest
+    from benchmarks.youtube_baseline.freeze import verified_audio
+    audio = tmp_path / 'sample.wav'
+    audio.write_bytes(b'fixed audio')
+    case = {'id': 'sample', 'media': audio.name,
+            'media_sha256': hashlib.sha256(audio.read_bytes()).hexdigest()}
+    assert verified_audio(case, tmp_path) == audio
+    audio.write_bytes(b'changed audio')
+    with pytest.raises(ValueError, match='Pinned audio changed'):
+        verified_audio(case, tmp_path)
+
+
+def test_repeat_comparison_ignores_execution_identity_but_not_caption_changes():
+    from benchmarks.youtube_baseline.repeat import semantic_result
+    a = {'segments': [{'text': 'Hello.', 'start': 0, 'end': 1}], 'language': 'en',
+         'meta': {'job_id': 'first', 'source': 'upload1.wav', 'model': 'large-v3'}}
+    b = deepcopy(a)
+    b['meta'].update(job_id='second', source='upload2.wav')
+    assert semantic_result(a) == semantic_result(b)
+    b['segments'][0]['end'] = 1.001
+    assert semantic_result(a) != semantic_result(b)
