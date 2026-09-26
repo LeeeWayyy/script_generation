@@ -88,6 +88,18 @@ def test_mps_remains_a_supported_cpu_fallback(monkeypatch):
     assert engine.device == "cpu"
 
 
+def test_cuda_precision_is_fixed_before_the_first_alignment(monkeypatch):
+    matmul = SimpleNamespace(allow_tf32=True)
+    cudnn = SimpleNamespace(allow_tf32=True)
+    torch = SimpleNamespace(backends=SimpleNamespace(
+        cuda=SimpleNamespace(matmul=matmul), cudnn=cudnn,
+    ))
+    monkeypatch.setitem(sys.modules, "torch", torch)
+    engine = TranscriptionEngine(device="cuda")
+    assert engine._asr is None
+    assert matmul.allow_tf32 is False and cudnn.allow_tf32 is False
+
+
 def test_engine_warm_loads_once_and_forwards_beam_size(monkeypatch):
     calls = []
     model = object()

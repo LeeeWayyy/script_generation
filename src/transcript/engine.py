@@ -46,6 +46,12 @@ class TranscriptionEngine:
         if isinstance(beam_size, bool) or not isinstance(beam_size, int) or beam_size <= 0:
             raise ValueError("beam_size must be a positive integer")
         self.device = detect_device(device)
+        if self.device == "cuda":
+            import torch
+            # Pyannote disables TF32 on its first inference. Set the same policy
+            # before alignment so the first job does not use different precision.
+            torch.backends.cuda.matmul.allow_tf32 = False
+            torch.backends.cudnn.allow_tf32 = False
         self.compute_type = compute_type or default_compute_type(self.device)
         self.model_name = model
         self.batch_size = batch_size
