@@ -58,6 +58,8 @@ def test_ytdlp_fetch_stops_and_cleans_unknown_size_download_over_cap(monkeypatch
     killed_groups = []
     if ingest.os.name == "posix":
         monkeypatch.setattr(ingest.os, "killpg", lambda pid, sig: killed_groups.append((pid, sig)))
+    elif ingest.os.name == "nt":
+        monkeypatch.setattr(ingest.subprocess, "run", lambda cmd, **kwargs: killed_groups.append(cmd))
 
     with pytest.raises(RuntimeError, match="3-byte cap"):
         ingest._ytdlp_fetch(
@@ -73,6 +75,8 @@ def test_ytdlp_fetch_stops_and_cleans_unknown_size_download_over_cap(monkeypatch
     if ingest.os.name == "posix":
         assert captured["kwargs"]["start_new_session"] is True
         assert killed_groups == [(123, ingest.signal.SIGKILL)]
+    elif ingest.os.name == "nt":
+        assert killed_groups == [["taskkill", "/F", "/T", "/PID", "123"]]
     assert not media.exists()
 
 
