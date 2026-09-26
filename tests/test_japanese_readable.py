@@ -46,3 +46,37 @@ def test_japanese_pauses_missing_timing_and_complete_replies_stay_separate():
     right.words[0].start = None
     result = readable_transcript(Transcript([left, right], 'ja'))
     assert len(result.segments) == 2
+
+
+def test_incomplete_inflections_join_sustained_fragments_without_rewriting():
+    for a, b in [('はい、右に曲がっ', 'てずっと行くと、右手の方で。'),
+                 ('ありがとうござ', 'います。'), ('そこへ行っ', 'たので帰ります。')]:
+        left = aligned(a, speaker='A', step=.08)
+        right = aligned(b, left.end, 'B', step=.08)
+        source = Transcript([left, right], 'ja')
+        before = source.to_dict()
+        result = readable_transcript(source)
+        assert len(result.segments) == 1
+        row = result.segments[0]
+        assert row.text == a + b and row.speaker is None
+        assert row.words == left.words + right.words
+        assert (row.start, row.end) == (left.start, right.end)
+        assert source.to_dict() == before
+        joins = result.meta['readable']['sentence_continuity_joins']
+        assert joins[0]['evidence'] == 'incomplete_inflection_with_contiguous_character_timing'
+        fallbacks = result.meta['readable']['fallbacks']
+        assert len(fallbacks) == 1 and fallbacks[0]['speaker'] == 'unavailable'
+
+
+def test_inflection_guard_preserves_pauses_sustained_sounds_and_complete_turns():
+    pairs = [('ありがとうござ', 'います。', .04, .08),
+             ('ありがとうござ', 'います。', 0., .2),
+             ('あっ', 'ていうことですね。', 0., .08),
+             ('ありがとうございます。', 'います。', 0., .08),
+             ('はい', 'いいえ。', 0., .08),
+             ('右に曲がった', 'はい。', 0., .08)]
+    for a, b, gap, step in pairs:
+        left = aligned(a, speaker='A', step=step)
+        right = aligned(b, left.end + gap, 'B', step=.08)
+        result = readable_transcript(Transcript([left, right], 'ja'))
+        assert [s.text for s in result.segments] == [a, b]

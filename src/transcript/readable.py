@@ -125,11 +125,12 @@ def _join_japanese_fragments(transcript):
     legal = _phrase_starts("".join(s.text for s in segments))
     counts = Counter(s.start for s in segments)
     replies = {"はい", "ええ", "うん", "いいえ", "あ", "あっ", "え", "いや", "ううん"}
-    boundaries, cursor = [], 0
+    boundaries, inflections, cursor = [], set(), 0
     for left, right in zip(segments, segments[1:]):
         cursor += len(left.text)
         if (cursor in legal or re.search(r'[、。！？!?.,;:]["”’]*$', left.text)
-                or left.text.strip() in replies or right.text.strip() in replies
+                or left.text.strip().rstrip('、。！？!?.,;:') in replies
+                or right.text.strip().rstrip('、。！？!?.,;:') in replies
                 or counts[right.start] != 1):
             continue
         words = left.words + right.words
@@ -140,11 +141,32 @@ def _join_japanese_fragments(transcript):
                 or any(b.start < a.end for a, b in zip(words, words[1:]))
                 or left.start != words[0].start or left.end != left.words[-1].end
                 or right.start != right.words[0].start or right.end != words[-1].end
-                or not 0 <= right.start - left.end <= .12 + 1e-6
-                or min(left.end - left.start, right.end - right.start) > .30 + 1e-6):
+                or not 0 <= right.start - left.end <= .12 + 1e-6):
+            continue
+        # Incomplete inflections are stronger evidence than phrase membership:
+        # a kanji verb ending in small tsu before te/ta, or goza before imasu.
+        # Keep this narrow: complete replies, punctuation and phrase boundaries
+        # were excluded above; require nearly contiguous, brief final characters.
+        inflection = (
+            (re.search(r'[一-龯][ぁ-ゖ]*っ$', left.text) and right.text.startswith(('て', 'た')))
+            or (left.text.endswith('ござ') and right.text.startswith(('います', 'いまし', 'いません')))
+        )
+        connected_inflection = (
+            inflection and right.start - left.end <= .02 + 1e-6
+            and 0 < left.words[-1].end - left.words[-1].start <= .12 + 1e-6
+            and right.end - left.start <= 8
+        )
+        if (min(left.end - left.start, right.end - right.start) > .30 + 1e-6
+                and not connected_inflection):
             continue
         boundaries.append(right.start)
-    return _join_boundaries(transcript, boundaries, basis="japanese_phrase_continuity_heuristic")
+        if connected_inflection:
+            inflections.add(right.start)
+    result = _join_boundaries(transcript, boundaries, basis="japanese_phrase_continuity_heuristic")
+    for join in result.meta.get('readable', {}).get('sentence_continuity_joins', []):
+        if join['boundary_start'] in inflections:
+            join['evidence'] = 'incomplete_inflection_with_contiguous_character_timing'
+    return result
 
 
 def _join_sentence_continuations(transcript: Transcript) -> Transcript:

@@ -895,7 +895,14 @@ limit does not apply. Duration and character limits wait for a BudouX phrase
 boundary. In the readable view, adjacent fragments inside a predicted phrase can
 join if their timing is intact and ordered, their gap is at most 120 ms, and at
 least one fragment lasts at most 300 ms. Punctuation, common complete replies,
-longer fragments, pauses, and uncertain timing retain boundaries.
+longer fragments, pauses, and uncertain timing retain boundaries. A narrow exception
+allows sustained fragments at incomplete inflections (a kanji verb ending in
+small `っ` before `て`/`た`, or `ござ` before polite `います` forms), still inside
+one predicted phrase: gap at most 20 ms, positive final-character duration at
+most 120 ms, and combined duration at most eight seconds. Complete replies,
+including punctuated `はい。`, remain separate. Join provenance records
+`evidence:incomplete_inflection_with_contiguous_character_timing`; original
+word speakers/times remain intact and conflicting row speakers stay null.
 
 These joins preserve text without inserting spaces, and preserve every original
 word label, score, and timestamp. Conflicting labels make the row speaker null.
