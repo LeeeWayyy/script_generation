@@ -879,6 +879,23 @@ implemented or validated here. Neither these two human corrections nor structura
 tests establish a general improvement in acoustic diarization accuracy.
 
 
+#### Japanese character alignment
+
+For Japanese (`ja`), aligned entries are characters, so the English 20-word
+limit does not apply. Duration and character limits wait for a BudouX phrase
+boundary. In the readable view, adjacent fragments inside a predicted phrase can
+join if their timing is intact and ordered, their gap is at most 120 ms, and at
+least one fragment lasts at most 300 ms. Punctuation, common complete replies,
+longer fragments, pauses, and uncertain timing retain boundaries.
+
+These joins preserve text without inserting spaces, and preserve every original
+word label, score, and timestamp. Conflicting labels make the row speaker null.
+`meta.readable.sentence_continuity_joins` uses
+`basis:japanese_phrase_continuity_heuristic`; this is linguistic evidence, not
+verified speaker identity. Raw results remain unchanged. Saved jobs benefit from
+the readable view without repeating download or inference. Install the updated
+`local`/`server` extra to include the lightweight BudouX dependency.
+
 #### Automatic short-sentence continuity
 
 `readable=true` now examines complete, punctuated English sentences across the

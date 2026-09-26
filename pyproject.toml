@@ -21,6 +21,7 @@ dependencies = []
 # torch is intentionally NOT pinned here because the correct wheel is
 # platform/CUDA-specific. See README for the right install command for your box.
 dev = [
+    "budoux>=0.7,<1",
     "pytest>=7.4",
     "ruff>=0.4",
     # The test suite drives the FastAPI app + TestClient (which needs httpx) and
@@ -34,6 +35,7 @@ dev = [
 # Local processing (the `transcript` CLI + `transcribe()` library). Install with
 # `pip install -e ".[local]"`. torch is installed separately (see README).
 local = [
+    "budoux>=0.7,<1",
     # ASR + alignment + diarization, all self-hosted.
     "whisperx>=3.1.1",
     # Source downloading (YouTube + thousands of sites).

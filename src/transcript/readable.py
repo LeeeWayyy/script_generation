@@ -1,13 +1,29 @@
 """Opt-in reading units; never rewrite speech or interpolate word timing."""
 from collections import Counter
 from dataclasses import asdict, replace
+from functools import lru_cache
 import math
 import re
 
 from .types import Transcript
 
 
+@lru_cache(maxsize=1)
+def _japanese_parser():
+    import budoux
+    return budoux.load_default_japanese_parser()
+
+
+def _phrase_starts(text):
+    positions, cursor = {0}, 0
+    for phrase in _japanese_parser().parse(text):
+        cursor += len(phrase)
+        positions.add(cursor)
+    return positions
+
+
 def readable_transcript(transcript: Transcript) -> Transcript:
+    japanese = (transcript.language or "").split("-")[0].lower() == "ja"
     segments, fallback = [], []
     for source_index, source in enumerate(transcript.segments):
         words = source.words
@@ -41,14 +57,18 @@ def readable_transcript(transcript: Transcript) -> Transcript:
         # ponytail: punctuation/pause/length heuristics; use a language-aware
         # segmenter only if these conservative reading boundaries prove inadequate.
         starts = [0]
+        phrase_starts = _phrase_starts(source.text) if japanese else None
         last_speaker = speaker(0)
         for i in range(1, len(tokens)):
             first = starts[-1]
             pause = timed(i - 1) and timed(i) and words[i].start - words[i - 1].end >= 0.8
             duration = timed(first) and timed(i) and words[i].end - words[first].start > 8
             changed = speaker(i) is not None and last_speaker is not None and speaker(i) != last_speaker
-            if (changed or pause or duration or i - first >= 20
-                    or positions[i] - positions[first] >= 120
+            # Japanese alignment entries are characters, not words. Apply length
+            # limits only at phrase boundaries, retaining pauses and observed turns.
+            length = (duration or (not japanese and i - first >= 20)
+                      or positions[i] - positions[first] >= 120)
+            if (changed or pause or (length and (not japanese or positions[i] in phrase_starts))
                     or re.search(r'[.!?。！？]["\u201d\u2019]*$', tokens[i - 1])):
                 starts.append(i)
                 last_speaker = speaker(i)
@@ -84,7 +104,39 @@ def readable_transcript(transcript: Transcript) -> Transcript:
         **transcript.meta,
         "readable": {"version": 1, "punctuation_restored": False, "fallbacks": fallback},
     })
-    return _join_sentence_continuations(result)
+    return _join_japanese_fragments(result) if japanese else _join_sentence_continuations(result)
+
+
+def _join_japanese_fragments(transcript):
+    """Repair character fragments only inside a predicted Japanese phrase.
+
+    ponytail: phrase segmentation is linguistic evidence, not acoustic proof of
+    speaker identity. Preserve all word labels and mark conflicting joins unknown.
+    """
+    segments = transcript.segments
+    legal = _phrase_starts("".join(s.text for s in segments))
+    counts = Counter(s.start for s in segments)
+    replies = {"はい", "ええ", "うん", "いいえ", "あ", "あっ", "え", "いや", "ううん"}
+    boundaries, cursor = [], 0
+    for left, right in zip(segments, segments[1:]):
+        cursor += len(left.text)
+        if (cursor in legal or re.search(r'[、。！？!?.,;:]["”’]*$', left.text)
+                or left.text.strip() in replies or right.text.strip() in replies
+                or counts[right.start] != 1):
+            continue
+        words = left.words + right.words
+        if (not left.words or not right.words
+                or any(not isinstance(t, (int, float)) or isinstance(t, bool)
+                       or not math.isfinite(t) for w in words for t in (w.start, w.end))
+                or any(w.start < 0 or w.end < w.start for w in words)
+                or any(b.start < a.end for a, b in zip(words, words[1:]))
+                or left.start != words[0].start or left.end != left.words[-1].end
+                or right.start != right.words[0].start or right.end != words[-1].end
+                or not 0 <= right.start - left.end <= .12 + 1e-6
+                or min(left.end - left.start, right.end - right.start) > .30 + 1e-6):
+            continue
+        boundaries.append(right.start)
+    return _join_boundaries(transcript, boundaries, basis="japanese_phrase_continuity_heuristic")
 
 
 def _join_sentence_continuations(transcript: Transcript) -> Transcript:
@@ -181,7 +233,9 @@ def _join_boundaries(transcript: Transcript, boundaries: list[float], *, basis: 
             labels = {w.speaker for w in words}
             label = next(iter(labels)) if len(labels) == 1 else None
             segments[-1] = replace(
-                left, text=left.text.rstrip() + " " + source.text.lstrip(), end=source.end,
+                left, text=left.text.rstrip() + (
+                    "" if basis == "japanese_phrase_continuity_heuristic" else " "
+                ) + source.text.lstrip(), end=source.end,
                 words=words, speaker=label, music=left.music or source.music,
             )
             corrections.append({
