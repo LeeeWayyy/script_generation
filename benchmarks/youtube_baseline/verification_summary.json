@@ -1,0 +1,3088 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-26T19:21:23.712341+00:00",
+  "inference_commit": "4d0b537a40dc997261b881fac8811372df8688d4",
+  "caption_policy": "Spoken words only; exclude sung lyrics. Independent content review remains required.",
+  "input_cases": 40,
+  "source_manifest_sha256": "56b02a3ec9830b6efcff63cc0c33369324c4c2d2e2b1f1bd7d8ecf4f240285a7",
+  "pinned_manifest_sha256": "30bdb8284456cb2b6c4c68f74dc9106909ea5dffc344247d8c0261f8bb0c4608",
+  "input_hours": 9.997252986111109,
+  "runs": 3,
+  "precision": {
+    "cuda_matmul_allow_tf32": false,
+    "cudnn_allow_tf32": false
+  },
+  "system": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.12.10",
+    "gpu": "NVIDIA GeForce RTX 5090, 591.86, 32607 MiB"
+  },
+  "packages": {
+    "budoux": "0.9.2",
+    "ctranslate2": "4.7.2",
+    "faster-whisper": "1.2.1",
+    "numpy": "2.3.5",
+    "onnxruntime": "1.26.0",
+    "pyannote-audio": "4.0.4",
+    "torch": "2.8.0+cu128",
+    "torchaudio": "2.8.0+cu128",
+    "transformers": "4.57.6",
+    "whisperx": "3.8.6",
+    "yt-dlp": "2026.8.19"
+  },
+  "speech_detector": {
+    "file": "silero_vad_v6.onnx",
+    "sha256": "4cbf549b8326f60f80f2536d9eefeb450a9abe83365a098031c89719f1be17d2",
+    "faster_whisper_version": "1.2.1",
+    "options": {
+      "threshold": 0.5,
+      "neg_threshold": null,
+      "min_speech_duration_ms": 0,
+      "max_speech_duration_s": 30,
+      "min_silence_duration_ms": 2000,
+      "speech_pad_ms": 400
+    }
+  },
+  "model_file_hashes": [
+    {
+      "model": "models--jonatasgrosman--wav2vec2-large-xlsr-53-japanese",
+      "revision": "2785e99ab97df77a32b5bd0ece5c9fa188a02f19",
+      "file": "model.safetensors",
+      "bytes": 1271405556,
+      "sha256": "c14e119e63c3dcabec7f869878e08850e31010df9608b0ab0bbdfb77dfa06821"
+    },
+    {
+      "model": "models--jonatasgrosman--wav2vec2-large-xlsr-53-japanese",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "file": "config.json",
+      "bytes": 1567,
+      "sha256": "552b8c8c85c54a761899eb94b5eb3d58166e769df8e26cf515ab9da695772cd7"
+    },
+    {
+      "model": "models--jonatasgrosman--wav2vec2-large-xlsr-53-japanese",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "file": "preprocessor_config.json",
+      "bytes": 158,
+      "sha256": "c403ce09975b90dff0dd8302c42d422e9de1f166cd7772df23490069893cb0cf"
+    },
+    {
+      "model": "models--jonatasgrosman--wav2vec2-large-xlsr-53-japanese",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "file": "pytorch_model.bin",
+      "bytes": 1271531927,
+      "sha256": "4f6821dcd79770fcd4c11487c4ee5c040b3a7e1863425224014ba5ea8fbc1b67"
+    },
+    {
+      "model": "models--jonatasgrosman--wav2vec2-large-xlsr-53-japanese",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "file": "special_tokens_map.json",
+      "bytes": 85,
+      "sha256": "bb7068de1150661a10b55f9e4b12a0e77af8bf91f5e45e1b58afaf1d0e17f675"
+    },
+    {
+      "model": "models--jonatasgrosman--wav2vec2-large-xlsr-53-japanese",
+      "revision": "cf031e020336460d15a417eba710bbc5bb43be9a",
+      "file": "vocab.json",
+      "bytes": 29298,
+      "sha256": "9ffedf9c2da2617b01c4227a4db875d2dfd4e8c31fb9a13182d03c3280679ffe"
+    },
+    {
+      "model": "models--pyannote--speaker-diarization-community-1",
+      "revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+      "file": "config.yaml",
+      "bytes": 444,
+      "sha256": "5ce2bfa9a938dc132cec1172592d65173cbb8f444ea1e4133f10f9391de155be"
+    },
+    {
+      "model": "models--pyannote--speaker-diarization-community-1",
+      "revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+      "file": "embedding\\pytorch_model.bin",
+      "bytes": 26646242,
+      "sha256": "6f10ff60898a1d185fa22e1d11e0bfa8a92efec811f11bca48cb8cafebefd929"
+    },
+    {
+      "model": "models--pyannote--speaker-diarization-community-1",
+      "revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+      "file": "plda\\plda.npz",
+      "bytes": 133852,
+      "sha256": "9b77bcd840692710dd3496f62ecfeed8d8e5f002fd991b785079b244eab7d255"
+    },
+    {
+      "model": "models--pyannote--speaker-diarization-community-1",
+      "revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+      "file": "plda\\xvec_transform.npz",
+      "bytes": 134376,
+      "sha256": "325f1ce8e48f7e55e9c8aa47e05d2766b7c48c4b25b8de8dd751e7a4cc5fbe8f"
+    },
+    {
+      "model": "models--pyannote--speaker-diarization-community-1",
+      "revision": "3533c8cf8e369892e6b79ff1bf80f7b0286a54ee",
+      "file": "segmentation\\pytorch_model.bin",
+      "bytes": 5906507,
+      "sha256": "7ad24338d844fb95985486eb1a464e32d229f6d7a03c9abe60f978bacf3f816e"
+    },
+    {
+      "model": "models--Systran--faster-whisper-large-v3",
+      "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+      "file": "config.json",
+      "bytes": 2394,
+      "sha256": "a9306624f5ec14270a014b647e5c316b6e03a662c369758d1b90697a7b0655b9"
+    },
+    {
+      "model": "models--Systran--faster-whisper-large-v3",
+      "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+      "file": "model.bin",
+      "bytes": 3087284237,
+      "sha256": "69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1"
+    },
+    {
+      "model": "models--Systran--faster-whisper-large-v3",
+      "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+      "file": "preprocessor_config.json",
+      "bytes": 340,
+      "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+    },
+    {
+      "model": "models--Systran--faster-whisper-large-v3",
+      "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+      "file": "tokenizer.json",
+      "bytes": 2480617,
+      "sha256": "6d8cbd7cd0d8d5815e478dac67b85a26bbe77c1f5e0c6d76d1ce2abc0e5f21ca"
+    },
+    {
+      "model": "models--Systran--faster-whisper-large-v3",
+      "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+      "file": "vocabulary.json",
+      "bytes": 1068114,
+      "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+    }
+  ],
+  "english_alignment_checkpoint": [
+    {
+      "file": "wav2vec2_fairseq_base_ls960_asr_ls960.pth",
+      "bytes": 377664473,
+      "sha256": "488fd4f16de84438ffc945334278c1b9fb9b7159a806c1080b16111a958c945d"
+    }
+  ],
+  "cold_health_per_pass": [
+    {
+      "status": "ok",
+      "model": "large-v3",
+      "queued_or_running": [],
+      "device": "cuda",
+      "compute_type": "float16",
+      "batch_size": 16,
+      "beam_size": 5,
+      "model_loaded": false,
+      "versions": {
+        "transcript": "0.1.0",
+        "torch": "2.8.0+cu128",
+        "whisperx": "3.8.6",
+        "faster_whisper": "1.2.1",
+        "ctranslate2": "4.7.2"
+      }
+    },
+    {
+      "status": "ok",
+      "model": "large-v3",
+      "queued_or_running": [],
+      "device": "cuda",
+      "compute_type": "float16",
+      "batch_size": 16,
+      "beam_size": 5,
+      "model_loaded": false,
+      "versions": {
+        "transcript": "0.1.0",
+        "torch": "2.8.0+cu128",
+        "whisperx": "3.8.6",
+        "faster_whisper": "1.2.1",
+        "ctranslate2": "4.7.2"
+      }
+    },
+    {
+      "status": "ok",
+      "model": "large-v3",
+      "queued_or_running": [],
+      "device": "cuda",
+      "compute_type": "float16",
+      "batch_size": 16,
+      "beam_size": 5,
+      "model_loaded": false,
+      "versions": {
+        "transcript": "0.1.0",
+        "torch": "2.8.0+cu128",
+        "whisperx": "3.8.6",
+        "faster_whisper": "1.2.1",
+        "ctranslate2": "4.7.2"
+      }
+    }
+  ],
+  "repeatability_checker_commit": "3035a47",
+  "cold_server_records": [
+    {
+      "snapshot": "server-before-precision-update.json",
+      "checked_at_utc": "2026-09-26T18:34:35.2489369Z",
+      "pass": 1,
+      "code_commit": "4d0b537a40dc997261b881fac8811372df8688d4",
+      "listener_pid": 39488
+    },
+    {
+      "server_pid": 22160,
+      "code_commit": "4d0b537a40dc997261b881fac8811372df8688d4",
+      "snapshot": "server-before-precision-pass2.json",
+      "restored_jobs": 267,
+      "restored_results": 249,
+      "verified_cold_health": {
+        "status": "ok",
+        "model": "large-v3",
+        "queued_or_running": [],
+        "device": "cuda",
+        "compute_type": "float16",
+        "batch_size": 16,
+        "beam_size": 5,
+        "model_loaded": false,
+        "versions": {
+          "transcript": "0.1.0",
+          "torch": "2.8.0+cu128",
+          "whisperx": "3.8.6",
+          "faster_whisper": "1.2.1",
+          "ctranslate2": "4.7.2"
+        }
+      }
+    },
+    {
+      "server_pid": 37668,
+      "code_commit": "4d0b537a40dc997261b881fac8811372df8688d4",
+      "snapshot": "server-before-precision-pass3.json",
+      "restored_jobs": 307,
+      "restored_results": 286,
+      "verified_cold_health": {
+        "status": "ok",
+        "model": "large-v3",
+        "queued_or_running": [],
+        "device": "cuda",
+        "compute_type": "float16",
+        "batch_size": 16,
+        "beam_size": 5,
+        "model_loaded": false,
+        "versions": {
+          "transcript": "0.1.0",
+          "torch": "2.8.0+cu128",
+          "whisperx": "3.8.6",
+          "faster_whisper": "1.2.1",
+          "ctranslate2": "4.7.2"
+        }
+      }
+    }
+  ],
+  "driver_resume": {
+    "reason": "SSH-attached benchmark driver was no longer running; resume saved completed cases without restarting inference server",
+    "saved_completed_cases": 16,
+    "same_server_pid": 37668,
+    "health_at_resume": {
+      "status": "ok",
+      "model": "large-v3",
+      "queued_or_running": [],
+      "device": "cuda",
+      "compute_type": "float16",
+      "batch_size": 16,
+      "beam_size": 5,
+      "model_loaded": true,
+      "versions": {
+        "transcript": "0.1.0",
+        "torch": "2.8.0+cu128",
+        "whisperx": "3.8.6",
+        "faster_whisper": "1.2.1",
+        "ctranslate2": "4.7.2"
+      }
+    }
+  },
+  "app_source": {
+    "source_commit": "0da479a4abec7e4e38cfc4f82142df3d84021c05",
+    "files": [
+      {
+        "path": "App/Models.swift",
+        "sha256": "224d1340d5138e5dc78ada857d3d856af98210da861c8cacf31ed5780e877693"
+      },
+      {
+        "path": "App/TranscriptPresentation.swift",
+        "sha256": "28a10b78faa437697e8f7a2cfd87e9e82c44ffcd19f897df042b89b8191be1bf"
+      }
+    ],
+    "working_tree_status": "",
+    "adapter_sha256": "f5383e52c7b4320b3a98b4f33dd6caea924e2abc01fbed93d3518eb22a7ec612"
+  },
+  "exact_raw_and_readable_matches": 37,
+  "repeatable_errors": 3,
+  "acceptance_passed": 0,
+  "independently_reviewed_rows": 0,
+  "wer": null,
+  "cer": null,
+  "remaining_requirements": [
+    "independent spoken-word and sung-lyric review",
+    "acoustic timing and true speaker review",
+    "sentence and expression continuity review"
+  ],
+  "rows": [
+    {
+      "case": "en-science-short",
+      "video_id": "dW1yQDeF2WU",
+      "language": "en",
+      "media_sha256": "35ea3db5fb94b48df943b02f649c97660f8bd3762d6fb27ee97476c62d0ef3e1",
+      "download_sha256": "f69cbf1fe3663b8cf94d1133a5b87298f16fad9a00f5553ba6c7bb686070d537",
+      "duration_s": 98.371375,
+      "selected_audio_language": null,
+      "creator_caption_languages": [],
+      "job_ids": [
+        "1e708326b51f",
+        "d3fc0c3be39c",
+        "3bc7e6028dfc"
+      ],
+      "statuses": [
+        "error",
+        "error",
+        "error"
+      ],
+      "functional_passes": [
+        false,
+        false,
+        false
+      ],
+      "acceptance_pass": false,
+      "errors": [
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech.",
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech.",
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech."
+      ],
+      "repeatable_error": true
+    },
+    {
+      "case": "en-science-medium",
+      "video_id": "2mlBh5d1IUY",
+      "language": "en",
+      "media_sha256": "e76a1c9768941b884b40731878b6e1a307c0144c2f1361ec212c1b1e93343e31",
+      "download_sha256": "956d83cd07e2142b4cf0f463ddb2b1e32525a8d7e89dd6b4a81f3297d20ba3d2",
+      "duration_s": 362.266125,
+      "selected_audio_language": "en-GB",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "6b96ab5e8e5e",
+        "6012c246721d",
+        "4b2e541dc1a6"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "04645c5354f0d9fcde5c271da42ea809f9f4aacbca1fa975fd944dab649aab3a",
+        "04645c5354f0d9fcde5c271da42ea809f9f4aacbca1fa975fd944dab649aab3a",
+        "04645c5354f0d9fcde5c271da42ea809f9f4aacbca1fa975fd944dab649aab3a"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "45124a5e78b75bd8a82a2a96894a108fc0a257bf374a785dda3900fd844e8bba",
+        "45124a5e78b75bd8a82a2a96894a108fc0a257bf374a785dda3900fd844e8bba",
+        "45124a5e78b75bd8a82a2a96894a108fc0a257bf374a785dda3900fd844e8bba"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 706,
+          "app_parser_pass": true,
+          "file": "en-science-medium.readable.json",
+          "rows": 68,
+          "rows_without_cues": [],
+          "usable_cues": 706
+        },
+        {
+          "aligned_entries": 706,
+          "app_parser_pass": true,
+          "file": "en-science-medium.readable.json",
+          "rows": 68,
+          "rows_without_cues": [],
+          "usable_cues": 706
+        },
+        {
+          "aligned_entries": 706,
+          "app_parser_pass": true,
+          "file": "en-science-medium.readable.json",
+          "rows": 68,
+          "rows_without_cues": [],
+          "usable_cues": 706
+        }
+      ],
+      "review_counts": {
+        "case": "en-science-medium",
+        "rows": 68,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-history-short",
+      "video_id": "-Jbsu8nngoQ",
+      "language": "en",
+      "media_sha256": "abc7825726e79172b7ab0cc8646c3cba3ebf2e90170adc2d4c9aa26cb0bc910a",
+      "download_sha256": "62a8b281e8d5f5c498c61d05a02af29feb19f53e62f1cac4601a43ea1df2e5d1",
+      "duration_s": 173.62725,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "471ca1f32911",
+        "6512504990d2",
+        "8ae338b01f85"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "e5571c1001d674133a9f242beafbf7d5dc66b448e09bee67c4325414cf86ce48",
+        "e5571c1001d674133a9f242beafbf7d5dc66b448e09bee67c4325414cf86ce48",
+        "e5571c1001d674133a9f242beafbf7d5dc66b448e09bee67c4325414cf86ce48"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "00a7d1b020fe7c625c95046d9b0589302bd8b959da91c109062df4745fb00df6",
+        "00a7d1b020fe7c625c95046d9b0589302bd8b959da91c109062df4745fb00df6",
+        "00a7d1b020fe7c625c95046d9b0589302bd8b959da91c109062df4745fb00df6"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 289,
+          "app_parser_pass": true,
+          "file": "en-history-short.readable.json",
+          "rows": 29,
+          "rows_without_cues": [],
+          "usable_cues": 289
+        },
+        {
+          "aligned_entries": 289,
+          "app_parser_pass": true,
+          "file": "en-history-short.readable.json",
+          "rows": 29,
+          "rows_without_cues": [],
+          "usable_cues": 289
+        },
+        {
+          "aligned_entries": 289,
+          "app_parser_pass": true,
+          "file": "en-history-short.readable.json",
+          "rows": 29,
+          "rows_without_cues": [],
+          "usable_cues": 289
+        }
+      ],
+      "review_counts": {
+        "case": "en-history-short",
+        "rows": 29,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-history-long",
+      "video_id": "avagSCdkiDs",
+      "language": "en",
+      "media_sha256": "ab51d43798b23fcf604167cc04f948b4ac6ed505f4051ef779c311074a68293c",
+      "download_sha256": "659a950227933b8a8747ff9e28c0519559f1f1b11e2311a1e2b5bd036bab822e",
+      "duration_s": 1491.766,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "a44f0de50677",
+        "a776e5ff1a81",
+        "b577d83c26b8"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "c8ba01386f75516601f6310516faf42af0612b50a4a7a7f7a9169139c2838319",
+        "c8ba01386f75516601f6310516faf42af0612b50a4a7a7f7a9169139c2838319",
+        "c8ba01386f75516601f6310516faf42af0612b50a4a7a7f7a9169139c2838319"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "f7e0e2b7fec625f5dcf9ee5297eaf8d67f90aa39c679bbc52d75d81fd6947bf5",
+        "f7e0e2b7fec625f5dcf9ee5297eaf8d67f90aa39c679bbc52d75d81fd6947bf5",
+        "f7e0e2b7fec625f5dcf9ee5297eaf8d67f90aa39c679bbc52d75d81fd6947bf5"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 3698,
+          "app_parser_pass": true,
+          "file": "en-history-long.readable.json",
+          "rows": 389,
+          "rows_without_cues": [],
+          "usable_cues": 3698
+        },
+        {
+          "aligned_entries": 3698,
+          "app_parser_pass": true,
+          "file": "en-history-long.readable.json",
+          "rows": 389,
+          "rows_without_cues": [],
+          "usable_cues": 3698
+        },
+        {
+          "aligned_entries": 3698,
+          "app_parser_pass": true,
+          "file": "en-history-long.readable.json",
+          "rows": 389,
+          "rows_without_cues": [],
+          "usable_cues": 3698
+        }
+      ],
+      "review_counts": {
+        "case": "en-history-long",
+        "rows": 389,
+        "unknown_speaker_words": 2,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-cooking-short",
+      "video_id": "iW6D3kUA2EE",
+      "language": "en",
+      "media_sha256": "e884800ab0de71922fb40007292608eacb43d765ccbec4a409e4d33afc60f544",
+      "download_sha256": "fd51c2b2ffceef883e61445e27817fb2ea1a58f702a44a55ee3dff0061a5b3ac",
+      "duration_s": 267.598375,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "9060deeb2ca2",
+        "b121953f41e8",
+        "9b9fc8de9821"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "f6622a631e81bbbe320f2c85b4cf0215e3d16888978bab831f076638e17b626e",
+        "f6622a631e81bbbe320f2c85b4cf0215e3d16888978bab831f076638e17b626e",
+        "f6622a631e81bbbe320f2c85b4cf0215e3d16888978bab831f076638e17b626e"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "923b5f7d6977ffc17e30ad6b82552768eb54db6a5e42a45fb77f36d1d9aabca5",
+        "923b5f7d6977ffc17e30ad6b82552768eb54db6a5e42a45fb77f36d1d9aabca5",
+        "923b5f7d6977ffc17e30ad6b82552768eb54db6a5e42a45fb77f36d1d9aabca5"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 768,
+          "app_parser_pass": true,
+          "file": "en-cooking-short.readable.json",
+          "rows": 54,
+          "rows_without_cues": [],
+          "usable_cues": 768
+        },
+        {
+          "aligned_entries": 768,
+          "app_parser_pass": true,
+          "file": "en-cooking-short.readable.json",
+          "rows": 54,
+          "rows_without_cues": [],
+          "usable_cues": 768
+        },
+        {
+          "aligned_entries": 768,
+          "app_parser_pass": true,
+          "file": "en-cooking-short.readable.json",
+          "rows": 54,
+          "rows_without_cues": [],
+          "usable_cues": 768
+        }
+      ],
+      "review_counts": {
+        "case": "en-cooking-short",
+        "rows": 54,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-cooking-medium",
+      "video_id": "8A_i-PFRieQ",
+      "language": "en",
+      "media_sha256": "dfc8c7fa27e0677dd3cd9e7a031d921b1453e41a4bdb2e5459565ee057df3390",
+      "download_sha256": "13303e62f947170a99f4c861dec8b423e0460b34dce76cc8e19cb1643ed10c54",
+      "duration_s": 591.0175,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "95c8376766d4",
+        "ce33710e839f",
+        "2d21d8c34646"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "0edef5c7d660cc0d9862dff0a69709c90884e9a91fd26bb4c4a3cbc853176da3",
+        "0edef5c7d660cc0d9862dff0a69709c90884e9a91fd26bb4c4a3cbc853176da3",
+        "0edef5c7d660cc0d9862dff0a69709c90884e9a91fd26bb4c4a3cbc853176da3"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "0a3e743e3f9b52eadbf5d476e2508429c223cb773170e2c40536a9b1202a6361",
+        "0a3e743e3f9b52eadbf5d476e2508429c223cb773170e2c40536a9b1202a6361",
+        "0a3e743e3f9b52eadbf5d476e2508429c223cb773170e2c40536a9b1202a6361"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1986,
+          "app_parser_pass": true,
+          "file": "en-cooking-medium.readable.json",
+          "rows": 159,
+          "rows_without_cues": [],
+          "usable_cues": 1986
+        },
+        {
+          "aligned_entries": 1986,
+          "app_parser_pass": true,
+          "file": "en-cooking-medium.readable.json",
+          "rows": 159,
+          "rows_without_cues": [],
+          "usable_cues": 1986
+        },
+        {
+          "aligned_entries": 1986,
+          "app_parser_pass": true,
+          "file": "en-cooking-medium.readable.json",
+          "rows": 159,
+          "rows_without_cues": [],
+          "usable_cues": 1986
+        }
+      ],
+      "review_counts": {
+        "case": "en-cooking-medium",
+        "rows": 159,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-technology-medium",
+      "video_id": "89cGQjB5R4M",
+      "language": "en",
+      "media_sha256": "a22adabc60b8442ffc0b3e272d23ee87bef4249bb17ea7f5869d575539ff255c",
+      "download_sha256": "d1676341d65074c9a67c8ac2eeaa50435295ceec40b5dd8206fec5d9d4f247f0",
+      "duration_s": 637.9218125,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "dde4cbd839eb",
+        "12bc0ca2f730",
+        "b73abbf481df"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "25b6631a917b38dabffdad7e4f848596debc775fe5f8023b6d7496a437090bd6",
+        "25b6631a917b38dabffdad7e4f848596debc775fe5f8023b6d7496a437090bd6",
+        "25b6631a917b38dabffdad7e4f848596debc775fe5f8023b6d7496a437090bd6"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "d25512cf6e57642dcebd49a1b62b907e033d13acb13df3e612c775f9e34490ff",
+        "d25512cf6e57642dcebd49a1b62b907e033d13acb13df3e612c775f9e34490ff",
+        "d25512cf6e57642dcebd49a1b62b907e033d13acb13df3e612c775f9e34490ff"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1455,
+          "app_parser_pass": true,
+          "file": "en-technology-medium.readable.json",
+          "rows": 203,
+          "rows_without_cues": [],
+          "usable_cues": 1455
+        },
+        {
+          "aligned_entries": 1455,
+          "app_parser_pass": true,
+          "file": "en-technology-medium.readable.json",
+          "rows": 203,
+          "rows_without_cues": [],
+          "usable_cues": 1455
+        },
+        {
+          "aligned_entries": 1455,
+          "app_parser_pass": true,
+          "file": "en-technology-medium.readable.json",
+          "rows": 203,
+          "rows_without_cues": [],
+          "usable_cues": 1455
+        }
+      ],
+      "review_counts": {
+        "case": "en-technology-medium",
+        "rows": 203,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-technology-long",
+      "video_id": "9Os0o3wzS_I",
+      "language": "en",
+      "media_sha256": "1400c78bf9358ae1480c515f843e20d907c4505bfe3e157a6a2fc67ffc7c42b8",
+      "download_sha256": "c378ff31b6204e306f8dec892244704a6a5241ed0fb2241a1719efe7f796ee87",
+      "duration_s": 1307.2834375,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "786b3f462d1b",
+        "52b6eca65d54",
+        "199d7276ea58"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "4a317a610a90f3db0527bce21d87c65f0e59bcf47efaf1a8c179513888405785",
+        "4a317a610a90f3db0527bce21d87c65f0e59bcf47efaf1a8c179513888405785",
+        "4a317a610a90f3db0527bce21d87c65f0e59bcf47efaf1a8c179513888405785"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "9adc12c5654c248725ed4837be9cdd51a4fa64d83104835f44f02838e22a00ae",
+        "9adc12c5654c248725ed4837be9cdd51a4fa64d83104835f44f02838e22a00ae",
+        "9adc12c5654c248725ed4837be9cdd51a4fa64d83104835f44f02838e22a00ae"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 3978,
+          "app_parser_pass": true,
+          "file": "en-technology-long.readable.json",
+          "rows": 286,
+          "rows_without_cues": [],
+          "usable_cues": 3978
+        },
+        {
+          "aligned_entries": 3978,
+          "app_parser_pass": true,
+          "file": "en-technology-long.readable.json",
+          "rows": 286,
+          "rows_without_cues": [],
+          "usable_cues": 3978
+        },
+        {
+          "aligned_entries": 3978,
+          "app_parser_pass": true,
+          "file": "en-technology-long.readable.json",
+          "rows": 286,
+          "rows_without_cues": [],
+          "usable_cues": 3978
+        }
+      ],
+      "review_counts": {
+        "case": "en-technology-long",
+        "rows": 286,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-travel-medium",
+      "video_id": "uIAFcC9Nz90",
+      "language": "en",
+      "media_sha256": "54f20347d35ae4ce68e3b1c90fcf60d7ab51e739c6e326b835065ca7fcb0c2d5",
+      "download_sha256": "1f3d9b5949b6d789cece26a0992054ddc5d70905996ac88adfe89612d0260ed3",
+      "duration_s": 851.2086875,
+      "selected_audio_language": null,
+      "creator_caption_languages": [],
+      "job_ids": [
+        "076edbe6d813",
+        "4131d5629016",
+        "e828d6722bca"
+      ],
+      "statuses": [
+        "error",
+        "error",
+        "error"
+      ],
+      "functional_passes": [
+        false,
+        false,
+        false
+      ],
+      "acceptance_pass": false,
+      "errors": [
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech.",
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech.",
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech."
+      ],
+      "repeatable_error": true
+    },
+    {
+      "case": "en-sports-short",
+      "video_id": "CHsC9ZfDa3I",
+      "language": "en",
+      "media_sha256": "93dd2c62a381eba3683ead11c68369ebc1066917ad8360e69969df246370b5fd",
+      "download_sha256": "bd7c2ed7a80d9433ab5f07d64211326ac6236fb6dfcbca5a76e8beede6008403",
+      "duration_s": 225.5146875,
+      "selected_audio_language": null,
+      "creator_caption_languages": [],
+      "job_ids": [
+        "ef7aa5e0722b",
+        "405e71c7e5ac",
+        "203a4112be41"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "c4a4bbad4e5bbba97ddc38c1a859e89fdd47eac8802d11d5265fffcb0c31939b",
+        "c4a4bbad4e5bbba97ddc38c1a859e89fdd47eac8802d11d5265fffcb0c31939b",
+        "c4a4bbad4e5bbba97ddc38c1a859e89fdd47eac8802d11d5265fffcb0c31939b"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "2c4e1052e757af4ffb6a1ff5174a467ac7258cbae1867f07412fefe1178e4d39",
+        "2c4e1052e757af4ffb6a1ff5174a467ac7258cbae1867f07412fefe1178e4d39",
+        "2c4e1052e757af4ffb6a1ff5174a467ac7258cbae1867f07412fefe1178e4d39"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 578,
+          "app_parser_pass": true,
+          "file": "en-sports-short.readable.json",
+          "rows": 50,
+          "rows_without_cues": [],
+          "usable_cues": 578
+        },
+        {
+          "aligned_entries": 578,
+          "app_parser_pass": true,
+          "file": "en-sports-short.readable.json",
+          "rows": 50,
+          "rows_without_cues": [],
+          "usable_cues": 578
+        },
+        {
+          "aligned_entries": 578,
+          "app_parser_pass": true,
+          "file": "en-sports-short.readable.json",
+          "rows": 50,
+          "rows_without_cues": [],
+          "usable_cues": 578
+        }
+      ],
+      "review_counts": {
+        "case": "en-sports-short",
+        "rows": 50,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-sports-medium",
+      "video_id": "tqdG_t4WbOE",
+      "language": "en",
+      "media_sha256": "b24b115e36f622009bdcc18f5010f124e6942da95d677ea484bda91b73fabbb7",
+      "download_sha256": "438db4f277f420c4f8a310beedabdd04058346664110f7f860300c3b8cf1b108",
+      "duration_s": 698.8858125,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "2769b7ff8086",
+        "e680c8fbe9cd",
+        "ce98369d72c9"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "4fd859724796759a702768723096e70932df75eb65990c7deece334b33bb842c",
+        "4fd859724796759a702768723096e70932df75eb65990c7deece334b33bb842c",
+        "4fd859724796759a702768723096e70932df75eb65990c7deece334b33bb842c"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "3d06891ffb803281d544c6ac5727eadb89d7cf67708ecde194ccc130edfb6c6a",
+        "3d06891ffb803281d544c6ac5727eadb89d7cf67708ecde194ccc130edfb6c6a",
+        "3d06891ffb803281d544c6ac5727eadb89d7cf67708ecde194ccc130edfb6c6a"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1445,
+          "app_parser_pass": true,
+          "file": "en-sports-medium.readable.json",
+          "rows": 118,
+          "rows_without_cues": [],
+          "usable_cues": 1445
+        },
+        {
+          "aligned_entries": 1445,
+          "app_parser_pass": true,
+          "file": "en-sports-medium.readable.json",
+          "rows": 118,
+          "rows_without_cues": [],
+          "usable_cues": 1445
+        },
+        {
+          "aligned_entries": 1445,
+          "app_parser_pass": true,
+          "file": "en-sports-medium.readable.json",
+          "rows": 118,
+          "rows_without_cues": [],
+          "usable_cues": 1445
+        }
+      ],
+      "review_counts": {
+        "case": "en-sports-medium",
+        "rows": 118,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-arts-medium",
+      "video_id": "O8avPiL5tug",
+      "language": "en",
+      "media_sha256": "d9c184f778cd5eb07b0a55208b10d6c20b678c55b222842842368eb079f7e55c",
+      "download_sha256": "24506aae621344b299dbeb52dedc56afebad4702e27d306514d3fabcbc2d3266",
+      "duration_s": 500.62225,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "89f050b7d1a0",
+        "cd47c0ccf543",
+        "c04df39c1f3a"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "f1fbc2a883efafa9b685cee9e1736131356b6189465d280039649274821c309d",
+        "f1fbc2a883efafa9b685cee9e1736131356b6189465d280039649274821c309d",
+        "f1fbc2a883efafa9b685cee9e1736131356b6189465d280039649274821c309d"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "ce1140a7d261bb797e15c5018cf27e87a332919297c25cdd35068f6a6f7e61ba",
+        "ce1140a7d261bb797e15c5018cf27e87a332919297c25cdd35068f6a6f7e61ba",
+        "ce1140a7d261bb797e15c5018cf27e87a332919297c25cdd35068f6a6f7e61ba"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1439,
+          "app_parser_pass": true,
+          "file": "en-arts-medium.readable.json",
+          "rows": 201,
+          "rows_without_cues": [],
+          "usable_cues": 1439
+        },
+        {
+          "aligned_entries": 1439,
+          "app_parser_pass": true,
+          "file": "en-arts-medium.readable.json",
+          "rows": 201,
+          "rows_without_cues": [],
+          "usable_cues": 1439
+        },
+        {
+          "aligned_entries": 1439,
+          "app_parser_pass": true,
+          "file": "en-arts-medium.readable.json",
+          "rows": 201,
+          "rows_without_cues": [],
+          "usable_cues": 1439
+        }
+      ],
+      "review_counts": {
+        "case": "en-arts-medium",
+        "rows": 201,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-arts-long",
+      "video_id": "WSL1cinlTF0",
+      "language": "en",
+      "media_sha256": "41139f8b485e9545c78b89bac13a8ad8cb9d94a45cefa9d437d46693d944aecc",
+      "download_sha256": "bb8b06623055ea5a3feeeb46531d54c5c365495a70920bd9fefc7b56fed6a9de",
+      "duration_s": 1547.69125,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "c7585c92b61a",
+        "164054592eac",
+        "e0668ac4e88b"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "fae8a5c261c80f799414e503d3307590ef0c43d45ec311260a938d25b57c72ad",
+        "fae8a5c261c80f799414e503d3307590ef0c43d45ec311260a938d25b57c72ad",
+        "fae8a5c261c80f799414e503d3307590ef0c43d45ec311260a938d25b57c72ad"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "bfb9720395c2f8827473b999d3dcdf8c2b9c2b8c3d0ebf032094964af21d6d19",
+        "bfb9720395c2f8827473b999d3dcdf8c2b9c2b8c3d0ebf032094964af21d6d19",
+        "bfb9720395c2f8827473b999d3dcdf8c2b9c2b8c3d0ebf032094964af21d6d19"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 2681,
+          "app_parser_pass": true,
+          "file": "en-arts-long.readable.json",
+          "rows": 385,
+          "rows_without_cues": [],
+          "usable_cues": 2681
+        },
+        {
+          "aligned_entries": 2681,
+          "app_parser_pass": true,
+          "file": "en-arts-long.readable.json",
+          "rows": 385,
+          "rows_without_cues": [],
+          "usable_cues": 2681
+        },
+        {
+          "aligned_entries": 2681,
+          "app_parser_pass": true,
+          "file": "en-arts-long.readable.json",
+          "rows": 385,
+          "rows_without_cues": [],
+          "usable_cues": 2681
+        }
+      ],
+      "review_counts": {
+        "case": "en-arts-long",
+        "rows": 385,
+        "unknown_speaker_words": 1,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-business-medium",
+      "video_id": "LCmiKLMk2SI",
+      "language": "en",
+      "media_sha256": "097eb1014a2b303216d6060531f4ae2f7b3e2a3163958c9721fea6a98813db53",
+      "download_sha256": "7f62b515f8ea96554ee7c58067a1fe11702a5485b3029ef08ecce017c5a04833",
+      "duration_s": 349.4255,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "96b1a7538cce",
+        "11f2ab6e6af8",
+        "d9b9c07b9463"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "e15e49ed4403a87e3680876802aeb3eaa31f3781791ab1d492b33c74d63129f4",
+        "e15e49ed4403a87e3680876802aeb3eaa31f3781791ab1d492b33c74d63129f4",
+        "e15e49ed4403a87e3680876802aeb3eaa31f3781791ab1d492b33c74d63129f4"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "e74e9cedd66442855e4ad367dead4d05d7db54fc9bc2054953a9d45037578954",
+        "e74e9cedd66442855e4ad367dead4d05d7db54fc9bc2054953a9d45037578954",
+        "e74e9cedd66442855e4ad367dead4d05d7db54fc9bc2054953a9d45037578954"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1296,
+          "app_parser_pass": true,
+          "file": "en-business-medium.readable.json",
+          "rows": 86,
+          "rows_without_cues": [],
+          "usable_cues": 1296
+        },
+        {
+          "aligned_entries": 1296,
+          "app_parser_pass": true,
+          "file": "en-business-medium.readable.json",
+          "rows": 86,
+          "rows_without_cues": [],
+          "usable_cues": 1296
+        },
+        {
+          "aligned_entries": 1296,
+          "app_parser_pass": true,
+          "file": "en-business-medium.readable.json",
+          "rows": 86,
+          "rows_without_cues": [],
+          "usable_cues": 1296
+        }
+      ],
+      "review_counts": {
+        "case": "en-business-medium",
+        "rows": 86,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-business-long",
+      "video_id": "B73ebBNrjmg",
+      "language": "en",
+      "media_sha256": "70c02b8007ba702394b8f85c491a6807adba194e4f4f5f49e8223c08225fb9bf",
+      "download_sha256": "85f7e76f42286e9d2d2a8929dade661079de4d29105d5c6b55f7eba38babb8c6",
+      "duration_s": 1282.914125,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "b8b346f4986c",
+        "dd683aa79c5d",
+        "27dd468ea0b6"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "7ad8f3e2b050f162a12ee80e78397decf3c4bcf94f42e2147f6ddc1acd74e026",
+        "7ad8f3e2b050f162a12ee80e78397decf3c4bcf94f42e2147f6ddc1acd74e026",
+        "7ad8f3e2b050f162a12ee80e78397decf3c4bcf94f42e2147f6ddc1acd74e026"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "112b66ab3b261744f2adf47eaa8c778318f85ce612f129f90c92aa8515adb8dc",
+        "112b66ab3b261744f2adf47eaa8c778318f85ce612f129f90c92aa8515adb8dc",
+        "112b66ab3b261744f2adf47eaa8c778318f85ce612f129f90c92aa8515adb8dc"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 4426,
+          "app_parser_pass": true,
+          "file": "en-business-long.readable.json",
+          "rows": 497,
+          "rows_without_cues": [],
+          "usable_cues": 4426
+        },
+        {
+          "aligned_entries": 4426,
+          "app_parser_pass": true,
+          "file": "en-business-long.readable.json",
+          "rows": 497,
+          "rows_without_cues": [],
+          "usable_cues": 4426
+        },
+        {
+          "aligned_entries": 4426,
+          "app_parser_pass": true,
+          "file": "en-business-long.readable.json",
+          "rows": 497,
+          "rows_without_cues": [],
+          "usable_cues": 4426
+        }
+      ],
+      "review_counts": {
+        "case": "en-business-long",
+        "rows": 497,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-education-extended",
+      "video_id": "5IAcLGsFuxA",
+      "language": "en",
+      "media_sha256": "8c935baa7968da2310385eaeaa17cd8e36cadf1b2379125da6d0b072e4cdc006",
+      "download_sha256": "a1ee2bd32e5a1f6d25ee86ef74df796415c19eea2524217d7df6e56b2778d4a3",
+      "duration_s": 3318.2011875,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "5967d5de8830",
+        "f5a001ad9bed",
+        "e94f7ee60a7f"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "507363b304d49814464e333ef64f6ee288a1088299a8b55eb8648f156d8f6703",
+        "507363b304d49814464e333ef64f6ee288a1088299a8b55eb8648f156d8f6703",
+        "507363b304d49814464e333ef64f6ee288a1088299a8b55eb8648f156d8f6703"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "32bdb9eb2845c1592c69fcd90a8771132bc4a2317b36239fb42ac3265863ce07",
+        "32bdb9eb2845c1592c69fcd90a8771132bc4a2317b36239fb42ac3265863ce07",
+        "32bdb9eb2845c1592c69fcd90a8771132bc4a2317b36239fb42ac3265863ce07"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 7931,
+          "app_parser_pass": true,
+          "file": "en-education-extended.readable.json",
+          "rows": 983,
+          "rows_without_cues": [],
+          "usable_cues": 7931
+        },
+        {
+          "aligned_entries": 7931,
+          "app_parser_pass": true,
+          "file": "en-education-extended.readable.json",
+          "rows": 983,
+          "rows_without_cues": [],
+          "usable_cues": 7931
+        },
+        {
+          "aligned_entries": 7931,
+          "app_parser_pass": true,
+          "file": "en-education-extended.readable.json",
+          "rows": 983,
+          "rows_without_cues": [],
+          "usable_cues": 7931
+        }
+      ],
+      "review_counts": {
+        "case": "en-education-extended",
+        "rows": 983,
+        "unknown_speaker_words": 2,
+        "unknown_speaker_rows": 3,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-culture-medium",
+      "video_id": "iB9q_zEYc94",
+      "language": "en",
+      "media_sha256": "c54ba6aa5b2fa8fd2669a905844c9b9febd38eb6ce4b2eb7d8c1ae755ac2e746",
+      "download_sha256": "a69d215a1be0689a2bbe55dea444aa9258b1ef5ed236192af5a93d1272addbd8",
+      "duration_s": 384.1706875,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "05dfaa8f10fa",
+        "e87726cc9cc0",
+        "ff5358840fe7"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "520e93d3fa973b2821008696b835a64c3259dd47757280da1eedca781bee7574",
+        "520e93d3fa973b2821008696b835a64c3259dd47757280da1eedca781bee7574",
+        "520e93d3fa973b2821008696b835a64c3259dd47757280da1eedca781bee7574"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "8657a092ea467cb833e920a5f6b37a358e2cceb07e0d2694558fcd43e1d753ca",
+        "8657a092ea467cb833e920a5f6b37a358e2cceb07e0d2694558fcd43e1d753ca",
+        "8657a092ea467cb833e920a5f6b37a358e2cceb07e0d2694558fcd43e1d753ca"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1116,
+          "app_parser_pass": true,
+          "file": "en-culture-medium.readable.json",
+          "rows": 112,
+          "rows_without_cues": [],
+          "usable_cues": 1116
+        },
+        {
+          "aligned_entries": 1116,
+          "app_parser_pass": true,
+          "file": "en-culture-medium.readable.json",
+          "rows": 112,
+          "rows_without_cues": [],
+          "usable_cues": 1116
+        },
+        {
+          "aligned_entries": 1116,
+          "app_parser_pass": true,
+          "file": "en-culture-medium.readable.json",
+          "rows": 112,
+          "rows_without_cues": [],
+          "usable_cues": 1116
+        }
+      ],
+      "review_counts": {
+        "case": "en-culture-medium",
+        "rows": 112,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-culture-extended",
+      "video_id": "8IYgHbTNLE0",
+      "language": "en",
+      "media_sha256": "16edb31aea4453ad51b581c680abff4e4bef3767b7cc0114bdc43667fe6f1207",
+      "download_sha256": "3453db91f145891e0e90654078bd33da5cc4205626dfe837bb2d216355fea78c",
+      "duration_s": 2946.9866875,
+      "selected_audio_language": "en",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "2b7f7d93b51f",
+        "c6b03ad279e6",
+        "e8a55a01fcde"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "2a388911aa79cbb97ffd35c0921e54f93b0d8071c285c938e17f1173b5e47503",
+        "2a388911aa79cbb97ffd35c0921e54f93b0d8071c285c938e17f1173b5e47503",
+        "2a388911aa79cbb97ffd35c0921e54f93b0d8071c285c938e17f1173b5e47503"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "463b0686cf2ef59db7d8865812b49644f1457ea4db0e6e5e4c10ea140db8967d",
+        "463b0686cf2ef59db7d8865812b49644f1457ea4db0e6e5e4c10ea140db8967d",
+        "463b0686cf2ef59db7d8865812b49644f1457ea4db0e6e5e4c10ea140db8967d"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 8432,
+          "app_parser_pass": true,
+          "file": "en-culture-extended.readable.json",
+          "rows": 948,
+          "rows_without_cues": [],
+          "usable_cues": 8432
+        },
+        {
+          "aligned_entries": 8432,
+          "app_parser_pass": true,
+          "file": "en-culture-extended.readable.json",
+          "rows": 948,
+          "rows_without_cues": [],
+          "usable_cues": 8432
+        },
+        {
+          "aligned_entries": 8432,
+          "app_parser_pass": true,
+          "file": "en-culture-extended.readable.json",
+          "rows": 948,
+          "rows_without_cues": [],
+          "usable_cues": 8432
+        }
+      ],
+      "review_counts": {
+        "case": "en-culture-extended",
+        "rows": 948,
+        "unknown_speaker_words": 5,
+        "unknown_speaker_rows": 6,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-science-short",
+      "video_id": "6uEpZMDzp5E",
+      "language": "ja",
+      "media_sha256": "c5bfbd7ec826bd29631e380d7f4615b49ecc67cd43ada2989d2d19dce8b92033",
+      "download_sha256": "a38f70f4545d7d795c4060369c9b8646a955391f5f92458360007f282f50f09b",
+      "duration_s": 180.0533125,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "0bebef8b82c0",
+        "2e6387049c38",
+        "63e1f4043f54"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "6d60253cbc03ac4fd30dad1faa0d63b2f90e2583c2560ac47b6f507f704a3f60",
+        "6d60253cbc03ac4fd30dad1faa0d63b2f90e2583c2560ac47b6f507f704a3f60",
+        "6d60253cbc03ac4fd30dad1faa0d63b2f90e2583c2560ac47b6f507f704a3f60"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "85b4b3872e053b7e98a9a1bb50e1c713a65110bd7169ef083cd6827340d6de06",
+        "85b4b3872e053b7e98a9a1bb50e1c713a65110bd7169ef083cd6827340d6de06",
+        "85b4b3872e053b7e98a9a1bb50e1c713a65110bd7169ef083cd6827340d6de06"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 667,
+          "app_parser_pass": true,
+          "file": "ja-science-short.readable.json",
+          "rows": 20,
+          "rows_without_cues": [],
+          "usable_cues": 667
+        },
+        {
+          "aligned_entries": 667,
+          "app_parser_pass": true,
+          "file": "ja-science-short.readable.json",
+          "rows": 20,
+          "rows_without_cues": [],
+          "usable_cues": 667
+        },
+        {
+          "aligned_entries": 667,
+          "app_parser_pass": true,
+          "file": "ja-science-short.readable.json",
+          "rows": 20,
+          "rows_without_cues": [],
+          "usable_cues": 667
+        }
+      ],
+      "review_counts": {
+        "case": "ja-science-short",
+        "rows": 20,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-science-medium",
+      "video_id": "XDuWBQLVOFI",
+      "language": "ja",
+      "media_sha256": "9e01b2993586243b97781ba70f86d8261f299fd62e439407be6aefcf11a39795",
+      "download_sha256": "7e65339d055969d43009006ffabf663eae678f7d64e3eab560c8c7508311cb64",
+      "duration_s": 797.9885625,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "45c8b3b466d1",
+        "30d87707b13a",
+        "37f25e275f1d"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "109ba06302c77c287dc7fcfa93553bbaadd116a9b1cbe3e2270156f985b19e11",
+        "109ba06302c77c287dc7fcfa93553bbaadd116a9b1cbe3e2270156f985b19e11",
+        "109ba06302c77c287dc7fcfa93553bbaadd116a9b1cbe3e2270156f985b19e11"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "cf4aa74d633029c9341cb9d6b98e786b762265d7b608cf9a6364234b2aa30dff",
+        "cf4aa74d633029c9341cb9d6b98e786b762265d7b608cf9a6364234b2aa30dff",
+        "cf4aa74d633029c9341cb9d6b98e786b762265d7b608cf9a6364234b2aa30dff"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 2972,
+          "app_parser_pass": true,
+          "file": "ja-science-medium.readable.json",
+          "rows": 96,
+          "rows_without_cues": [],
+          "usable_cues": 2972
+        },
+        {
+          "aligned_entries": 2972,
+          "app_parser_pass": true,
+          "file": "ja-science-medium.readable.json",
+          "rows": 96,
+          "rows_without_cues": [],
+          "usable_cues": 2972
+        },
+        {
+          "aligned_entries": 2972,
+          "app_parser_pass": true,
+          "file": "ja-science-medium.readable.json",
+          "rows": 96,
+          "rows_without_cues": [],
+          "usable_cues": 2972
+        }
+      ],
+      "review_counts": {
+        "case": "ja-science-medium",
+        "rows": 96,
+        "unknown_speaker_words": 1,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-history-short",
+      "video_id": "U4A4LY6lXG0",
+      "language": "ja",
+      "media_sha256": "e211c8c6a2e27b1c8984ec4dde8fc9063f574f00e367db1204a4f35d14610809",
+      "download_sha256": "965ba515614621da002d9bbd7fbe5754ca1baf0d556f8b82863cce348941eee6",
+      "duration_s": 135.929625,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "4606aa2a979e",
+        "374ae310fae8",
+        "074eb9213b08"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "2ce6701ae6283246e5f53dd221dd3557b9a2cf14f4627d49562b557787ba9f5f",
+        "2ce6701ae6283246e5f53dd221dd3557b9a2cf14f4627d49562b557787ba9f5f",
+        "2ce6701ae6283246e5f53dd221dd3557b9a2cf14f4627d49562b557787ba9f5f"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "207fb21d961b75e51122e94f620113dcdd3feeb31a5307a636f650c8400c25fb",
+        "207fb21d961b75e51122e94f620113dcdd3feeb31a5307a636f650c8400c25fb",
+        "207fb21d961b75e51122e94f620113dcdd3feeb31a5307a636f650c8400c25fb"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 497,
+          "app_parser_pass": true,
+          "file": "ja-history-short.readable.json",
+          "rows": 14,
+          "rows_without_cues": [],
+          "usable_cues": 497
+        },
+        {
+          "aligned_entries": 497,
+          "app_parser_pass": true,
+          "file": "ja-history-short.readable.json",
+          "rows": 14,
+          "rows_without_cues": [],
+          "usable_cues": 497
+        },
+        {
+          "aligned_entries": 497,
+          "app_parser_pass": true,
+          "file": "ja-history-short.readable.json",
+          "rows": 14,
+          "rows_without_cues": [],
+          "usable_cues": 497
+        }
+      ],
+      "review_counts": {
+        "case": "ja-history-short",
+        "rows": 14,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-history-long",
+      "video_id": "JD2zGEyXAlk",
+      "language": "ja",
+      "media_sha256": "4b9d8adb54a486740d8a7362f3d8dc5114a0640bce98f2ed8b6eee1b119d28f0",
+      "download_sha256": "9480a16a24eedf70e8bad3b38ca75a6a30433edbaee0d97dfd4ac21a1ab70ceb",
+      "duration_s": 1455.6589375,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "ad9aa602d679",
+        "7fc6f683e626",
+        "b23243ad5260"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "5ddf303a9d3a6fe535e9bd624473b7181a6a6b298cdfbba66753ff8a7f1e0629",
+        "5ddf303a9d3a6fe535e9bd624473b7181a6a6b298cdfbba66753ff8a7f1e0629",
+        "5ddf303a9d3a6fe535e9bd624473b7181a6a6b298cdfbba66753ff8a7f1e0629"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "f223e74871635325217570fd8dbb4ef93919c667857395103abb2c5bc057d8e9",
+        "f223e74871635325217570fd8dbb4ef93919c667857395103abb2c5bc057d8e9",
+        "f223e74871635325217570fd8dbb4ef93919c667857395103abb2c5bc057d8e9"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 6306,
+          "app_parser_pass": true,
+          "file": "ja-history-long.readable.json",
+          "rows": 189,
+          "rows_without_cues": [],
+          "usable_cues": 6306
+        },
+        {
+          "aligned_entries": 6306,
+          "app_parser_pass": true,
+          "file": "ja-history-long.readable.json",
+          "rows": 189,
+          "rows_without_cues": [],
+          "usable_cues": 6306
+        },
+        {
+          "aligned_entries": 6306,
+          "app_parser_pass": true,
+          "file": "ja-history-long.readable.json",
+          "rows": 189,
+          "rows_without_cues": [],
+          "usable_cues": 6306
+        }
+      ],
+      "review_counts": {
+        "case": "ja-history-long",
+        "rows": 189,
+        "unknown_speaker_words": 8,
+        "unknown_speaker_rows": 8,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-cooking-short",
+      "video_id": "KQG9PcNY6tc",
+      "language": "ja",
+      "media_sha256": "94781e91e9684da508070e2378b7e74c73809e7b364ff3e0d86d7d89acee1399",
+      "download_sha256": "2b96ffa2f73ed7764b40fcefc01363af7e4d03fce84d6184505022b0b9b0a8fb",
+      "duration_s": 75.7435,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "10bb4cebed0e",
+        "b3954d08bb12",
+        "402c38ff79d3"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "710ca93ff4c46fb869321556a3f077e9838c8f3faffb2d913088826d598b229d",
+        "710ca93ff4c46fb869321556a3f077e9838c8f3faffb2d913088826d598b229d",
+        "710ca93ff4c46fb869321556a3f077e9838c8f3faffb2d913088826d598b229d"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "ceaf3cb0dfab0fd1b3b5586a6a8e3502aec2e90a1c97dbaa442ea92ec0fd3cf2",
+        "ceaf3cb0dfab0fd1b3b5586a6a8e3502aec2e90a1c97dbaa442ea92ec0fd3cf2",
+        "ceaf3cb0dfab0fd1b3b5586a6a8e3502aec2e90a1c97dbaa442ea92ec0fd3cf2"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 335,
+          "app_parser_pass": true,
+          "file": "ja-cooking-short.readable.json",
+          "rows": 10,
+          "rows_without_cues": [],
+          "usable_cues": 335
+        },
+        {
+          "aligned_entries": 335,
+          "app_parser_pass": true,
+          "file": "ja-cooking-short.readable.json",
+          "rows": 10,
+          "rows_without_cues": [],
+          "usable_cues": 335
+        },
+        {
+          "aligned_entries": 335,
+          "app_parser_pass": true,
+          "file": "ja-cooking-short.readable.json",
+          "rows": 10,
+          "rows_without_cues": [],
+          "usable_cues": 335
+        }
+      ],
+      "review_counts": {
+        "case": "ja-cooking-short",
+        "rows": 10,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-cooking-medium",
+      "video_id": "eWPKGjPvY24",
+      "language": "ja",
+      "media_sha256": "7d1b5c89b99d1498ab8313f5de43a1bb2ab919e2e5067a7c378a6459316c3b61",
+      "download_sha256": "40dbf754db5d8eef0b80d1a63999a8b626929d933cebbd50ddedf895e365e9bc",
+      "duration_s": 807.0095625,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "54fb70440bc4",
+        "e18d52232e75",
+        "5e9df69cd93b"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "92987c6c5d45bd81d9d8a9f669eb7c1f0d8e6a0574fb69f4763a7e9ea7011601",
+        "92987c6c5d45bd81d9d8a9f669eb7c1f0d8e6a0574fb69f4763a7e9ea7011601",
+        "92987c6c5d45bd81d9d8a9f669eb7c1f0d8e6a0574fb69f4763a7e9ea7011601"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "37d87b56df660a59294dfb9172bc80d7f9415152cd3db58af1bd4a47221907d7",
+        "37d87b56df660a59294dfb9172bc80d7f9415152cd3db58af1bd4a47221907d7",
+        "37d87b56df660a59294dfb9172bc80d7f9415152cd3db58af1bd4a47221907d7"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 4790,
+          "app_parser_pass": true,
+          "file": "ja-cooking-medium.readable.json",
+          "rows": 111,
+          "rows_without_cues": [],
+          "usable_cues": 4790
+        },
+        {
+          "aligned_entries": 4790,
+          "app_parser_pass": true,
+          "file": "ja-cooking-medium.readable.json",
+          "rows": 111,
+          "rows_without_cues": [],
+          "usable_cues": 4790
+        },
+        {
+          "aligned_entries": 4790,
+          "app_parser_pass": true,
+          "file": "ja-cooking-medium.readable.json",
+          "rows": 111,
+          "rows_without_cues": [],
+          "usable_cues": 4790
+        }
+      ],
+      "review_counts": {
+        "case": "ja-cooking-medium",
+        "rows": 111,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-technology-medium",
+      "video_id": "OKIG2FB_5Ak",
+      "language": "ja",
+      "media_sha256": "e55d9d2861535d6bb9087da3f7de451ef946341e4fc611d81262237c04bd91a7",
+      "download_sha256": "8d2307b5b3fba3efd4d7f1a5a665a855a04259f2a9892b9f7383a3678adf0eae",
+      "duration_s": 512.6826875,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "7221aab56765",
+        "0121d1fb31b0",
+        "f13538c867c6"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "f0e47ca6aabd871bc328d944178553d937d096dfae8a49ff741f1218db56c8d8",
+        "f0e47ca6aabd871bc328d944178553d937d096dfae8a49ff741f1218db56c8d8",
+        "f0e47ca6aabd871bc328d944178553d937d096dfae8a49ff741f1218db56c8d8"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "b7e4f7afdc9a2b1212a8b2c339f04e2bcaefe32f857fe2c1f394049207036dbf",
+        "b7e4f7afdc9a2b1212a8b2c339f04e2bcaefe32f857fe2c1f394049207036dbf",
+        "b7e4f7afdc9a2b1212a8b2c339f04e2bcaefe32f857fe2c1f394049207036dbf"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 3146,
+          "app_parser_pass": true,
+          "file": "ja-technology-medium.readable.json",
+          "rows": 81,
+          "rows_without_cues": [],
+          "usable_cues": 3146
+        },
+        {
+          "aligned_entries": 3146,
+          "app_parser_pass": true,
+          "file": "ja-technology-medium.readable.json",
+          "rows": 81,
+          "rows_without_cues": [],
+          "usable_cues": 3146
+        },
+        {
+          "aligned_entries": 3146,
+          "app_parser_pass": true,
+          "file": "ja-technology-medium.readable.json",
+          "rows": 81,
+          "rows_without_cues": [],
+          "usable_cues": 3146
+        }
+      ],
+      "review_counts": {
+        "case": "ja-technology-medium",
+        "rows": 81,
+        "unknown_speaker_words": 6,
+        "unknown_speaker_rows": 6,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-technology-long",
+      "video_id": "Hl8UNYrp0Vg",
+      "language": "ja",
+      "media_sha256": "0443a52d121e4a8587f2d0d3d95b6a54c44b5f8d3011fb977c718aabfaf6c6c1",
+      "download_sha256": "4f857b09fb133ede493156e95c4e6d8d8485b003b500d9865d599de3a37e70ea",
+      "duration_s": 1159.1285625,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "49189733540d",
+        "35d06ff5e4d4",
+        "8373a37586ec"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "be66b87d02f5360504a604aeafbd28fe2a586f3c4b25fb00f86b9d53224566f1",
+        "be66b87d02f5360504a604aeafbd28fe2a586f3c4b25fb00f86b9d53224566f1",
+        "be66b87d02f5360504a604aeafbd28fe2a586f3c4b25fb00f86b9d53224566f1"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "1581ae0d8373ef66305442c2101cbd48ad76f99ae2547b51ce95ea7af9869e4c",
+        "1581ae0d8373ef66305442c2101cbd48ad76f99ae2547b51ce95ea7af9869e4c",
+        "1581ae0d8373ef66305442c2101cbd48ad76f99ae2547b51ce95ea7af9869e4c"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 6987,
+          "app_parser_pass": true,
+          "file": "ja-technology-long.readable.json",
+          "rows": 181,
+          "rows_without_cues": [],
+          "usable_cues": 6987
+        },
+        {
+          "aligned_entries": 6987,
+          "app_parser_pass": true,
+          "file": "ja-technology-long.readable.json",
+          "rows": 181,
+          "rows_without_cues": [],
+          "usable_cues": 6987
+        },
+        {
+          "aligned_entries": 6987,
+          "app_parser_pass": true,
+          "file": "ja-technology-long.readable.json",
+          "rows": 181,
+          "rows_without_cues": [],
+          "usable_cues": 6987
+        }
+      ],
+      "review_counts": {
+        "case": "ja-technology-long",
+        "rows": 181,
+        "unknown_speaker_words": 4,
+        "unknown_speaker_rows": 4,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-travel-medium",
+      "video_id": "3nkpYnRnqgo",
+      "language": "ja",
+      "media_sha256": "f6b4195166ba599f209904b8b208419b5861e95a369c959face3e375ebab637c",
+      "download_sha256": "d2cdf512416b63f63ab219e1a769f84a0a3c214fc8b66f2a3b8d622db11f3ae0",
+      "duration_s": 717.392125,
+      "selected_audio_language": null,
+      "creator_caption_languages": [],
+      "job_ids": [
+        "7d0c78a6eeed",
+        "f17a9d6e800f",
+        "ce7380396358"
+      ],
+      "statuses": [
+        "error",
+        "error",
+        "error"
+      ],
+      "functional_passes": [
+        false,
+        false,
+        false
+      ],
+      "acceptance_pass": false,
+      "errors": [
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech.",
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech.",
+        "No reliable speech activity was detected; refusing to publish unverified captions. Check that the source contains audible speech."
+      ],
+      "repeatable_error": true
+    },
+    {
+      "case": "ja-sports-short",
+      "video_id": "04-yGPf8DOk",
+      "language": "ja",
+      "media_sha256": "b61f7f572b7e6dd4377ed4577478286e3949d0344093b80fb2ba795c509a7356",
+      "download_sha256": "a04cc69e0ad4ea8f8b185288f24a586082104b48dfe64e864ef5be6ea3ef8fc7",
+      "duration_s": 105.708875,
+      "selected_audio_language": null,
+      "creator_caption_languages": [],
+      "job_ids": [
+        "762da68c0d06",
+        "59572b3ea912",
+        "f5b661561c5e"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "b0d784020a1fd6bc8e022801b472ffbbb1f7f0e58c81299b135b631ad946eefe",
+        "b0d784020a1fd6bc8e022801b472ffbbb1f7f0e58c81299b135b631ad946eefe",
+        "b0d784020a1fd6bc8e022801b472ffbbb1f7f0e58c81299b135b631ad946eefe"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "75e17bf8379981dfc1fc2461261dec882cd80c2afefabc383c7dfe1fbcffbdfb",
+        "75e17bf8379981dfc1fc2461261dec882cd80c2afefabc383c7dfe1fbcffbdfb",
+        "75e17bf8379981dfc1fc2461261dec882cd80c2afefabc383c7dfe1fbcffbdfb"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 43,
+          "app_parser_pass": true,
+          "file": "ja-sports-short.readable.json",
+          "rows": 2,
+          "rows_without_cues": [],
+          "usable_cues": 43
+        },
+        {
+          "aligned_entries": 43,
+          "app_parser_pass": true,
+          "file": "ja-sports-short.readable.json",
+          "rows": 2,
+          "rows_without_cues": [],
+          "usable_cues": 43
+        },
+        {
+          "aligned_entries": 43,
+          "app_parser_pass": true,
+          "file": "ja-sports-short.readable.json",
+          "rows": 2,
+          "rows_without_cues": [],
+          "usable_cues": 43
+        }
+      ],
+      "review_counts": {
+        "case": "ja-sports-short",
+        "rows": 2,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-sports-medium",
+      "video_id": "U_6HRHq5dyM",
+      "language": "ja",
+      "media_sha256": "f610ebe12f677270a6de549f63d54c5f2d7b091f1d5542178d6aa37e278284b7",
+      "download_sha256": "1096cc21c598b1b0984baffc96f093a2b6855f0d3f6644faff07902810f02085",
+      "duration_s": 474.176,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "cdf6a6acd492",
+        "6bfab9d628d2",
+        "994cd0b8c5f5"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "95f1e1a506b9d8cb21d0e5fa05be14bf0e0801fb065c1a652cedf9acace00b04",
+        "95f1e1a506b9d8cb21d0e5fa05be14bf0e0801fb065c1a652cedf9acace00b04",
+        "95f1e1a506b9d8cb21d0e5fa05be14bf0e0801fb065c1a652cedf9acace00b04"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "00c9ef917e83883e4f70531df7d5a97124c28e6415e73e79335c23dbbac2eae1",
+        "00c9ef917e83883e4f70531df7d5a97124c28e6415e73e79335c23dbbac2eae1",
+        "00c9ef917e83883e4f70531df7d5a97124c28e6415e73e79335c23dbbac2eae1"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1560,
+          "app_parser_pass": true,
+          "file": "ja-sports-medium.readable.json",
+          "rows": 50,
+          "rows_without_cues": [],
+          "usable_cues": 1560
+        },
+        {
+          "aligned_entries": 1560,
+          "app_parser_pass": true,
+          "file": "ja-sports-medium.readable.json",
+          "rows": 50,
+          "rows_without_cues": [],
+          "usable_cues": 1560
+        },
+        {
+          "aligned_entries": 1560,
+          "app_parser_pass": true,
+          "file": "ja-sports-medium.readable.json",
+          "rows": 50,
+          "rows_without_cues": [],
+          "usable_cues": 1560
+        }
+      ],
+      "review_counts": {
+        "case": "ja-sports-medium",
+        "rows": 50,
+        "unknown_speaker_words": 53,
+        "unknown_speaker_rows": 3,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-arts-long",
+      "video_id": "h7uUA_kXuFI",
+      "language": "ja",
+      "media_sha256": "0dab0ad6d64ab9cf3cdcea6a3e551e9544797dec762265a79effd05639503e1c",
+      "download_sha256": "c10b302068d0cbf11af2a7f5cf7bb402b95edc22db066ca21b393fce738495a8",
+      "duration_s": 1646.3876875,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "6b98f8cbe47e",
+        "836bf5effa02",
+        "fdbb69e173d9"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "b1fec732416ab68f72339573d4e6a599c9327e16e583d65021075126c0acd357",
+        "b1fec732416ab68f72339573d4e6a599c9327e16e583d65021075126c0acd357",
+        "b1fec732416ab68f72339573d4e6a599c9327e16e583d65021075126c0acd357"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "a2ead5887f65192e48f9b162576ee0b34feac1a3e79b2a2f43450b3afb7ddc0b",
+        "a2ead5887f65192e48f9b162576ee0b34feac1a3e79b2a2f43450b3afb7ddc0b",
+        "a2ead5887f65192e48f9b162576ee0b34feac1a3e79b2a2f43450b3afb7ddc0b"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 7687,
+          "app_parser_pass": true,
+          "file": "ja-arts-long.readable.json",
+          "rows": 319,
+          "rows_without_cues": [],
+          "usable_cues": 7687
+        },
+        {
+          "aligned_entries": 7687,
+          "app_parser_pass": true,
+          "file": "ja-arts-long.readable.json",
+          "rows": 319,
+          "rows_without_cues": [],
+          "usable_cues": 7687
+        },
+        {
+          "aligned_entries": 7687,
+          "app_parser_pass": true,
+          "file": "ja-arts-long.readable.json",
+          "rows": 319,
+          "rows_without_cues": [],
+          "usable_cues": 7687
+        }
+      ],
+      "review_counts": {
+        "case": "ja-arts-long",
+        "rows": 319,
+        "unknown_speaker_words": 78,
+        "unknown_speaker_rows": 55,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-business-medium",
+      "video_id": "1JPcZad1zmc",
+      "language": "ja",
+      "media_sha256": "5f88494b4ea11e82bd4542a047f19a0729da5992740b39d09be7c1b7d6c3453f",
+      "download_sha256": "ef94366eafbd2222a6ef699ea69ae874cd374f95cc7ca412374662e86cc7a4e2",
+      "duration_s": 380.8853125,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "edb995718d5f",
+        "a23120768dec",
+        "af787de44593"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "8a91f48ec713851ccddc6fc5a5c18586979529417cb6e156d95719d0bc3aff9f",
+        "8a91f48ec713851ccddc6fc5a5c18586979529417cb6e156d95719d0bc3aff9f",
+        "8a91f48ec713851ccddc6fc5a5c18586979529417cb6e156d95719d0bc3aff9f"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "45ff7144bcab554961e5ea2bd0972e8296cf833eda8bdd771380976264d0cf13",
+        "45ff7144bcab554961e5ea2bd0972e8296cf833eda8bdd771380976264d0cf13",
+        "45ff7144bcab554961e5ea2bd0972e8296cf833eda8bdd771380976264d0cf13"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1967,
+          "app_parser_pass": true,
+          "file": "ja-business-medium.readable.json",
+          "rows": 47,
+          "rows_without_cues": [],
+          "usable_cues": 1967
+        },
+        {
+          "aligned_entries": 1967,
+          "app_parser_pass": true,
+          "file": "ja-business-medium.readable.json",
+          "rows": 47,
+          "rows_without_cues": [],
+          "usable_cues": 1967
+        },
+        {
+          "aligned_entries": 1967,
+          "app_parser_pass": true,
+          "file": "ja-business-medium.readable.json",
+          "rows": 47,
+          "rows_without_cues": [],
+          "usable_cues": 1967
+        }
+      ],
+      "review_counts": {
+        "case": "ja-business-medium",
+        "rows": 47,
+        "unknown_speaker_words": 2,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-business-long",
+      "video_id": "wnh6gEO6KX0",
+      "language": "ja",
+      "media_sha256": "610b37656376023f04017b0891f5c4d96dc077ae297de12fb8d09ef6b3bd6db7",
+      "download_sha256": "e9540a21328e005a8b5495c222df1ad3fff39ee24a837a3c5448e0966068e24f",
+      "duration_s": 1032.59825,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "08c13193b71e",
+        "6d80c3846a04",
+        "3a115a24d4db"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "4dee575e6f92f1ac1a126230d94982964bdd28fa9a23465fc49d2ee5c804f48b",
+        "4dee575e6f92f1ac1a126230d94982964bdd28fa9a23465fc49d2ee5c804f48b",
+        "4dee575e6f92f1ac1a126230d94982964bdd28fa9a23465fc49d2ee5c804f48b"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "dde95b75788666f0f82afc8c094cce80bf5895720e27d1161d7929b97f4e3379",
+        "dde95b75788666f0f82afc8c094cce80bf5895720e27d1161d7929b97f4e3379",
+        "dde95b75788666f0f82afc8c094cce80bf5895720e27d1161d7929b97f4e3379"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 5893,
+          "app_parser_pass": true,
+          "file": "ja-business-long.readable.json",
+          "rows": 153,
+          "rows_without_cues": [],
+          "usable_cues": 5893
+        },
+        {
+          "aligned_entries": 5893,
+          "app_parser_pass": true,
+          "file": "ja-business-long.readable.json",
+          "rows": 153,
+          "rows_without_cues": [],
+          "usable_cues": 5893
+        },
+        {
+          "aligned_entries": 5893,
+          "app_parser_pass": true,
+          "file": "ja-business-long.readable.json",
+          "rows": 153,
+          "rows_without_cues": [],
+          "usable_cues": 5893
+        }
+      ],
+      "review_counts": {
+        "case": "ja-business-long",
+        "rows": 153,
+        "unknown_speaker_words": 20,
+        "unknown_speaker_rows": 9,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-education-medium",
+      "video_id": "_2XsKmh6oB0",
+      "language": "ja",
+      "media_sha256": "f766cd3f3595e208745f10bb3183a46ef04acf2056420219ff6ade0895b4edf6",
+      "download_sha256": "f75add38d3613a70fdc15eb56131b795646bd0a8814188bf27967472993f3ce1",
+      "duration_s": 587.6266875,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "21befb9b446f",
+        "cc7f57be3dfe",
+        "12f836d789b1"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "4413b53295e8ef9ef2ec03a03c87b3086fe8dc708fc9a97ab982d57222f37dff",
+        "4413b53295e8ef9ef2ec03a03c87b3086fe8dc708fc9a97ab982d57222f37dff",
+        "4413b53295e8ef9ef2ec03a03c87b3086fe8dc708fc9a97ab982d57222f37dff"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "4f038d9e698d7a1132290f56bd74f4cbff37e7b344c6a38f7e9f5a29073021c8",
+        "4f038d9e698d7a1132290f56bd74f4cbff37e7b344c6a38f7e9f5a29073021c8",
+        "4f038d9e698d7a1132290f56bd74f4cbff37e7b344c6a38f7e9f5a29073021c8"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 3088,
+          "app_parser_pass": true,
+          "file": "ja-education-medium.readable.json",
+          "rows": 79,
+          "rows_without_cues": [],
+          "usable_cues": 3088
+        },
+        {
+          "aligned_entries": 3088,
+          "app_parser_pass": true,
+          "file": "ja-education-medium.readable.json",
+          "rows": 79,
+          "rows_without_cues": [],
+          "usable_cues": 3088
+        },
+        {
+          "aligned_entries": 3088,
+          "app_parser_pass": true,
+          "file": "ja-education-medium.readable.json",
+          "rows": 79,
+          "rows_without_cues": [],
+          "usable_cues": 3088
+        }
+      ],
+      "review_counts": {
+        "case": "ja-education-medium",
+        "rows": 79,
+        "unknown_speaker_words": 6,
+        "unknown_speaker_rows": 4,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-education-extended",
+      "video_id": "S6MhDswbuDs",
+      "language": "ja",
+      "media_sha256": "7e36acffc83c6f638a98b37c290750e09dcde6172c30715fad02e53a39631bb7",
+      "download_sha256": "f1d2a74cb903af9e1efae71b67d9158d751d91992fb97b1f5b7b327268085a26",
+      "duration_s": 3024.128,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "4adcb11b92c3",
+        "f076f81647a7",
+        "d817d531345e"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "44017ba8d9395da04444be516bf91a5187c4ac394815c7edcf75ae9ce10a4c83",
+        "44017ba8d9395da04444be516bf91a5187c4ac394815c7edcf75ae9ce10a4c83",
+        "44017ba8d9395da04444be516bf91a5187c4ac394815c7edcf75ae9ce10a4c83"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "65b4a255293bfd41c86ac231c6f01c341f86e3f6b6d852fd396b7fb66dd70dcb",
+        "65b4a255293bfd41c86ac231c6f01c341f86e3f6b6d852fd396b7fb66dd70dcb",
+        "65b4a255293bfd41c86ac231c6f01c341f86e3f6b6d852fd396b7fb66dd70dcb"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 15127,
+          "app_parser_pass": true,
+          "file": "ja-education-extended.readable.json",
+          "rows": 425,
+          "rows_without_cues": [],
+          "usable_cues": 15127
+        },
+        {
+          "aligned_entries": 15127,
+          "app_parser_pass": true,
+          "file": "ja-education-extended.readable.json",
+          "rows": 425,
+          "rows_without_cues": [],
+          "usable_cues": 15127
+        },
+        {
+          "aligned_entries": 15127,
+          "app_parser_pass": true,
+          "file": "ja-education-extended.readable.json",
+          "rows": 425,
+          "rows_without_cues": [],
+          "usable_cues": 15127
+        }
+      ],
+      "review_counts": {
+        "case": "ja-education-extended",
+        "rows": 425,
+        "unknown_speaker_words": 4,
+        "unknown_speaker_rows": 5,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-culture-medium",
+      "video_id": "yn-U20B2saQ",
+      "language": "ja",
+      "media_sha256": "cd7fc4058ab2a7032870eacbe133d31bd930d48a84fb3839a8d9ca421dc1695e",
+      "download_sha256": "2644bc9f736379335e83309e9e1f238e5a8eb80620a7ced78b8f114c1daf0d45",
+      "duration_s": 728.32,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "0f5a52c555f4",
+        "5c330cd2d444",
+        "3851dfb08d6e"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "c4bd59fde3ac76a958e217c094e161ac5b5efbcffed80ff307b4a44edf5268c4",
+        "c4bd59fde3ac76a958e217c094e161ac5b5efbcffed80ff307b4a44edf5268c4",
+        "c4bd59fde3ac76a958e217c094e161ac5b5efbcffed80ff307b4a44edf5268c4"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "d392c4d2038be40e93053a98bed5b33d843b2e7ff1d0b8ba52f1a8f010706ffe",
+        "d392c4d2038be40e93053a98bed5b33d843b2e7ff1d0b8ba52f1a8f010706ffe",
+        "d392c4d2038be40e93053a98bed5b33d843b2e7ff1d0b8ba52f1a8f010706ffe"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 3317,
+          "app_parser_pass": true,
+          "file": "ja-culture-medium.readable.json",
+          "rows": 93,
+          "rows_without_cues": [],
+          "usable_cues": 3317
+        },
+        {
+          "aligned_entries": 3317,
+          "app_parser_pass": true,
+          "file": "ja-culture-medium.readable.json",
+          "rows": 93,
+          "rows_without_cues": [],
+          "usable_cues": 3317
+        },
+        {
+          "aligned_entries": 3317,
+          "app_parser_pass": true,
+          "file": "ja-culture-medium.readable.json",
+          "rows": 93,
+          "rows_without_cues": [],
+          "usable_cues": 3317
+        }
+      ],
+      "review_counts": {
+        "case": "ja-culture-medium",
+        "rows": 93,
+        "unknown_speaker_words": 1,
+        "unknown_speaker_rows": 1,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-culture-extended",
+      "video_id": "jdyR8n4jYsI",
+      "language": "ja",
+      "media_sha256": "02b1cd2966a0ae769dee211b3afd6111e5aa0fbc360a8c59cd346872f335393c",
+      "download_sha256": "819958bb015e66243b1d5e3fbdfab4c517715abd11ad213a649b5ffd3bb5113f",
+      "duration_s": 3388.0468125,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "0fc289753545",
+        "143c32a43851",
+        "c481966eaa9e"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "4442bb017ffc61d347954b74f084d16fbf66cb734e42150f408553358981863d",
+        "4442bb017ffc61d347954b74f084d16fbf66cb734e42150f408553358981863d",
+        "4442bb017ffc61d347954b74f084d16fbf66cb734e42150f408553358981863d"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "38793fbb0773ca86021207a819c8a8a9da08eb68210d64ec0f789a4cbcb125df",
+        "38793fbb0773ca86021207a819c8a8a9da08eb68210d64ec0f789a4cbcb125df",
+        "38793fbb0773ca86021207a819c8a8a9da08eb68210d64ec0f789a4cbcb125df"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 21890,
+          "app_parser_pass": true,
+          "file": "ja-culture-extended.readable.json",
+          "rows": 868,
+          "rows_without_cues": [],
+          "usable_cues": 21890
+        },
+        {
+          "aligned_entries": 21890,
+          "app_parser_pass": true,
+          "file": "ja-culture-extended.readable.json",
+          "rows": 868,
+          "rows_without_cues": [],
+          "usable_cues": 21890
+        },
+        {
+          "aligned_entries": 21890,
+          "app_parser_pass": true,
+          "file": "ja-culture-extended.readable.json",
+          "rows": 868,
+          "rows_without_cues": [],
+          "usable_cues": 21890
+        }
+      ],
+      "review_counts": {
+        "case": "ja-culture-extended",
+        "rows": 868,
+        "unknown_speaker_words": 187,
+        "unknown_speaker_rows": 134,
+        "missing_timing": 0,
+        "adjustments": 1
+      }
+    },
+    {
+      "case": "en-travel-short",
+      "video_id": "QBpRYapgXUM",
+      "language": "en",
+      "media_sha256": "34132145ca611d32f857fa7424ed962f182d0805460fdd6a42b6c5d14b6d3c79",
+      "download_sha256": "0e8151d74bbc2626177ea6bdcc09107596e388f9c18d94b9495d6e710138101f",
+      "duration_s": 285.888,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "95134d85752b",
+        "bf2393d1755b",
+        "ca8534cd4fbb"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "e75fa5dc2885372f1979bd1dccc43bdcfd5de4f0a64d192a095c99e45e720590",
+        "e75fa5dc2885372f1979bd1dccc43bdcfd5de4f0a64d192a095c99e45e720590",
+        "e75fa5dc2885372f1979bd1dccc43bdcfd5de4f0a64d192a095c99e45e720590"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "3b84d2588f187e4a25e5724f97ca96e149f5736fbfa082f79df196a85d71db91",
+        "3b84d2588f187e4a25e5724f97ca96e149f5736fbfa082f79df196a85d71db91",
+        "3b84d2588f187e4a25e5724f97ca96e149f5736fbfa082f79df196a85d71db91"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 844,
+          "app_parser_pass": true,
+          "file": "en-travel-short.readable.json",
+          "rows": 60,
+          "rows_without_cues": [],
+          "usable_cues": 844
+        },
+        {
+          "aligned_entries": 844,
+          "app_parser_pass": true,
+          "file": "en-travel-short.readable.json",
+          "rows": 60,
+          "rows_without_cues": [],
+          "usable_cues": 844
+        },
+        {
+          "aligned_entries": 844,
+          "app_parser_pass": true,
+          "file": "en-travel-short.readable.json",
+          "rows": 60,
+          "rows_without_cues": [],
+          "usable_cues": 844
+        }
+      ],
+      "review_counts": {
+        "case": "en-travel-short",
+        "rows": 60,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "en-education-medium",
+      "video_id": "IL9Cr71r2oo",
+      "language": "en",
+      "media_sha256": "e843bc400695528889a29e8d2e72ab994a9c5b587d42849ead8242c098790437",
+      "download_sha256": "0757a9c40f6b2f9035e8d172d4cec59a34de23a9cef4aea08072d2eb8b47481c",
+      "duration_s": 534.336,
+      "selected_audio_language": "en-US",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "643ef802c8df",
+        "b92eea9c5a40",
+        "1e4c6b28c8cb"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "4cccf0ef412a69687946475be74ebe4a59cc4d34fdbb0cbb365a6a6e4d050cf9",
+        "4cccf0ef412a69687946475be74ebe4a59cc4d34fdbb0cbb365a6a6e4d050cf9",
+        "4cccf0ef412a69687946475be74ebe4a59cc4d34fdbb0cbb365a6a6e4d050cf9"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "8f30e9fa4c5912420a65ba26e83278c52cdcff754d734ad4d5af3705799a267d",
+        "8f30e9fa4c5912420a65ba26e83278c52cdcff754d734ad4d5af3705799a267d",
+        "8f30e9fa4c5912420a65ba26e83278c52cdcff754d734ad4d5af3705799a267d"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 1537,
+          "app_parser_pass": true,
+          "file": "en-education-medium.readable.json",
+          "rows": 129,
+          "rows_without_cues": [],
+          "usable_cues": 1537
+        },
+        {
+          "aligned_entries": 1537,
+          "app_parser_pass": true,
+          "file": "en-education-medium.readable.json",
+          "rows": 129,
+          "rows_without_cues": [],
+          "usable_cues": 1537
+        },
+        {
+          "aligned_entries": 1537,
+          "app_parser_pass": true,
+          "file": "en-education-medium.readable.json",
+          "rows": 129,
+          "rows_without_cues": [],
+          "usable_cues": 1537
+        }
+      ],
+      "review_counts": {
+        "case": "en-education-medium",
+        "rows": 129,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-travel-short",
+      "video_id": "TJE20tNCqzE",
+      "language": "ja",
+      "media_sha256": "3a794af45fa39b902a4b5ca9fa2469df3d98fe9a2c1caae7b06b4208be18fb66",
+      "download_sha256": "a15fbd61e25f0ea026dfdc9b11765a91f65eaa93b424a741f6cf889ed23865e9",
+      "duration_s": 179.9895,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "b446f0a6a2db",
+        "0322827de787",
+        "087c9adad435"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "9bdbfc4326d2aabefefc5b5ad13e5964f9b4c727ff30f3430e765578d9fe9e58",
+        "9bdbfc4326d2aabefefc5b5ad13e5964f9b4c727ff30f3430e765578d9fe9e58",
+        "9bdbfc4326d2aabefefc5b5ad13e5964f9b4c727ff30f3430e765578d9fe9e58"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "16b836957136c9fe139bbcc00a93e026d94c113a3185c678690635bd92efc2eb",
+        "16b836957136c9fe139bbcc00a93e026d94c113a3185c678690635bd92efc2eb",
+        "16b836957136c9fe139bbcc00a93e026d94c113a3185c678690635bd92efc2eb"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 646,
+          "app_parser_pass": true,
+          "file": "ja-travel-short.readable.json",
+          "rows": 18,
+          "rows_without_cues": [],
+          "usable_cues": 646
+        },
+        {
+          "aligned_entries": 646,
+          "app_parser_pass": true,
+          "file": "ja-travel-short.readable.json",
+          "rows": 18,
+          "rows_without_cues": [],
+          "usable_cues": 646
+        },
+        {
+          "aligned_entries": 646,
+          "app_parser_pass": true,
+          "file": "ja-travel-short.readable.json",
+          "rows": 18,
+          "rows_without_cues": [],
+          "usable_cues": 646
+        }
+      ],
+      "review_counts": {
+        "case": "ja-travel-short",
+        "rows": 18,
+        "unknown_speaker_words": 0,
+        "unknown_speaker_rows": 0,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    },
+    {
+      "case": "ja-arts-medium",
+      "video_id": "ohSqfn8JTbE",
+      "language": "ja",
+      "media_sha256": "6d796689300d90cfb2dc714cf6ed43c31858b8130ee5593bb85792b02947f58c",
+      "download_sha256": "e5e7a44c94973032319d05e13edb52c98c51a99a424ab588af4814aaa020b896",
+      "duration_s": 744.96,
+      "selected_audio_language": "ja",
+      "creator_caption_languages": [],
+      "job_ids": [
+        "a16feae93e58",
+        "4748b7d5a027",
+        "ea5f8c1cda3a"
+      ],
+      "statuses": [
+        "done",
+        "done",
+        "done"
+      ],
+      "functional_passes": [
+        true,
+        true,
+        true
+      ],
+      "acceptance_pass": false,
+      "raw_content_hashes": [
+        "59b2d0ed2fad76c586d5eaf3eab3aaee81b68b3558f809bf2efdea0ed891243f",
+        "59b2d0ed2fad76c586d5eaf3eab3aaee81b68b3558f809bf2efdea0ed891243f",
+        "59b2d0ed2fad76c586d5eaf3eab3aaee81b68b3558f809bf2efdea0ed891243f"
+      ],
+      "raw_exact_match": true,
+      "readable_content_hashes": [
+        "973605f49ac2e8ee22be230370db56663eae833b63851fd54d11c96a0ee7e9eb",
+        "973605f49ac2e8ee22be230370db56663eae833b63851fd54d11c96a0ee7e9eb",
+        "973605f49ac2e8ee22be230370db56663eae833b63851fd54d11c96a0ee7e9eb"
+      ],
+      "readable_exact_match": true,
+      "app_checks": [
+        {
+          "aligned_entries": 2550,
+          "app_parser_pass": true,
+          "file": "ja-arts-medium.readable.json",
+          "rows": 91,
+          "rows_without_cues": [],
+          "usable_cues": 2550
+        },
+        {
+          "aligned_entries": 2550,
+          "app_parser_pass": true,
+          "file": "ja-arts-medium.readable.json",
+          "rows": 91,
+          "rows_without_cues": [],
+          "usable_cues": 2550
+        },
+        {
+          "aligned_entries": 2550,
+          "app_parser_pass": true,
+          "file": "ja-arts-medium.readable.json",
+          "rows": 91,
+          "rows_without_cues": [],
+          "usable_cues": 2550
+        }
+      ],
+      "review_counts": {
+        "case": "ja-arts-medium",
+        "rows": 91,
+        "unknown_speaker_words": 16,
+        "unknown_speaker_rows": 7,
+        "missing_timing": 0,
+        "adjustments": 0
+      }
+    }
+  ]
+}

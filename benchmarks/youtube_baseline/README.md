@@ -1,5 +1,9 @@
 # English/Japanese YouTube acceptance baseline
 
+See [Windows verification results](VERIFICATION_RESULTS.md) and
+`verification_summary.json` for the three cold-process runs and remaining
+accuracy gaps. The original first-run baseline is retained separately.
+
 Run on the Windows GPU host against the existing authenticated service:
 
 ```powershell
@@ -91,3 +95,8 @@ passes. It compares both raw and readable files: all caption text, word data, ti
 metadata, excluding execution IDs and source paths. An identical error is
 reported separately and never counts as successful caption generation.
 Repeatability does not establish accuracy; both gates must pass independently.
+
+For long Windows runs, use a local terminal or a persistent host process with
+file logs. An SSH-attached driver can exit when its connection ends. Resume the
+same output directory to retain completed cases and pending job IDs; do not
+restart the inference server merely to recover the driver.
