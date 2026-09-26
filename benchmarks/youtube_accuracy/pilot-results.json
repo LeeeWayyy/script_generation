@@ -213,5 +213,69 @@
     }
   ],
   "decision": "Reject native decoder: English calibration and Japanese holdout worsen. Production decoder unchanged.",
-  "scoring_fix": "English numeric/unit normalization only; lower rescored error rates are not generation improvements."
+  "scoring_fix": "English numeric/unit normalization only; lower rescored error rates are not generation improvements.",
+  "app_parser": [
+    {
+      "aligned_entries": 1084,
+      "app_parser_pass": true,
+      "file": "en-business-pilot.readable.json",
+      "rows": 87,
+      "rows_without_cues": [],
+      "usable_cues": 1084
+    },
+    {
+      "aligned_entries": 1961,
+      "app_parser_pass": true,
+      "file": "en-conversation-pilot.readable.json",
+      "rows": 188,
+      "rows_without_cues": [],
+      "usable_cues": 1961
+    },
+    {
+      "aligned_entries": 4482,
+      "app_parser_pass": true,
+      "file": "ja-history-pilot.readable.json",
+      "rows": 153,
+      "rows_without_cues": [],
+      "usable_cues": 4482
+    },
+    {
+      "aligned_entries": 647,
+      "app_parser_pass": true,
+      "file": "ja-science-pilot.readable.json",
+      "rows": 21,
+      "rows_without_cues": [],
+      "usable_cues": 647
+    }
+  ],
+  "app_parser_sources": {
+    "/Users/leeewayyy/Documents/SourceCode/ScriptViewing/App/Models.swift": "224d1340d5138e5dc78ada857d3d856af98210da861c8cacf31ed5780e877693",
+    "/Users/leeewayyy/Documents/SourceCode/ScriptViewing/App/TranscriptPresentation.swift": "28a10b78faa437697e8f7a2cfd87e9e82c44ffcd19f897df042b89b8191be1bf",
+    "benchmarks/youtube_baseline/check_app.swift": "f5383e52c7b4320b3a98b4f33dd6caea924e2abc01fbed93d3518eb22a7ec612"
+  },
+  "native_trial_configuration": {
+    "model": "large-v3",
+    "implementation": "faster_whisper.WhisperModel",
+    "device": "cuda",
+    "compute_type": "float16",
+    "beam_size": 5,
+    "temperature": 0,
+    "condition_on_previous_text": false,
+    "vad_filter": true,
+    "vad_parameters": {
+      "max_speech_duration_s": 30
+    },
+    "tf32": false,
+    "alignment": false,
+    "diarization": false,
+    "scope": "ASR-only experiment; not production end-to-end output"
+  },
+  "host_versions": {
+    "torch": "2.8.0+cu128",
+    "whisperx": "3.8.6",
+    "faster-whisper": "1.2.1",
+    "ctranslate2": "4.7.2",
+    "transformers": "4.57.6",
+    "GPU": "RTX 5090 32GB"
+  }
 }
