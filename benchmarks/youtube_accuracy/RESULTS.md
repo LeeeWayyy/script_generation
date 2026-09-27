@@ -116,6 +116,14 @@ Shorter VAD merge chunks (`chunk-trial-results.json`, calibration only) made no
 material difference: English 5.73% → 5.77% (15 s and 10 s), Japanese 9.75% →
 9.60% (15 s) / 9.65% (10 s). Rejected; the production chunk size stays 30 s.
 
+A Japanese-specific model, `kotoba-whisper-v2.0` (CTranslate2), was tried on the
+Japanese calibration split (`kotoba-trial-results.json`). Through the production
+WhisperX path it scored 30.75% CER (30 s) and 30.52% (15 s) against 9.75% for
+large-v3; with its documented faster-whisper settings it was still 14.7–38.2% on
+five cases where large-v3 scored 1.6–21.8%. Errors include misrecognized content
+(`化学式の読み方はo2だ` → `学学学医している`), not only omissions. It was about 2–3×
+faster but was rejected; all languages stay on large-v3, with no language routing.
+
 ## Outstanding acceptance work
 
 The generation disagreements still need acoustic adjudication, and incomplete or

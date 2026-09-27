@@ -1,0 +1,104 @@
+{
+ "status": "rejected",
+ "model": "kotoba-tech/kotoba-whisper-v2.0-faster (float16, beam 5)",
+ "trial": "Japanese calibration only, ASR-only. WhisperX batched path with production SpeechVad and kana re-decode at 30 s and 15 s chunks; faster-whisper native path with documented settings (chunk_length 15, no previous-text conditioning, VAD) on five cases.",
+ "weighted_cer_excluding_partial_reference": {
+  "large-v3": 0.09747582627069984,
+  "kotoba_whisperx_30s": 0.30751739819472196,
+  "kotoba_whisperx_15s": 0.30517467098463447,
+  "kotoba_native_documented": 0.23263178729299994
+ },
+ "note": "Native weighted CER covers only its five cases; compare per-row large-v3 values.",
+ "finding": "Worse than large-v3 on every case in every configuration, with misrecognized content, not only omissions. Faster (about 2-3x) but not adoptable. Japanese stays on large-v3; no language routing.",
+ "rows": [
+  {
+   "case": "ja-reference-01",
+   "large-v3": 0.015503875968992248,
+   "kotoba_whisperx_30s": 0.20310077519379846,
+   "kotoba_whisperx_15s": 0.20310077519379846,
+   "kotoba_native_documented": 0.14728682170542637
+  },
+  {
+   "case": "ja-reference-02",
+   "large-v3": 14.659574468085106,
+   "kotoba_whisperx_30s": 12.28191489361702,
+   "kotoba_whisperx_15s": 12.303191489361701
+  },
+  {
+   "case": "ja-reference-03",
+   "large-v3": 0.06054827175208582,
+   "kotoba_whisperx_30s": 0.20810488676996425,
+   "kotoba_whisperx_15s": 0.20810488676996425
+  },
+  {
+   "case": "ja-reference-04",
+   "large-v3": 0.04103289706402547,
+   "kotoba_whisperx_30s": 0.3742483197736116,
+   "kotoba_whisperx_15s": 0.3742483197736116,
+   "kotoba_native_documented": 0.20516448532012735
+  },
+  {
+   "case": "ja-reference-05",
+   "large-v3": 0.2179930795847751,
+   "kotoba_whisperx_30s": 0.4854176964903609,
+   "kotoba_whisperx_15s": 0.47108255066732574,
+   "kotoba_native_documented": 0.3816114681166584
+  },
+  {
+   "case": "ja-reference-06",
+   "large-v3": 0.16683046683046682,
+   "kotoba_whisperx_30s": 0.3393120393120393,
+   "kotoba_whisperx_15s": 0.3312039312039312
+  },
+  {
+   "case": "ja-reference-07",
+   "large-v3": 0.039028440938343366,
+   "kotoba_whisperx_30s": 0.23334025326966992,
+   "kotoba_whisperx_15s": 0.23230226281918206
+  },
+  {
+   "case": "ja-reference-08",
+   "large-v3": 0.11532231940395206,
+   "kotoba_whisperx_30s": 0.30336896663427276,
+   "kotoba_whisperx_15s": 0.30158730158730157
+  },
+  {
+   "case": "ja-reference-09",
+   "large-v3": 0.1548582995951417,
+   "kotoba_whisperx_30s": 0.3694331983805668,
+   "kotoba_whisperx_15s": 0.3694331983805668
+  },
+  {
+   "case": "ja-reference-10",
+   "large-v3": 0.12709457540471458,
+   "kotoba_whisperx_30s": 0.3997443907980687,
+   "kotoba_whisperx_15s": 0.40045441635898893,
+   "kotoba_native_documented": 0.23658051689860835
+  },
+  {
+   "case": "ja-reference-11",
+   "large-v3": 0.05132192846034215,
+   "kotoba_whisperx_30s": 0.2099533437013997,
+   "kotoba_whisperx_15s": 0.2087869362363919
+  },
+  {
+   "case": "ja-reference-12",
+   "large-v3": 0.1098531211750306,
+   "kotoba_whisperx_30s": 0.29314565483476135,
+   "kotoba_whisperx_15s": 0.28518971848225216
+  },
+  {
+   "case": "ja-reference-13",
+   "large-v3": 0.06919060052219321,
+   "kotoba_whisperx_30s": 0.27980852915578763,
+   "kotoba_whisperx_15s": 0.27980852915578763
+  },
+  {
+   "case": "ja-reference-14",
+   "large-v3": 0.055725190839694655,
+   "kotoba_whisperx_30s": 0.24656488549618322,
+   "kotoba_whisperx_15s": 0.24656488549618322,
+   "kotoba_native_documented": 0.15763358778625955
+  }
+ ]
+}
