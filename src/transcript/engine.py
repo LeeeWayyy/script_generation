@@ -165,11 +165,16 @@ class TranscriptionEngine:
                 "unverified captions. Check that the source contains audible speech."
             )
         detected_language = result.get("language", language)
+        redecodes = (_redecode_kana_only_chunks(asr, audio, result, self.batch_size)
+                     if detected_language == "ja" else [])
 
-        return self._align_and_diarize(
+        transcript = self._align_and_diarize(
             audio, result, language=detected_language, diarize=diarize,
             min_speakers=min_speakers, max_speakers=max_speakers, align=align,
         )
+        if redecodes:
+            transcript.meta["orthography_redecodes"] = redecodes
+        return transcript
 
     def run_captions(
         self,
@@ -245,6 +250,49 @@ class TranscriptionEngine:
         if alignment_adjustments:
             transcript.meta["alignment_adjustments"] = alignment_adjustments
         return transcript
+
+
+# Whisper sometimes decodes a Japanese chunk in learner-reader style: spaced,
+# kanji-free hiragana (じかん for 時間). Chunks are decoded independently, so only
+# that chunk is re-decoded, with ordinary kanji-mixed text as its prompt.
+KANA_ONLY_MIN_HIRAGANA = 15
+ORTHOGRAPHY_PROMPT = "今日は、日本語で話します。料理を作る時間が一番好きです。"
+_HIRAGANA = re.compile(r"[\u3041-\u309f]")
+_KANJI = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _redecode_kana_only_chunks(asr, audio, result: dict, batch_size: int) -> list[dict]:
+    """Replace a kanji-free chunk only with the model's own kanji-bearing re-decode.
+
+    Natural kana speech (わかんない) re-decodes without kanji and is kept. A
+    re-decode that shrinks or grows implausibly is rejected, so content is not
+    lost to the prompt; the original text is retained in the returned records.
+    """
+    from dataclasses import replace
+
+    redecodes = []
+    for segment in result.get("segments", []):
+        text = segment.get("text", "")
+        if len(_HIRAGANA.findall(text)) < KANA_ONLY_MIN_HIRAGANA or _KANJI.search(text):
+            continue
+        clip = audio[int(segment["start"] * 16000):int(segment["end"] * 16000)]
+        original_options = asr.options
+        asr.options = replace(original_options, initial_prompt=ORTHOGRAPHY_PROMPT)
+        try:
+            redo = asr.transcribe(clip, batch_size=batch_size, language="ja")
+        finally:
+            asr.options = original_options
+        candidate = "".join(s.get("text", "") for s in redo.get("segments", []))
+        # Kanji compress readings (じかん -> 時間), so allow shorter, not much shorter.
+        dense, candidate_dense = re.sub(r"\s", "", text), re.sub(r"\s", "", candidate)
+        accepted = bool(_KANJI.search(candidate)) and (
+            0.5 * len(dense) <= len(candidate_dense) <= 1.2 * len(dense))
+        redecodes.append({"start": segment["start"], "end": segment["end"],
+                          "original_text": text, "redecoded_text": candidate,
+                          "accepted": accepted})
+        if accepted:
+            segment["text"] = candidate
+    return redecodes
 
 
 def _deduplicate_alignment_boundaries(result: dict) -> list[dict]:

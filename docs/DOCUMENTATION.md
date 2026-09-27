@@ -974,3 +974,11 @@ Missing word speaker labels are uncertainty, not evidence of a new speaker.
 The readable view does not split merely at known/unknown transitions; it still
 splits between differing known speakers, even across unknown words. A row that
 contains unknown word assignments has `speaker:null` and a fallback entry.
+
+Japanese ASR chunks are decoded independently, and Whisper occasionally decodes
+one in learner-reader style: spaced, kanji-free hiragana (`じかん` for `時間`).
+A chunk with at least 15 hiragana and no kanji is re-decoded once from the same
+audio with an ordinary kanji-mixed prompt. The re-decode is used only when it
+contains kanji and keeps 50–120% of the original length; natural kana speech
+re-decodes without kanji and is kept. `meta.orthography_redecodes` retains each
+chunk's times, original and re-decoded text, and whether it was accepted.

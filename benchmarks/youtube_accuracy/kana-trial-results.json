@@ -1,0 +1,179 @@
+{
+ "status": "adopted",
+ "trial": "ASR-only, all 20 Japanese cases, engine._redecode_kana_only_chunks; scoring v3",
+ "baseline_scores": "full-baseline/reference-scores-v3.json (aligned outputs)",
+ "rows": [
+  {
+   "case": "ja-reference-01",
+   "split": "calibration",
+   "cer": 0.015503875968992248,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-02",
+   "split": "calibration",
+   "cer": 14.659574468085106,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-03",
+   "split": "calibration",
+   "cer": 0.06054827175208582,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-04",
+   "split": "calibration",
+   "cer": 0.04103289706402547,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-05",
+   "split": "calibration",
+   "cer": 0.2179930795847751,
+   "orthography_redecodes": [
+    {
+     "start": 337.04,
+     "end": 343.696,
+     "original_text": "ありがとうございますはいありがとうございます",
+     "redecoded_text": "ありがとうございます。",
+     "accepted": false
+    }
+   ]
+  },
+  {
+   "case": "ja-reference-06",
+   "split": "calibration",
+   "cer": 0.16683046683046682,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-07",
+   "split": "calibration",
+   "cer": 0.039028440938343366,
+   "orthography_redecodes": [
+    {
+     "start": 817.552,
+     "end": 821.456,
+     "original_text": "だからどうしたらそれができるか すごくモヤモヤしています",
+     "redecoded_text": "だからどうしたらそれができるか すごくモヤモヤしています。",
+     "accepted": false
+    }
+   ]
+  },
+  {
+   "case": "ja-reference-08",
+   "split": "calibration",
+   "cer": 0.11532231940395206,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-09",
+   "split": "calibration",
+   "cer": 0.1548582995951417,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-10",
+   "split": "calibration",
+   "cer": 0.12709457540471458,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-11",
+   "split": "calibration",
+   "cer": 0.05132192846034215,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-12",
+   "split": "calibration",
+   "cer": 0.1098531211750306,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-13",
+   "split": "calibration",
+   "cer": 0.06919060052219321,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-14",
+   "split": "calibration",
+   "cer": 0.055725190839694655,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-15",
+   "split": "holdout",
+   "cer": 0.25161290322580643,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-16",
+   "split": "holdout",
+   "cer": 0.13986367079020448,
+   "orthography_redecodes": [
+    {
+     "start": 130.736,
+     "end": 158.16,
+     "original_text": "2じかんぐらい かけて りょうり つくってたよね。あれは ちょっと じかん かけすぎた だけど。でも、りょうりを つくって、それを いっしょに たべるひとがいて、いろんな はなしを するのが すき。いいね、いいね。なんか かぞくと つながる じかんだし、あと おいしいものを たべながら いろんな はなしを する。",
+     "redecoded_text": "2時間ぐらいかけて、料理作ってたよね。あれは、ちょっと時間かけすぎた、だけど。でも、料理を作って、それを一緒に食べる人がいて、いろんな話をするのが好き。いいね、いいね。なんか、家族とつながる時間だし、あと、おいしいものを食べながら、いろんな話をする。",
+     "accepted": true
+    },
+    {
+     "start": 365.728,
+     "end": 394.896,
+     "original_text": "うんどうして なかったんだけど、せんしゅうから ちょっとずつ ランニングを はじめたんだよね。ランニング、さいしょにじゅっぷん はしりはじめて、ちょっとずつ じかんを のばしてるんだけど、そんなにはしれないけど、はしったあと、コンビニで アイスコーヒーを かうっていう ごほうびを よいしておくのが、",
+     "redecoded_text": "運動してなかったんだけど、先週からちょっとずつ、ランニングを始めたんだよね。ランニング、最初20分走り始めて、ちょっとずつ時間を伸ばしてるんだけど、そんなに走れないけど、走った後、コンビニでアイスコーヒーを買うっていうご褒美を用意しておくのが、",
+     "accepted": true
+    },
+    {
+     "start": 591.296,
+     "end": 620.352,
+     "original_text": "すごい じみな うごきなのに、けっこう なんか ぜんしん プルプルプルプルプルプルって してて。そう、わかる。ちょうきで つづけて からだを つくって いきたいなって おもってる。うんうんうんうん。わたしも ピラティスの せんせいに、みく、ちょっと かおを ゆるめてって いわれる。かおが こわいよ。かおに ちからが はいりすぎって いわれて。わかる?",
+     "redecoded_text": "すごい地味な動きなのに、結構なんか全身プルプルプルプルプルってしてて。そう、わかる。長期で続けて、体を作っていきたいなって思ってる。うんうんうんうん。私もピラティスの先生に、ミク、ちょっと顔を緩めてって言われる。顔が怖いよ。顔に力が入りすぎって言われて。わかる?その…",
+     "accepted": true
+    },
+    {
+     "start": 754.704,
+     "end": 783.408,
+     "original_text": "ああ、しあわせってなる。わかる。わかる。もう なにもしないでね。そう。なにもしないで、そのまま リラックス。うん。いいね。それ、それしたい。さいきん できてない?さいきんできてないんです。きょうしようかな。うん。さいきん よるまで しごとを してることが おおい?",
+     "redecoded_text": "ああ、幸せってなる。わかる。もう何もしないでね。何もしないで、そのままリラックス。いいね。それ、それしたい。最近できてない?最近できてないんです。今日しよっかな。最近、夜まで仕事をしてることが多い?",
+     "accepted": true
+    },
+    {
+     "start": 900.912,
+     "end": 930.128,
+     "original_text": "で、たいおんが さがったときに、ねむけが くるらしい。へー。そうそう。だから、その にほんじんの おふろに はえるぶんかは、りにかなってるというか、からだにいいみたい。へー。そうそうそう。へー、ちょっと きょうしよう。うん。いいじゃん、いいじゃん。きょうする?そういう なんか、じぶんが よろこびを かんじる しゅんかんを、",
+     "redecoded_text": "で、体温が下がったときに、眠気がくるらしい。へー。そうそう。だから、その日本人のお風呂に入る文化は、理にかなってるというか、体にいいみたい。へー。そうそうそう。へー、ちょっと、今日しよう。うん。いいじゃん、いいじゃん。今日する?そういう、なんか、自分が喜びを感じる瞬間を、",
+     "accepted": true
+    }
+   ]
+  },
+  {
+   "case": "ja-reference-17",
+   "split": "holdout",
+   "cer": 0.11754168389141519,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-18",
+   "split": "holdout",
+   "cer": 0.15888150846368115,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-19",
+   "split": "holdout",
+   "cer": 0.09369617636927316,
+   "orthography_redecodes": []
+  },
+  {
+   "case": "ja-reference-20",
+   "split": "holdout",
+   "cer": 0.2945742057159437,
+   "orthography_redecodes": []
+  }
+ ]
+}

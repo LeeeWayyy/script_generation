@@ -81,6 +81,25 @@ A fixed disfluent `initial_prompt` was tried on the calibration split only
 and dropped whole English sentences. It was rejected; the holdout was not run.
 The in-process control reproduced the baseline text exactly.
 
+## Kana-only chunk re-decoding
+
+The `ja-reference-16` hiragana output came from whole ASR chunks decoded in
+learner-reader style (spaced hiragana, no kanji). The engine now re-decodes only
+such chunks, with an ordinary kanji-mixed prompt, and accepts a re-decode only
+when it contains kanji and keeps 50–120% of the original length. The symptom was
+found in a holdout case; the rule uses no reference text. ASR-only trial on all
+20 Japanese cases (`kana-trial-results.json`):
+
+- 7 chunks matched; 5 in `ja-reference-16` were accepted (e.g. `2じかんぐらい かけて
+  りょうり` → `2時間ぐらいかけて、料理`; `おふろに はえる` → `お風呂に入る`).
+- Natural kana chunks in `ja-reference-05`/`-07` were kept; the length guard
+  refused a re-decode that dropped a repeated `ありがとうございます`.
+- `ja-reference-16` CER 18.61% → 13.99%; Japanese holdout 20.47% → 20.00%;
+  calibration unchanged (no chunk matched). Some accepted re-decodes omit a
+  repeated backchannel (`うん`, a second `わかる`).
+- An aligned end-to-end run of `ja-reference-16` kept all 5 re-decodes with
+  word timing and recorded them in `meta.orthography_redecodes`.
+
 ## Outstanding acceptance work
 
 The generation disagreements still need acoustic adjudication, and incomplete or

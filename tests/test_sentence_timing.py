@@ -118,3 +118,38 @@ def test_pipeline_adjusts_before_speaker_assignment_and_reports_provenance(monke
                                       min_speakers=None, max_speakers=None, align=False)
     assert result.segments[0].end == 9.295
     assert result.meta['timing_adjustments'][0]['original_end'] == 9.794
+
+
+def test_kana_only_japanese_chunk_is_redecoded_without_losing_content():
+    from dataclasses import dataclass
+    from transcript.engine import ORTHOGRAPHY_PROMPT, _redecode_kana_only_chunks
+
+    @dataclass
+    class Options:
+        initial_prompt: str | None = None
+
+    class Asr:
+        options = Options()
+
+        def __init__(self, reply):
+            self.reply, self.prompts = reply, []
+
+        def transcribe(self, clip, batch_size, language):
+            self.prompts.append(self.options.initial_prompt)
+            return {'segments': [{'text': self.reply}]}
+
+    reader = 'でも、りょうりを つくって、それを いっしょに たべるひとがいて、いろんな はなしを するのが すき'
+    result = {'segments': [{'text': reader, 'start': 1.0, 'end': 2.0},
+                           {'text': '夜ご飯を作ります', 'start': 2.0, 'end': 3.0}]}
+    asr = Asr('でも、料理を作って、それを一緒に食べる人がいて、色んな話をするのが好き')
+    records = _redecode_kana_only_chunks(asr, [0.0] * 48000, result, 16)
+    assert result['segments'][0]['text'].startswith('でも、料理を作って')
+    assert result['segments'][1]['text'] == '夜ご飯を作ります'
+    assert records[0]['accepted'] and records[0]['original_text'] == reader
+    assert asr.prompts == [ORTHOGRAPHY_PROMPT] and asr.options.initial_prompt is None
+
+    # Natural kana speech, or a re-decode that drops content, keeps the original.
+    for reply in ('なんかなんていうんだろうそういうことかわかんないけど', '料理'):
+        natural = {'segments': [{'text': reader, 'start': 0.0, 'end': 1.0}]}
+        assert not _redecode_kana_only_chunks(Asr(reply), [0.0] * 16000, natural, 16)[0]['accepted']
+        assert natural['segments'][0]['text'] == reader
