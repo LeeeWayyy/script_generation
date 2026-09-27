@@ -52,6 +52,35 @@ both Mac and Windows. The live server is healthy and idle; the earlier original
 YouTube URL job remains available. Transient 403s during corpus download recovered
 with fresh extraction retries; this does not prove that all future URLs will work.
 
+## Scoring v3 and verbatim-prompt trial
+
+Scoring v3 (`reference-scores-v3.json`, same generated outputs) removes caption
+annotations and speaker labels, and treats fillers/backchannels as optional (a
+product decision: they are not required transcript content). It also adds a
+full-coverage aggregate. This is a measurement change only.
+
+| Set | v2 all cases | v3 all cases | v3 full-coverage references |
+|---|---:|---:|---:|
+| English calibration | 6.53% WER | 6.37% WER | 6.37% WER |
+| English holdout | 4.73% WER | 4.48% WER | 4.48% WER |
+| Japanese calibration | 16.60% CER | 16.01% CER | 9.75% CER |
+| Japanese holdout | 22.84% CER | 20.47% CER | 20.47% CER |
+
+The partial `ja-reference-02` reference alone accounts for about six points of the
+Japanese calibration aggregate. Only 0–5% of reference speech per case falls where
+generation produced no segment. Removing fillers changed Japanese holdout by only
+about one point: the remaining disagreement is mostly omitted short words and hedges
+(`みたいな`, `とか`, sentence-final `ね`) in conversation, speaker names in
+`ja-reference-20`, and kana/kanji choices. `ja-reference-16` output is largely
+hiragana (`じかん` for `時間`), a readability defect rather than only a scoring
+difference. These remain open generation issues.
+
+A fixed disfluent `initial_prompt` was tried on the calibration split only
+(`prompt-trial-results.json`). It increased disagreement on 22 of 28 cases
+(English 6.37% → 9.23% WER, Japanese 9.75% → 11.45% CER excluding ja-reference-02)
+and dropped whole English sentences. It was rejected; the holdout was not run.
+The in-process control reproduced the baseline text exactly.
+
 ## Outstanding acceptance work
 
 The generation disagreements still need acoustic adjudication, and incomplete or

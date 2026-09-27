@@ -64,4 +64,25 @@ def test_report_keeps_missing_cases_and_reference_quality_flags(tmp_path):
     assert result['groups'][0]['reference_weighted_error_rate'] == 2 / 5
     assert result['groups'][0]['reference_quality_flagged'] == 2
     assert result['rows'][0]['reference_caption_bounds_s'] == [0, 20]
+    assert result['groups'][0]['full_coverage_reference_weighted_error_rate'] is None
+    assert result['groups'][0]['partial_coverage_excluded'] == 1
     assert result['rows'][1]['status'] == 'no_generated_result'
+
+
+def test_caption_annotations_and_speaker_labels_are_not_scored_as_speech():
+    from benchmarks.youtube_accuracy import strip_annotations
+    generated = {'segments': [{'text': '衣替えしたから'}, {'text': 'しますね'}]}
+    result = assess('（私は）衣替えしたから\n（それぐらいの頻度で）しますね', generated, 'ja')
+    assert result['cer'] == 0 and result['annotations_retained_v2_score']['cer'] > 0
+    assert strip_annotations('PROFESSOR: Good afternoon.\n[LAUGHTER]').split() == ['Good', 'afternoon.']
+    # Times and ordinary prose are not labels.
+    assert strip_annotations('10:30 we met') == '10:30 we met'
+    assert assess('地球の自転', {'segments': [{'text': '地球の時点'}]}, 'ja')['char_errors'] == 2
+
+
+def test_japanese_fillers_and_backchannels_are_not_required():
+    generated = {'segments': [{'text': 'そうですね、地球の自転です。'}]}
+    result = assess('うんうんえっとそうですねあのー地球のえー自転ですうーん', generated, 'ja')
+    assert result['cer'] == 0 and result['annotations_retained_v2_score']['cer'] > 0
+    # Real words are still scored.
+    assert assess('あの人', {'segments': [{'text': '人'}]}, 'ja')['char_errors'] == 2

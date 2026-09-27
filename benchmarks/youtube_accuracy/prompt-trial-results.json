@@ -1,0 +1,160 @@
+{
+ "status": "rejected",
+ "trial": "fixed disfluent initial_prompt, ASR-only, calibration split only; holdout not run",
+ "scoring_version": 3,
+ "model": "large-v3 float16 beam 5, SpeechVad, batch 16",
+ "prompts": {
+  "ja": "えーと、あの、うん、うん。そうですね。はい、まあ、なんか、そう。",
+  "en": "Um, uh, so, you know, I mean, yeah. Hmm, okay, right."
+ },
+ "control_reproduces_baseline_text": true,
+ "weighted_error_excluding_partial_reference": {
+  "en_control": 0.06367645205997229,
+  "en_prompt": 0.09230187728360842,
+  "ja_control": 0.09747582627069984,
+  "ja_prompt": 0.11449505041457085
+ },
+ "finding": "Prompt increased disagreement on 22/28 calibration cases; English lost whole sentences, Japanese gained punctuation/wording changes.",
+ "rows": [
+  {
+   "case": "en-reference-01",
+   "control": 0.016511867905056758,
+   "prompt": 0.04059167526659787
+  },
+  {
+   "case": "en-reference-02",
+   "control": 0.012956419316843345,
+   "prompt": 0.12838633686690223
+  },
+  {
+   "case": "en-reference-03",
+   "control": 0.08072878092134499,
+   "prompt": 0.09094948896459784
+  },
+  {
+   "case": "en-reference-04",
+   "control": 0.04810281517747858,
+   "prompt": 0.07539779681762546
+  },
+  {
+   "case": "en-reference-05",
+   "control": 0.12054794520547946,
+   "prompt": 0.11050228310502283
+  },
+  {
+   "case": "en-reference-06",
+   "control": 0.06331877729257641,
+   "prompt": 0.06331877729257641
+  },
+  {
+   "case": "en-reference-07",
+   "control": 0.07778738115816768,
+   "prompt": 0.1365600691443388
+  },
+  {
+   "case": "en-reference-08",
+   "control": 0.161717679305619,
+   "prompt": 0.22613065326633167
+  },
+  {
+   "case": "en-reference-09",
+   "control": 0.020075282308657464,
+   "prompt": 0.11041405269761606
+  },
+  {
+   "case": "en-reference-10",
+   "control": 0.010894941634241245,
+   "prompt": 0.008560311284046693
+  },
+  {
+   "case": "en-reference-11",
+   "control": 0.029069767441860465,
+   "prompt": 0.03604651162790698
+  },
+  {
+   "case": "en-reference-12",
+   "control": 0.07948243992606285,
+   "prompt": 0.0822550831792976
+  },
+  {
+   "case": "en-reference-13",
+   "control": 0.08469945355191257,
+   "prompt": 0.10792349726775956
+  },
+  {
+   "case": "en-reference-14",
+   "control": 0.059897051941974734,
+   "prompt": 0.09475900795507722
+  },
+  {
+   "case": "ja-reference-01",
+   "control": 0.015503875968992248,
+   "prompt": 0.015503875968992248
+  },
+  {
+   "case": "ja-reference-02",
+   "control": 14.659574468085106,
+   "prompt": 14.835106382978724
+  },
+  {
+   "case": "ja-reference-03",
+   "control": 0.06054827175208582,
+   "prompt": 0.07246722288438617
+  },
+  {
+   "case": "ja-reference-04",
+   "control": 0.04103289706402547,
+   "prompt": 0.07110010611956137
+  },
+  {
+   "case": "ja-reference-05",
+   "control": 0.2179930795847751,
+   "prompt": 0.2906574394463668
+  },
+  {
+   "case": "ja-reference-06",
+   "control": 0.16683046683046682,
+   "prompt": 0.1366093366093366
+  },
+  {
+   "case": "ja-reference-07",
+   "control": 0.039028440938343366,
+   "prompt": 0.037990450487855515
+  },
+  {
+   "case": "ja-reference-08",
+   "control": 0.11532231940395206,
+   "prompt": 0.12973760932944606
+  },
+  {
+   "case": "ja-reference-09",
+   "control": 0.1548582995951417,
+   "prompt": 0.22267206477732793
+  },
+  {
+   "case": "ja-reference-10",
+   "control": 0.12709457540471458,
+   "prompt": 0.13873899460380573
+  },
+  {
+   "case": "ja-reference-11",
+   "control": 0.05132192846034215,
+   "prompt": 0.07387247278382582
+  },
+  {
+   "case": "ja-reference-12",
+   "control": 0.1098531211750306,
+   "prompt": 0.13096695226438188
+  },
+  {
+   "case": "ja-reference-13",
+   "control": 0.06919060052219321,
+   "prompt": 0.14012184508268058
+  },
+  {
+   "case": "ja-reference-14",
+   "control": 0.055725190839694655,
+   "prompt": 0.07824427480916031
+  }
+ ]
+}

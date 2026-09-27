@@ -42,8 +42,15 @@ Changed references require a recorded new corpus version, never a silent edit.
 English uses WER with the installed Whisper English normalizer, retaining currency
 and percent units and equating spoken/written number forms. Its version and empty
 spelling map are recorded. Japanese uses CER with the existing Unicode normalizer.
-Version 2 scores retain the initial strict v1 scores for comparison and are written
-to `reference-scores-v2.json`, preserving the initial report. Non-speech labels,
+Version 3 scores remove caption annotations before scoring both texts: bracketed
+sounds and implied words (`[LAUGHTER]`, `（私は）`) and line-leading speaker labels
+(`PROFESSOR:`). Fillers and backchannels are not required transcript content:
+English drops them in the Whisper normalizer, and Japanese scoring removes kana
+fillers (`えっと`, `えー`, `あー`, `うん`, `うーん`, `あのー`) from both texts. Each row keeps the strict v1 and annotations-retained v2 scores;
+reports are written to `reference-scores-v3.json`, preserving earlier reports.
+Groups also report a full-coverage aggregate that omits partial-coverage references,
+which otherwise count every later generated word as an insertion. Space-delimited
+labels (`ja-reference-20`: `ursさん ...`) are not detectable and remain scored. Non-speech labels,
 orthographic choices and edited captions remain possible reference differences.
 Creator-provided does not itself establish human authorship,
 verbatim completeness, correct speakers, word timing, or spoken-only content.
