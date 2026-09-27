@@ -40,8 +40,9 @@ path. Raw creator captions, reference text and audio are independently hashed.
 Changed references require a recorded new corpus version, never a silent edit.
 
 English uses WER with the installed Whisper English normalizer, retaining currency
-and percent units and equating spoken/written number forms. Its version and empty
-spelling map are recorded. Japanese uses CER with the existing Unicode normalizer.
+and percent units and equating spoken/written number forms. Curly apostrophes are made ASCII so
+contractions expand (`it’s` → `it is`), and `ok` is spelled `okay`; the version
+and spelling map are recorded. Japanese uses CER with the existing Unicode normalizer.
 Version 3 scores remove caption annotations before scoring both texts: bracketed
 sounds and implied words (`[LAUGHTER]`, `（私は）`) and line-leading speaker labels
 (`PROFESSOR:`). Fillers and backchannels are not required transcript content:

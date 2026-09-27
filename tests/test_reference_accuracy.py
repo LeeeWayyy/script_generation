@@ -38,6 +38,7 @@ def test_english_normalization_preserves_currency_and_numeric_errors():
     assert correct['wer'] == 0 and correct['strict_v1_score']['wer'] > 0
     assert measure('sixteen', 'sixty')['wer'] > 0
     assert measure('ten thousand dollars', '10,000')['wer'] > 0
+    assert measure('It’s OK, don’t worry', "It's okay, don't worry")['wer'] == 0
 
 
 def test_report_keeps_missing_cases_and_reference_quality_flags(tmp_path):

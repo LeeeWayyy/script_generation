@@ -103,12 +103,18 @@ def strip_fillers(text, language):
     return JA_FILLER.sub(' ', unicodedata.normalize('NFKC', text)) if language == 'ja' else text
 
 
+CURLY_APOSTROPHES = str.maketrans({'\N{RIGHT SINGLE QUOTATION MARK}': "'",
+                                   '\N{LEFT SINGLE QUOTATION MARK}': "'"})
+ENGLISH_SPELLINGS = {'ok': 'okay'}
+
+
 def _measure(reference, hypothesis, language):
     if language != 'en':
         return score(reference, hypothesis), 'benchmarks.run.normalize_text v1'
     from transformers.models.whisper.english_normalizer import EnglishTextNormalizer
-    normalizer = EnglishTextNormalizer({})
-    expected, actual = normalizer(reference), normalizer(hypothesis)
+    # The normalizer expands only ASCII contractions: it’s would score as "it s".
+    normalizer = EnglishTextNormalizer(ENGLISH_SPELLINGS)
+    expected, actual = (normalizer(t.translate(CURLY_APOSTROPHES)) for t in (reference, hypothesis))
     reference_words, hypothesis_words = expected.split(), actual.split()
     reference_chars, hypothesis_chars = expected.replace(' ', ''), actual.replace(' ', '')
     if not reference_words:
@@ -120,7 +126,7 @@ def _measure(reference, hypothesis, language):
              'word_errors': word_errors, 'reference_words': len(reference_words),
              'char_errors': char_errors, 'reference_chars': len(reference_chars),
              'normalized_hypothesis_sha256': hashlib.sha256(actual.encode()).hexdigest()},
-            'Whisper EnglishTextNormalizer, empty spelling map; transformers '
+            'Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers '
             + version('transformers') + '; bracketed annotations removed')
 
 

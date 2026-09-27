@@ -61,8 +61,8 @@ full-coverage aggregate. This is a measurement change only.
 
 | Set | v2 all cases | v3 all cases | v3 full-coverage references |
 |---|---:|---:|---:|
-| English calibration | 6.53% WER | 6.37% WER | 6.37% WER |
-| English holdout | 4.73% WER | 4.48% WER | 4.48% WER |
+| English calibration | 6.53% WER | 5.73% WER | 5.73% WER |
+| English holdout | 4.73% WER | 4.29% WER | 4.29% WER |
 | Japanese calibration | 16.60% CER | 16.01% CER | 9.75% CER |
 | Japanese holdout | 22.84% CER | 20.47% CER | 20.47% CER |
 
@@ -99,6 +99,22 @@ found in a holdout case; the rule uses no reference text. ASR-only trial on all
   repeated backchannel (`うん`, a second `わかる`).
 - An aligned end-to-end run of `ja-reference-16` kept all 5 re-decodes with
   word timing and recorded them in `meta.orthography_redecodes`.
+
+## Error sources and further trials
+
+English v3 also normalizes curly apostrophes (five references use `’`, which
+previously scored every contraction as an error) and `OK`/`okay`.
+
+Japanese scored on kana readings (pykakasi diagnostic, not a gate) drops from
+9.75% to 6.72% calibration and 20.00% to 16.55% holdout CER with kana
+re-decoding: about three points are kanji/kana/numeral spelling choices. The
+remaining holdout error is dominated by deletions in conversational podcasts
+(`ja-reference-05`, `-15`, `-18`, `-20`): short words and discourse markers such
+as `あの`, `なんか`, `まあ`, `その`, `ね`, `で`.
+
+Shorter VAD merge chunks (`chunk-trial-results.json`, calibration only) made no
+material difference: English 5.73% → 5.77% (15 s and 10 s), Japanese 9.75% →
+9.60% (15 s) / 9.65% (10 s). Rejected; the production chunk size stays 30 s.
 
 ## Outstanding acceptance work
 

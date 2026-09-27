@@ -156,5 +156,6 @@
    "control": 0.055725190839694655,
    "prompt": 0.07824427480916031
   }
- ]
+ ],
+ "scoring_note": "Scored before English curly-apostrophe and ok/okay normalization; relative comparison unaffected."
 }
