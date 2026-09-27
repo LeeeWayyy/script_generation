@@ -31,6 +31,13 @@ dev = [
     "httpx>=0.27",
     "python-multipart>=0.0.9",
     "requests>=2.31",
+    "transcript[benchmark]",
+]
+# Creator-reference accuracy scoring (benchmarks/youtube_accuracy.py): minimal
+# edit alignment and Japanese kana readings.
+benchmark = [
+    "pykakasi>=2.3,<3",
+    "rapidfuzz>=3",
 ]
 # Local processing (the `transcript` CLI + `transcribe()` library). Install with
 # `pip install -e ".[local]"`. torch is installed separately (see README).

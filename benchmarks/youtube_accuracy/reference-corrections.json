@@ -1,0 +1,8 @@
+{
+ "ja-reference-20": [
+  {
+   "pattern": "^(?:noriko|ursさん|shounoさん|intro)(?= |$)",
+   "reason": "Creator captions prefix speaker turns with a space-delimited name label (noriko, ursさん, shounoさん) and one 'intro' heading. Labels are not speech; names spoken mid-line (noriko先生) are kept."
+  }
+ ]
+}

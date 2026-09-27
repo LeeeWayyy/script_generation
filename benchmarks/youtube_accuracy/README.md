@@ -43,16 +43,33 @@ English uses WER with the installed Whisper English normalizer, retaining curren
 and percent units and equating spoken/written number forms. Curly apostrophes are made ASCII so
 contractions expand (`it’s` → `it is`), and `ok` is spelled `okay`; the version
 and spelling map are recorded. Japanese uses CER with the existing Unicode normalizer.
-Version 3 scores remove caption annotations before scoring both texts: bracketed
-sounds and implied words (`[LAUGHTER]`, `（私は）`) and line-leading speaker labels
-(`PROFESSOR:`). Fillers and backchannels are not required transcript content:
-English drops them in the Whisper normalizer, and Japanese scoring removes kana
-fillers (`えっと`, `えー`, `あー`, `うん`, `うーん`, `あのー`) from both texts. Each row keeps the strict v1 and annotations-retained v2 scores;
-reports are written to `reference-scores-v3.json`, preserving earlier reports.
+Version 4 scores (`reference-scores-v4.json`; earlier reports are preserved)
+separate acceptable differences from recognition errors. Every rule is applied to
+both texts, and each row reports what it forgave:
+
+- Caption annotations are not speech: bracketed sounds and implied words
+  (`[LAUGHTER]`, `（私は）`) and line-leading speaker labels (`PROFESSOR:`).
+- Fillers and backchannels are not required content. English drops them in the
+  Whisper normalizer; Japanese removes kana fillers (`えっと`, `えー`, `あー`, `うん`,
+  `うーん`, `あのー`).
+- Japanese spelling: Arabic numbers become kanji numerals, and a difference whose
+  whole-word hiragana readings match (pykakasi) is `kana_kanji_spelling`, e.g.
+  `時`/`とき`, `綺麗`/`きれい`, `タメ`/`ため`. Kanji replaced by other kanji stays an
+  error even with the same reading (`自転`/`時点`, `台風`/`大風`).
+- English word spacing: a difference that only splits or joins words
+  (`vietcong`/`viet cong`) is `word_spacing`. This also accepts sound-alike joins
+  such as `every one`/`everyone` and `U.S.`/`us`.
+- Generated text entirely outside the caption time span cannot be judged by the
+  reference; `generated_chars_outside_reference_span` reports what was excluded.
+- `reference-corrections.json` records reference fixes that cannot be detected
+  generally, with pattern, reason and removal count per row. The frozen files
+  stay unchanged; `ja-reference-20` removes space-delimited speaker labels.
+
+Each row keeps the strict v1 and annotations-retained v2 scores, the error count
+before tolerances (`strict_char_errors`/`strict_word_errors`), examples of accepted
+differences, and its eight largest remaining differences for human spot checks.
 Groups also report a full-coverage aggregate that omits partial-coverage references,
-which otherwise count every later generated word as an insertion. Space-delimited
-labels (`ja-reference-20`: `ursさん ...`) are not detectable and remain scored. Non-speech labels,
-orthographic choices and edited captions remain possible reference differences.
+which otherwise count every later generated word as an insertion.
 Creator-provided does not itself establish human authorship,
 verbatim completeness, correct speakers, word timing, or spoken-only content.
 Those requirements are reported separately, not inferred from WER/CER.

@@ -106,11 +106,128 @@ def strip_fillers(text, language):
 CURLY_APOSTROPHES = str.maketrans({'\N{RIGHT SINGLE QUOTATION MARK}': "'",
                                    '\N{LEFT SINGLE QUOTATION MARK}': "'"})
 ENGLISH_SPELLINGS = {'ok': 'okay'}
+CORRECTIONS = Path(__file__).with_name('youtube_accuracy') / 'reference-corrections.json'
+KANJI_DIGITS = '〇一二三四五六七八九'
+
+
+def kanji_number(n):
+    """Positional Arabic number as a kanji numeral (3760 -> 三千七百六十)."""
+    if n == 0 or n >= 10 ** 16:
+        return KANJI_DIGITS[0] if n == 0 else str(n)
+    out = ''
+    for unit, name in ((10 ** 12, '兆'), (10 ** 8, '億'), (10 ** 4, '万'), (1, '')):
+        chunk = n // unit % 10000
+        for value, place in ((1000, '千'), (100, '百'), (10, '十'), (1, '')):
+            digit = chunk // value % 10
+            if digit:
+                out += ('' if digit == 1 and place else KANJI_DIGITS[digit]) + place
+        out += name if chunk else ''
+    return out
+
+
+def _kanji_numerals(text):
+    return re.sub(r'\d[\d,]*', lambda m: kanji_number(int(m.group().replace(',', ''))), text)
+
+
+def _word_readings(text):
+    """(start, end, hiragana) per dictionary word, or None if offsets do not cover text."""
+    import pykakasi
+    words, start = [], 0
+    for item in pykakasi.kakasi().convert(text):
+        words.append((start, start + len(item['orig']), item['hira']))
+        start += len(item['orig'])
+    return words if start == len(text) else None
+
+
+def _word_span(words, start, end):
+    covered = [w for w in words if w[0] < max(end, start + 1) and w[1] > min(start, end - 1)]
+    return (min(covered[0][0], start), max(covered[-1][1], end)) if covered else (start, end)
+
+
+def _spelling_variants(reference, hypothesis, blocks, words):
+    """Blocks that only spell the same words differently (時/とき, 綺麗/きれい).
+
+    Each difference is widened by the same equal context on both sides to whole
+    dictionary words; differences whose words overlap are judged together. Kanji
+    replaced by other kanji stays an error even with the same reading (自転/時点).
+    """
+    groups, merge_next = [], False
+    for index, block in enumerate(blocks):
+        i, j, k, m = block[3]
+        ref_start, ref_end = _word_span(words[0], i, j)
+        hyp_start, hyp_end = _word_span(words[1], k, m)
+        need_left, need_right = max(i - ref_start, k - hyp_start), max(ref_end - j, hyp_end - m)
+        # Widen only through equal text, whose offsets match on both sides.
+        previous = blocks[index - 1][3] if index else (0, 0, 0, 0)
+        following = blocks[index + 1][3] if index + 1 < len(blocks) else (len(reference), 0, len(hypothesis), 0)
+        gap_left, gap_right = i - previous[1], following[0] - j
+        right = min(need_right, gap_right)
+        if groups and (merge_next or need_left > gap_left):
+            groups[-1][0].append(block)
+            groups[-1][1][1], groups[-1][1][3] = j + right, m + right
+        else:
+            left = min(need_left, gap_left)
+            groups.append([[block], [i - left, j + right, k - left, m + right]])
+        merge_next = need_right > gap_right
+    accepted = []
+    for members, (a, b, c, d) in groups:
+        if any(KANJI.search(block[1]) and KANJI.search(block[2]) for block in members):
+            continue
+        if _hiragana(reference[a:b]) == _hiragana(hypothesis[c:d]):
+            accepted.extend(members)
+    return accepted
+
+
+def _hiragana(text):
+    import pykakasi
+    return ''.join(item['hira'] for item in pykakasi.kakasi().convert(text))
+
+
+KANJI = re.compile(r'[一-鿿]')
+
+
+def _blocks(reference, hypothesis):
+    """Minimal edit script grouped into contiguous differences: (cost, ref, hyp)."""
+    from rapidfuzz.distance import Levenshtein
+    blocks, current = [], None
+    for op in Levenshtein.opcodes(reference, hypothesis):
+        if op.tag == 'equal':
+            current = None
+            continue
+        if current is None:
+            current = [0, op.src_start, op.src_end, op.dest_start, op.dest_end]
+            blocks.append(current)
+        current[0] += max(op.src_end - op.src_start, op.dest_end - op.dest_start)
+        current[2], current[4] = op.src_end, op.dest_end
+    return [(cost, reference[i:j], hypothesis[k:m], (i, j, k, m)) for cost, i, j, k, m in blocks]
+
+
+def _largest(blocks, joiner, count=8):
+    return [{'errors': b[0], 'reference': joiner.join(b[1]), 'generated': joiner.join(b[2])}
+            for b in sorted(blocks, key=lambda b: -b[0])[:count]]
 
 
 def _measure(reference, hypothesis, language):
     if language != 'en':
-        return score(reference, hypothesis), 'benchmarks.run.normalize_text v1'
+        expected, actual = (normalize_text(_kanji_numerals(unicodedata.normalize('NFKC', t))).replace(' ', '')
+                            for t in (reference, hypothesis))
+        if not expected:
+            raise ValueError('Reference has no characters after Japanese normalization')
+        blocks = _blocks(expected, actual)
+        words = (_word_readings(expected), _word_readings(actual))
+        # Kanji/kana/katakana spelling of the same word is not a recognition error.
+        spelling = _spelling_variants(expected, actual, blocks, words) if None not in words else []
+        remaining = [b for b in blocks if b not in spelling]
+        errors = sum(b[0] for b in remaining)
+        return ({'cer': errors / len(expected), 'wer': errors / len(expected),
+                 'char_errors': errors, 'reference_chars': len(expected),
+                 'strict_char_errors': errors + sum(b[0] for b in spelling),
+                 'acceptable_differences': {'kana_kanji_spelling': sum(b[0] for b in spelling),
+                                            'examples': _largest(spelling, '', 5)},
+                 'largest_remaining_differences': _largest(remaining, ''),
+                 'normalized_hypothesis_sha256': hashlib.sha256(actual.encode()).hexdigest()},
+                'benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading '
+                'kana/kanji spelling tolerated via pykakasi ' + version('pykakasi'))
     from transformers.models.whisper.english_normalizer import EnglishTextNormalizer
     # The normalizer expands only ASCII contractions: it’s would score as "it s".
     normalizer = EnglishTextNormalizer(ENGLISH_SPELLINGS)
@@ -119,30 +236,58 @@ def _measure(reference, hypothesis, language):
     reference_chars, hypothesis_chars = expected.replace(' ', ''), actual.replace(' ', '')
     if not reference_words:
         raise ValueError('Reference has no words after English normalization')
-    word_errors = edit_distance(reference_words, hypothesis_words)
+    blocks = _blocks(reference_words, hypothesis_words)
+    # Word spacing alone (vietcong / viet cong) is a spelling choice, not a misheard word.
+    spacing = [b for b in blocks if ''.join(b[1]) == ''.join(b[2])]
+    remaining = [b for b in blocks if b not in spacing]
+    word_errors = sum(b[0] for b in remaining)
     char_errors = edit_distance(reference_chars, hypothesis_chars)
     return ({'wer': word_errors / len(reference_words),
              'cer': char_errors / len(reference_chars),
              'word_errors': word_errors, 'reference_words': len(reference_words),
              'char_errors': char_errors, 'reference_chars': len(reference_chars),
+             'strict_word_errors': word_errors + sum(b[0] for b in spacing),
+             'acceptable_differences': {'word_spacing': sum(b[0] for b in spacing),
+                                        'examples': _largest(spacing, ' ', 5)},
+             'largest_remaining_differences': _largest(remaining, ' '),
              'normalized_hypothesis_sha256': hashlib.sha256(actual.encode()).hexdigest()},
             'Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers '
-            + version('transformers') + '; bracketed annotations removed')
+            + version('transformers') + '; bracketed annotations removed; word spacing tolerated')
 
 
-def assess(reference, generated, language):
+def correct_reference(case_id, reference):
+    """Apply recorded, reviewable reference corrections; frozen files stay unchanged."""
+    applied = []
+    corrections = json.loads(CORRECTIONS.read_text(encoding='utf-8')) if CORRECTIONS.exists() else {}
+    for correction in corrections.get(case_id, []):
+        reference, removed = re.subn(correction['pattern'], ' ', reference, flags=re.MULTILINE)
+        applied.append({**correction, 'removed': removed})
+    return reference, applied
+
+
+def assess(reference, generated, language, span=None):
     meta = generated.get('meta', {})
     if meta.get('transcript_source') == 'youtube_manual_captions' or meta.get('caption_language'):
         raise ValueError('Reference leakage: generated output used captions')
-    hypothesis = '\n'.join(s['text'] for s in generated['segments'])
+    segments = generated['segments']
+    outside = []
+    if span:
+        # Captions cannot judge generated text before/after the span they cover.
+        low, high = span[0] - 1, span[1] + 1
+        outside = [s for s in segments if s.get('end', low) < low or s.get('start', high) > high]
+        segments = [s for s in segments if s not in outside]
+    hypothesis = '\n'.join(s['text'] for s in segments)
     annotated, _ = _measure(reference, hypothesis, language)
-    result, normalization = _measure(strip_fillers(strip_annotations(reference), language),
-                                     strip_fillers(strip_annotations(hypothesis), language),
-                                     language)
+    cleaned_reference = strip_fillers(strip_annotations(reference), language)
+    cleaned_hypothesis = strip_fillers(strip_annotations(hypothesis), language)
+    result, normalization = _measure(cleaned_reference, cleaned_hypothesis, language)
     metric = 'cer' if language == 'ja' else 'wer'
+    for field in ('largest_remaining_differences', 'acceptable_differences'):
+        annotated.pop(field, None)
     return {**result, 'primary_metric': metric, 'strict_v1_score': score(reference, hypothesis),
             'annotations_retained_v2_score': annotated,
-            'normalization': normalization + '; caption annotations, speaker labels and fillers removed (v3)',
+            'generated_chars_outside_reference_span': sum(len(s['text']) for s in outside),
+            'normalization': normalization + '; caption annotations, speaker labels and fillers removed (v4)',
             'normalized_reference_exact_match': result[metric] == 0,
             'reference_status': 'creator_provided_not_independently_reviewed',
             'speaker_accuracy': None, 'acoustic_timing_accuracy': None,
@@ -169,14 +314,18 @@ def report(manifest, results):
                 row['partial_reference_coverage'] = True
                 row['reference_quality_note'] = (row.get('reference_quality_note', '')
                     + ' Caption timestamps cover only part of the media; review before using as full-video ground truth.').strip()
+        reference, corrections = correct_reference(case['id'], reference)
+        if corrections:
+            row['reference_corrections'] = corrections
         if path.exists():
             generated = json.loads(path.read_text(encoding='utf-8'))
-            row.update(assess(reference, generated, case['language']))
+            row.update(assess(reference, generated, case['language'],
+                              row.get('reference_caption_bounds_s')))
             row['generated_sha256'] = _sha256(path)
         else:
             row['status'] = 'no_generated_result'
         rows.append(row)
-    result = {'scoring_version': 3, 'cases': len(cases), 'scored': sum('wer' in r for r in rows),
+    result = {'scoring_version': 4, 'cases': len(cases), 'scored': sum('wer' in r for r in rows),
               'normalized_reference_exact_matches': sum(r.get('normalized_reference_exact_match', False) for r in rows),
               'rows': rows}
     result['groups'] = []
@@ -198,7 +347,7 @@ def report(manifest, results):
                 sum(r[unit + '_errors'] for r in full) / full_denominator if full_denominator else None),
             'partial_coverage_excluded': len(scored) - len(full),
         })
-    save(results / 'reference-scores-v3.json', result)
+    save(results / 'reference-scores-v4.json', result)
     return result
 
 

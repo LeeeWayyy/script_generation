@@ -87,3 +87,39 @@ def test_japanese_fillers_and_backchannels_are_not_required():
     assert result['cer'] == 0 and result['annotations_retained_v2_score']['cer'] > 0
     # Real words are still scored.
     assert assess('あの人', {'segments': [{'text': '人'}]}, 'ja')['char_errors'] == 2
+
+
+def test_japanese_spelling_variants_are_accepted_but_homophones_are_errors():
+    pytest.importorskip('pykakasi')
+    def errors(reference, text):
+        return assess(reference, {'segments': [{'text': text}]}, 'ja')
+    assert errors('3,760円です', '三千七百六十円です')['char_errors'] == 0
+    for reference, text in (('小さい時に行った', '小さいときにいった'), ('綺麗な花', 'きれいな花'),
+                            ('タメになる', 'ためになる')):
+        result = errors(reference, text)
+        assert result['char_errors'] == 0 and result['acceptable_differences']['kana_kanji_spelling'] > 0
+    # Different kanji with the same reading is a recognition error, not spelling.
+    assert errors('台風が来る', '大風が来る')['char_errors'] == 1
+    assert errors('そうですねなるほど', 'そうですね')['largest_remaining_differences'][0]['reference'] == 'なるほど'
+
+
+def test_english_word_spacing_is_accepted_and_listed():
+    pytest.importorskip('transformers.models.whisper.english_normalizer')
+    result = assess('the vietcong came', {'segments': [{'text': 'The Viet Cong came'}]}, 'en')
+    assert result['wer'] == 0 and result['strict_word_errors'] == 2
+    assert result['acceptable_differences']['word_spacing'] == 2
+
+
+def test_reference_corrections_and_caption_span_are_recorded(tmp_path, monkeypatch):
+    import json
+    import benchmarks.youtube_accuracy as accuracy
+    corrections = tmp_path / 'corrections.json'
+    corrections.write_text(json.dumps({'case': [{'pattern': '^noriko(?= |$)', 'reason': 'label'}]}),
+                           encoding='utf-8')
+    monkeypatch.setattr(accuracy, 'CORRECTIONS', corrections)
+    text, applied = accuracy.correct_reference('case', 'noriko こんにちは\nnoriko先生')
+    assert text.split() == ['こんにちは', 'noriko先生'] and applied[0]['removed'] == 1
+    generated = {'segments': [{'text': '地球の自転', 'start': 1, 'end': 2},
+                              {'text': '音楽', 'start': 50, 'end': 60}]}
+    result = assess('地球の自転', generated, 'ja', [0, 20])
+    assert result['cer'] == 0 and result['generated_chars_outside_reference_span'] == 2

@@ -124,6 +124,33 @@ five cases where large-v3 scored 1.6–21.8%. Errors include misrecognized conte
 (`化学式の読み方はo2だ` → `学学学医している`), not only omissions. It was about 2–3×
 faster but was rejected; all languages stay on large-v3, with no language routing.
 
+## Scoring v4: acceptable differences separated
+
+Scoring v4 (`reference-scores-v4.json`, same generated outputs) keeps every
+v3 rule and additionally forgives only differences that are not misheard words:
+same-reading kana/kanji/numeral spellings in Japanese (1,010 characters across
+the corpus), English word-spacing splits/joins (182 words), 343 speaker labels
+in `ja-reference-20` via `reference-corrections.json`, and generated text outside
+the caption time span. Homophones written with different kanji remain errors.
+
+| Set | v3 all cases | v4 all cases | v4 full-coverage references |
+|---|---:|---:|---:|
+| English calibration | 5.73% WER | 5.38% WER | 5.38% WER |
+| English holdout | 4.29% WER | 4.00% WER | 4.00% WER |
+| Japanese calibration | 16.01% CER | 9.49% CER | 7.86% CER |
+| Japanese holdout | 20.47% CER | 15.38% CER | 15.38% CER |
+
+With the kana-only chunk re-decoding now in production (ASR-only trial outputs),
+Japanese is 7.85% (calibration, full coverage) and 14.88% (holdout).
+
+Sampled accepted differences were spelling-only (`けっこう`/`結構`, `にんじん`/`人参`,
+`smart phone`/`smartphone`). The largest remaining differences are mostly real:
+dropped conversational stretches, `瑠璃光院` → `ルリ公園`, and an English phrase in
+`ja-reference-15` generated as `最高`. Some still need listening review rather
+than rules: `ja-reference-06` generated a subscribe outro absent from its captions
+(possibly uncaptioned speech), and `en-reference-08` captions contain written
+mathematical notation rather than the spoken words.
+
 ## Outstanding acceptance work
 
 The generation disagreements still need acoustic adjudication, and incomplete or

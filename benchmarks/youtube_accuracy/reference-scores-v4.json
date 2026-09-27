@@ -1,0 +1,4355 @@
+{
+  "scoring_version": 4,
+  "cases": 40,
+  "scored": 40,
+  "normalized_reference_exact_matches": 0,
+  "rows": [
+    {
+      "case": "en-reference-01",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.12,
+        1042.712
+      ],
+      "wer": 0.013071895424836602,
+      "cer": 0.007397133610725843,
+      "word_errors": 38,
+      "reference_words": 2907,
+      "char_errors": 96,
+      "reference_chars": 12978,
+      "strict_word_errors": 48,
+      "acceptable_differences": {
+        "word_spacing": 10,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "outcompeted",
+            "generated": "out competed"
+          },
+          {
+            "errors": 2,
+            "reference": "longterm",
+            "generated": "long term"
+          },
+          {
+            "errors": 2,
+            "reference": "flat line",
+            "generated": "flatline"
+          },
+          {
+            "errors": 2,
+            "reference": "flat lining",
+            "generated": "flatlining"
+          },
+          {
+            "errors": 2,
+            "reference": "co evolution",
+            "generated": "coevolution"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 3,
+          "reference": "is causing evolution",
+          "generated": ""
+        },
+        {
+          "errors": 2,
+          "reference": "the evolve",
+          "generated": "an evolved"
+        },
+        {
+          "errors": 2,
+          "reference": "",
+          "generated": "you know"
+        },
+        {
+          "errors": 2,
+          "reference": "one 10",
+          "generated": "110th"
+        },
+        {
+          "errors": 1,
+          "reference": "a",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "a",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "a",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "a",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "6a2d8a3e86fd3042c4b64cf73c984579920ca651acdf4a73ab47dc936d293715",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.030027932960893854,
+        "cer": 0.019917582417582416,
+        "word_errors": 86,
+        "reference_words": 2864,
+        "char_errors": 261,
+        "reference_chars": 13104,
+        "normalized_hypothesis_sha256": "300c04408e246e7e5bd82565b4589a91dfeb6c19b764ef957239e9ddd672c5d1"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.013071895424836602,
+        "cer": 0.007397133610725843,
+        "word_errors": 38,
+        "reference_words": 2907,
+        "char_errors": 96,
+        "reference_chars": 12978,
+        "strict_word_errors": 48,
+        "normalized_hypothesis_sha256": "6a2d8a3e86fd3042c4b64cf73c984579920ca651acdf4a73ab47dc936d293715"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "e10e43210ca7de36a7c5c49d27e034a8de9e5d81b541a6355faee46ec816abe4"
+    },
+    {
+      "case": "en-reference-02",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        1.459,
+        324.59
+      ],
+      "wer": 0.005889281507656066,
+      "cer": 0.004036908881199538,
+      "word_errors": 5,
+      "reference_words": 849,
+      "char_errors": 14,
+      "reference_chars": 3468,
+      "strict_word_errors": 11,
+      "acceptable_differences": {
+        "word_spacing": 6,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "teabag",
+            "generated": "tea bag"
+          },
+          {
+            "errors": 2,
+            "reference": "teabag",
+            "generated": "tea bag"
+          },
+          {
+            "errors": 2,
+            "reference": "teabag",
+            "generated": "tea bag"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 1,
+          "reference": "hadfield",
+          "generated": "hatfield"
+        },
+        {
+          "errors": 1,
+          "reference": "hadfield",
+          "generated": "hatfield"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "slash"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "slash"
+        },
+        {
+          "errors": 1,
+          "reference": "help",
+          "generated": "helped"
+        }
+      ],
+      "normalized_hypothesis_sha256": "9c9984d736aa9914d66af8aed58dbba20a1056b908003dce3c360ab081ff0c4a",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.02033492822966507,
+        "cer": 0.004899135446685879,
+        "word_errors": 17,
+        "reference_words": 836,
+        "char_errors": 17,
+        "reference_chars": 3470,
+        "normalized_hypothesis_sha256": "fb63826c4c0c0fd8990cb6d35639995f68cb8dc5d6fe28c90035ee2315a44e36"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.005889281507656066,
+        "cer": 0.004036908881199538,
+        "word_errors": 5,
+        "reference_words": 849,
+        "char_errors": 14,
+        "reference_chars": 3468,
+        "strict_word_errors": 11,
+        "normalized_hypothesis_sha256": "9c9984d736aa9914d66af8aed58dbba20a1056b908003dce3c360ab081ff0c4a"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "a49056f30435f21dd45328dbd265ac4b89c676880e496820da54cd7dd2ddc369"
+    },
+    {
+      "case": "en-reference-03",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        11.48,
+        3221.559
+      ],
+      "wer": 0.06487927714412679,
+      "cer": 0.04926076360682372,
+      "word_errors": 438,
+      "reference_words": 6751,
+      "char_errors": 1516,
+      "reference_chars": 30775,
+      "strict_word_errors": 466,
+      "acceptable_differences": {
+        "word_spacing": 28,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "re covered",
+            "generated": "recovered"
+          },
+          {
+            "errors": 2,
+            "reference": "sea floor",
+            "generated": "seafloor"
+          },
+          {
+            "errors": 2,
+            "reference": "sea floor",
+            "generated": "seafloor"
+          },
+          {
+            "errors": 2,
+            "reference": "seafloor",
+            "generated": "sea floor"
+          },
+          {
+            "errors": 2,
+            "reference": "manmade",
+            "generated": "man made"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 7,
+          "reference": "each other",
+          "generated": "another the same principle was applied here"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "behind a wall in the tomb"
+        },
+        {
+          "errors": 6,
+          "reference": "when they disappear",
+          "generated": "at the time of their disappearance"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "to us for several reasons"
+        },
+        {
+          "errors": 5,
+          "reference": "add a",
+          "generated": "and associate that with the"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "we celebrate our achievements well"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "like the discovery of troy"
+        },
+        {
+          "errors": 5,
+          "reference": "manmade",
+          "generated": "something that was man made"
+        }
+      ],
+      "normalized_hypothesis_sha256": "6a04538a6053fda28d3ba7b686d28ad9ec318a38b9a590b00945de89789d13ed",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.08266666666666667,
+        "cer": 0.05985452914223461,
+        "word_errors": 558,
+        "reference_words": 6750,
+        "char_errors": 1868,
+        "reference_chars": 31209,
+        "normalized_hypothesis_sha256": "f678dcae6eac7f34d0f8cbbe00886340c298d196f40d53233c8e9d8d9eb5fcdd"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.06487927714412679,
+        "cer": 0.04926076360682372,
+        "word_errors": 438,
+        "reference_words": 6751,
+        "char_errors": 1516,
+        "reference_chars": 30775,
+        "strict_word_errors": 466,
+        "normalized_hypothesis_sha256": "6a04538a6053fda28d3ba7b686d28ad9ec318a38b9a590b00945de89789d13ed"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "0b9033f7b2ed7f8caae7612a39c9ebbc07b867a24f010175c46525c42b78d984"
+    },
+    {
+      "case": "en-reference-04",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        6.859,
+        3210.8650000000002
+      ],
+      "wer": 0.035740514075887395,
+      "cer": 0.02505086469989827,
+      "word_errors": 292,
+      "reference_words": 8170,
+      "char_errors": 985,
+      "reference_chars": 39320,
+      "strict_word_errors": 322,
+      "acceptable_differences": {
+        "word_spacing": 30,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "north eastern",
+            "generated": "northeastern"
+          },
+          {
+            "errors": 2,
+            "reference": "birthdate",
+            "generated": "birth date"
+          },
+          {
+            "errors": 2,
+            "reference": "vietcong",
+            "generated": "viet cong"
+          },
+          {
+            "errors": 2,
+            "reference": "vietcong",
+            "generated": "viet cong"
+          },
+          {
+            "errors": 2,
+            "reference": "vietcong",
+            "generated": "viet cong"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 156,
+          "reference": "",
+          "generated": "hello guys thank you so much for watching this video if you enjoy our work and would like to support the channel please visit our revamped patreon and buymeacoffee membership pages which contain rewards such as early access to our content merchandise discounts and audio versions of our videos along with much more that we give to our valued supporters if you have not yet signed up to help our cause we would like to ask you to please consider doing so as we need to secure the channel by safeguarding it from possible demonetization but also invest in better equipment software and more people to help us improve our videos going forward in short without your contributions these videos would not be possible so if you would like to ensure this channel never has to shut down due to demonetization please spare whatever you can per month and become people profiles patrons thanks for listening"
+        },
+        {
+          "errors": 17,
+          "reference": "",
+          "generated": "15th of april 1998 pol pot died in his sleep as his heart gave out on the"
+        },
+        {
+          "errors": 3,
+          "reference": "vat botum vaddei",
+          "generated": "wat potomwade"
+        },
+        {
+          "errors": 3,
+          "reference": "sangkum reastr niyum",
+          "generated": "sancomria neum"
+        },
+        {
+          "errors": 3,
+          "reference": "khieu samphan to",
+          "generated": "kew sampant"
+        },
+        {
+          "errors": 2,
+          "reference": "saloth sar",
+          "generated": "salot sa"
+        },
+        {
+          "errors": 2,
+          "reference": "prek sbauv",
+          "generated": "prexpal"
+        },
+        {
+          "errors": 2,
+          "reference": "saloth sar",
+          "generated": "salot tsar"
+        }
+      ],
+      "normalized_hypothesis_sha256": "9a8f19e08656935b2fe81c75b19e138a0db905657650e6a98555fb125990b01d",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.0417950930834669,
+        "cer": 0.02859313663416487,
+        "word_errors": 339,
+        "reference_words": 8111,
+        "char_errors": 1129,
+        "reference_chars": 39485,
+        "normalized_hypothesis_sha256": "d06540eff3d5910ec529b4c3dafa0f30430d92ed75fe9a72d8e4c2ac81209403"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.035740514075887395,
+        "cer": 0.02505086469989827,
+        "word_errors": 292,
+        "reference_words": 8170,
+        "char_errors": 985,
+        "reference_chars": 39320,
+        "strict_word_errors": 322,
+        "normalized_hypothesis_sha256": "9a8f19e08656935b2fe81c75b19e138a0db905657650e6a98555fb125990b01d"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "d7e90738f5540903c2d009a2856c0269354ac88ba4cc9a0f30c144b2aa1f4368"
+    },
+    {
+      "case": "en-reference-05",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        2.949,
+        459.419
+      ],
+      "wer": 0.11598173515981736,
+      "cer": 0.07641872032557089,
+      "word_errors": 127,
+      "reference_words": 1095,
+      "char_errors": 338,
+      "reference_chars": 4423,
+      "strict_word_errors": 131,
+      "acceptable_differences": {
+        "word_spacing": 4,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "snake skin",
+            "generated": "snakeskin"
+          },
+          {
+            "errors": 2,
+            "reference": "halfway",
+            "generated": "half way"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 5,
+          "reference": "something",
+          "generated": "so what i am going"
+        },
+        {
+          "errors": 4,
+          "reference": "fought you",
+          "generated": "you have forked it"
+        },
+        {
+          "errors": 4,
+          "reference": "",
+          "generated": "you have got to"
+        },
+        {
+          "errors": 4,
+          "reference": "in to meet send",
+          "generated": "underneath then"
+        },
+        {
+          "errors": 4,
+          "reference": "your better",
+          "generated": "you are bad at"
+        },
+        {
+          "errors": 3,
+          "reference": "yummy",
+          "generated": "to become really"
+        },
+        {
+          "errors": 3,
+          "reference": "that passes",
+          "generated": "the pasta has"
+        },
+        {
+          "errors": 3,
+          "reference": "304",
+          "generated": "3.5 to 4"
+        }
+      ],
+      "normalized_hypothesis_sha256": "8c871cd9efd9e22aa5f08eb868e25df05c3aee3aa367633f3f0ac7199285314b",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.09683257918552036,
+        "cer": 0.05844869259503406,
+        "word_errors": 107,
+        "reference_words": 1105,
+        "char_errors": 266,
+        "reference_chars": 4551,
+        "normalized_hypothesis_sha256": "59f9568c7bfbf107aff9e314097d762af8f53892d4bdbfe06416f3ce3eb5069a"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.11598173515981736,
+        "cer": 0.07641872032557089,
+        "word_errors": 127,
+        "reference_words": 1095,
+        "char_errors": 338,
+        "reference_chars": 4423,
+        "strict_word_errors": 131,
+        "normalized_hypothesis_sha256": "8c871cd9efd9e22aa5f08eb868e25df05c3aee3aa367633f3f0ac7199285314b"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "b4a56055f7735f91f165ba378f5886b0dc2c6b67355c489afd88fcefa54232f9"
+    },
+    {
+      "case": "en-reference-06",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        435.71999999999997
+      ],
+      "wer": 0.016739446870451237,
+      "cer": 0.014293006636038795,
+      "word_errors": 23,
+      "reference_words": 1374,
+      "char_errors": 84,
+      "reference_chars": 5877,
+      "strict_word_errors": 33,
+      "acceptable_differences": {
+        "word_spacing": 10,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "minutefood",
+            "generated": "minute food"
+          },
+          {
+            "errors": 2,
+            "reference": "minutefood",
+            "generated": "minute food"
+          },
+          {
+            "errors": 2,
+            "reference": "minutefood",
+            "generated": "minute food"
+          },
+          {
+            "errors": 2,
+            "reference": "work out",
+            "generated": "workout"
+          },
+          {
+            "errors": 2,
+            "reference": "minutefood",
+            "generated": "minute food"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 9,
+          "reference": "",
+          "generated": "even if they happen super slowly at that temperature"
+        },
+        {
+          "errors": 1,
+          "reference": "its",
+          "generated": "it"
+        },
+        {
+          "errors": 1,
+          "reference": ".",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "f",
+          "generated": "fahrenheit"
+        },
+        {
+          "errors": 1,
+          "reference": "f",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "f",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "whole"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "to"
+        }
+      ],
+      "normalized_hypothesis_sha256": "7814ba64d2e4f225470b3a515114a2ad1ff7b650de9f5603e7e14d53ab8b4fa0",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.023378582202111614,
+        "cer": 0.007680491551459293,
+        "word_errors": 31,
+        "reference_words": 1326,
+        "char_errors": 45,
+        "reference_chars": 5859,
+        "normalized_hypothesis_sha256": "92203e01a8a0ae63089b5761120ce89738657d1572c91dc4b848054f3b3e6559"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.016739446870451237,
+        "cer": 0.014293006636038795,
+        "word_errors": 23,
+        "reference_words": 1374,
+        "char_errors": 84,
+        "reference_chars": 5877,
+        "strict_word_errors": 33,
+        "normalized_hypothesis_sha256": "7814ba64d2e4f225470b3a515114a2ad1ff7b650de9f5603e7e14d53ab8b4fa0"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "307de85e5db88c03530ab0aeaedb942c0b42e97ab5d245137cae5909c804a296"
+    },
+    {
+      "case": "en-reference-07",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        719.4
+      ],
+      "wer": 0.06914433880726016,
+      "cer": 0.045351004348726444,
+      "word_errors": 160,
+      "reference_words": 2314,
+      "char_errors": 438,
+      "reference_chars": 9658,
+      "strict_word_errors": 180,
+      "acceptable_differences": {
+        "word_spacing": 20,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "nano scientist",
+            "generated": "nanoscientist"
+          },
+          {
+            "errors": 2,
+            "reference": "nano meter",
+            "generated": "nanometer"
+          },
+          {
+            "errors": 2,
+            "reference": "nano meter",
+            "generated": "nanometer"
+          },
+          {
+            "errors": 2,
+            "reference": "nano meter",
+            "generated": "nanometer"
+          },
+          {
+            "errors": 2,
+            "reference": "nano meter",
+            "generated": "nanometer"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 9,
+          "reference": "",
+          "generated": "and we are going to have to think about"
+        },
+        {
+          "errors": 4,
+          "reference": "phil moriarty",
+          "generated": "60 simple is own"
+        },
+        {
+          "errors": 4,
+          "reference": "about about",
+          "generated": "off the order of"
+        },
+        {
+          "errors": 4,
+          "reference": "a erm you know",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "straight forward",
+          "generated": "quite straightforward these days"
+        },
+        {
+          "errors": 4,
+          "reference": "one 2 3 4",
+          "generated": "1234"
+        },
+        {
+          "errors": 4,
+          "reference": "",
+          "generated": "there are so many"
+        },
+        {
+          "errors": 3,
+          "reference": "nano scientist h",
+          "generated": "nanoscientist"
+        }
+      ],
+      "normalized_hypothesis_sha256": "61feb10691b250b391779affdd03f27010e27ddd098355431e5e8fc4a6d87b07",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.08915770609318996,
+        "cer": 0.049614342297269125,
+        "word_errors": 199,
+        "reference_words": 2232,
+        "char_errors": 476,
+        "reference_chars": 9594,
+        "normalized_hypothesis_sha256": "663a0fbef3374637f5803229ce4fe3bdb2653828046afbcf39473e37c8ac6b52"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.0695464362850972,
+        "cer": 0.04544983952790144,
+        "word_errors": 161,
+        "reference_words": 2315,
+        "char_errors": 439,
+        "reference_chars": 9659,
+        "strict_word_errors": 181,
+        "normalized_hypothesis_sha256": "61feb10691b250b391779affdd03f27010e27ddd098355431e5e8fc4a6d87b07"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "a1b7aa745a9cfd57d45e5740318e50c6fe70379c35d8ce25c3cd91f6eda60040"
+    },
+    {
+      "case": "en-reference-08",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        955.1600000000001
+      ],
+      "wer": 0.15989036089538602,
+      "cer": 0.0986652977412731,
+      "word_errors": 350,
+      "reference_words": 2189,
+      "char_errors": 961,
+      "reference_chars": 9740,
+      "strict_word_errors": 352,
+      "acceptable_differences": {
+        "word_spacing": 2,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "where as",
+            "generated": "whereas"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 14,
+          "reference": "n one is also a Natural number n N succ N is n one",
+          "generated": "all the natural numbers"
+        },
+        {
+          "errors": 7,
+          "reference": "p P q P q p is",
+          "generated": "as"
+        },
+        {
+          "errors": 6,
+          "reference": "f a b",
+          "generated": "which comes from computer science or"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "it is a programming language"
+        },
+        {
+          "errors": 5,
+          "reference": "a logical expression",
+          "generated": "an expression in the logic"
+        },
+        {
+          "errors": 5,
+          "reference": "with certain properties p p",
+          "generated": "which have"
+        },
+        {
+          "errors": 5,
+          "reference": "is there",
+          "generated": "so you have sort of"
+        },
+        {
+          "errors": 5,
+          "reference": "0 one 2 3 4",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "f6878a960f9117679675cc8a29007b9c09227dc28c562124cb3b01e2c5f7b829",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.1790009250693802,
+        "cer": 0.11137270959156516,
+        "word_errors": 387,
+        "reference_words": 2162,
+        "char_errors": 1088,
+        "reference_chars": 9769,
+        "normalized_hypothesis_sha256": "a80aedbc61e7632c5d8cf1608fd96cfd38e37cc79c4507c0cbcf0a4d50a001bb"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.16227272727272726,
+        "cer": 0.10210332856851133,
+        "word_errors": 357,
+        "reference_words": 2200,
+        "char_errors": 1000,
+        "reference_chars": 9794,
+        "strict_word_errors": 359,
+        "normalized_hypothesis_sha256": "f6878a960f9117679675cc8a29007b9c09227dc28c562124cb3b01e2c5f7b829"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "d8a8c3d43c6c54ff40e8902fe6e38750d6e204e40ad3a4c973c4a97f0930f2b0"
+    },
+    {
+      "case": "en-reference-09",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.719,
+        244.129
+      ],
+      "wer": 0.01756587202007528,
+      "cer": 0.0073461891643709825,
+      "word_errors": 14,
+      "reference_words": 797,
+      "char_errors": 24,
+      "reference_chars": 3267,
+      "strict_word_errors": 16,
+      "acceptable_differences": {
+        "word_spacing": 2,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "smart phone",
+            "generated": "smartphone"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 3,
+          "reference": "s wifi",
+          "generated": "is wi fi"
+        },
+        {
+          "errors": 2,
+          "reference": "it would",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "sized",
+          "generated": "size"
+        },
+        {
+          "errors": 1,
+          "reference": "on",
+          "generated": "in"
+        },
+        {
+          "errors": 1,
+          "reference": "sleeved",
+          "generated": "sleeve"
+        },
+        {
+          "errors": 1,
+          "reference": "sleeved",
+          "generated": "sleeve"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "a"
+        },
+        {
+          "errors": 1,
+          "reference": "have",
+          "generated": "got"
+        }
+      ],
+      "normalized_hypothesis_sha256": "d2d86c22fc85f305f126c282213a8e614de3be7f583ca36196e7415b4253d499",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.020671834625323,
+        "cer": 0.006752608962553714,
+        "word_errors": 16,
+        "reference_words": 774,
+        "char_errors": 22,
+        "reference_chars": 3258,
+        "normalized_hypothesis_sha256": "01b6a07b9b5982eff18d47f1ca0aa18ea5c12f549398ab0351a02c6e3c1a6fc6"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.01756587202007528,
+        "cer": 0.0073461891643709825,
+        "word_errors": 14,
+        "reference_words": 797,
+        "char_errors": 24,
+        "reference_chars": 3267,
+        "strict_word_errors": 16,
+        "normalized_hypothesis_sha256": "d2d86c22fc85f305f126c282213a8e614de3be7f583ca36196e7415b4253d499"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "9921924eb9ac9e869dbe74a7450a427400725ed930585a08225de3ee57c0e431"
+    },
+    {
+      "case": "en-reference-10",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.934,
+        383.04900000000004
+      ],
+      "wer": 0.010894941634241245,
+      "cer": 0.007942657884540875,
+      "word_errors": 14,
+      "reference_words": 1285,
+      "char_errors": 41,
+      "reference_chars": 5162,
+      "strict_word_errors": 14,
+      "acceptable_differences": {
+        "word_spacing": 0,
+        "examples": []
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 2,
+          "reference": "damrak",
+          "generated": "dam rack"
+        },
+        {
+          "errors": 2,
+          "reference": "the rhine",
+          "generated": ""
+        },
+        {
+          "errors": 2,
+          "reference": "you got",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "in",
+          "generated": "an"
+        },
+        {
+          "errors": 1,
+          "reference": "sights",
+          "generated": "sites"
+        },
+        {
+          "errors": 1,
+          "reference": "ob",
+          "generated": "an"
+        },
+        {
+          "errors": 1,
+          "reference": "the",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "alright",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "e187d1c225369ddcbf419b72a060cea3d2294056de69ffd9b85a3426ed0474c7",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.015561015561015561,
+        "cer": 0.012128325508607199,
+        "word_errors": 19,
+        "reference_words": 1221,
+        "char_errors": 62,
+        "reference_chars": 5112,
+        "normalized_hypothesis_sha256": "9a04d1182a044933ccedbac3fe840e98ea357db441735e4ef8dff4d9c80111c5"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.010894941634241245,
+        "cer": 0.007942657884540875,
+        "word_errors": 14,
+        "reference_words": 1285,
+        "char_errors": 41,
+        "reference_chars": 5162,
+        "strict_word_errors": 14,
+        "normalized_hypothesis_sha256": "e187d1c225369ddcbf419b72a060cea3d2294056de69ffd9b85a3426ed0474c7"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "e89ddf7c5c32383e05c5474b109c02d4cf236d8f6cb63cd18961969a307d75f0"
+    },
+    {
+      "case": "en-reference-11",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        2.36,
+        385.039
+      ],
+      "wer": 0.029069767441860465,
+      "cer": 0.02620776760341017,
+      "word_errors": 25,
+      "reference_words": 860,
+      "char_errors": 83,
+      "reference_chars": 3167,
+      "strict_word_errors": 25,
+      "acceptable_differences": {
+        "word_spacing": 0,
+        "examples": []
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 6,
+          "reference": "racing on i wanted to be",
+          "generated": ""
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "i do not know how"
+        },
+        {
+          "errors": 3,
+          "reference": "it is yeah",
+          "generated": ""
+        },
+        {
+          "errors": 2,
+          "reference": "",
+          "generated": "you know"
+        },
+        {
+          "errors": 2,
+          "reference": "and yeah",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "zegama",
+          "generated": "together"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "like"
+        },
+        {
+          "errors": 1,
+          "reference": "sure",
+          "generated": "showing"
+        }
+      ],
+      "normalized_hypothesis_sha256": "751d9221b74f458ff8c235ac55b5c078f8316622fced01200f9549cee20d330e",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.030120481927710843,
+        "cer": 0.02643312101910828,
+        "word_errors": 25,
+        "reference_words": 830,
+        "char_errors": 83,
+        "reference_chars": 3140,
+        "normalized_hypothesis_sha256": "94b31dc60032de451f47a9dfcb9bbbefa42ac0b937e286ec2299f403f23316d2"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.029069767441860465,
+        "cer": 0.02620776760341017,
+        "word_errors": 25,
+        "reference_words": 860,
+        "char_errors": 83,
+        "reference_chars": 3167,
+        "strict_word_errors": 25,
+        "normalized_hypothesis_sha256": "751d9221b74f458ff8c235ac55b5c078f8316622fced01200f9549cee20d330e"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "6ba677fe94fc90bfa838de9dcfee9cc215af0296c0eb693f6ec49ba61b8557c7"
+    },
+    {
+      "case": "en-reference-12",
+      "language": "en",
+      "split": "calibration",
+      "reference_quality_note": "Pilot comparison found suspect wording; retain as diagnostic, not trusted ground truth without review.",
+      "reference_caption_bounds_s": [
+        0.42,
+        392.38
+      ],
+      "wer": 0.07763401109057301,
+      "cer": 0.04887628191141174,
+      "word_errors": 84,
+      "reference_words": 1082,
+      "char_errors": 224,
+      "reference_chars": 4583,
+      "strict_word_errors": 86,
+      "acceptable_differences": {
+        "word_spacing": 2,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "bestselling",
+            "generated": "best selling"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 5,
+          "reference": "an",
+          "generated": "and they showed me this"
+        },
+        {
+          "errors": 4,
+          "reference": "monotonously sold",
+          "generated": "nuts and sea salt"
+        },
+        {
+          "errors": 4,
+          "reference": "with people who",
+          "generated": "because it does not"
+        },
+        {
+          "errors": 3,
+          "reference": "his heart",
+          "generated": "he saw it"
+        },
+        {
+          "errors": 3,
+          "reference": "or",
+          "generated": "i do not"
+        },
+        {
+          "errors": 3,
+          "reference": "an additional buyer",
+          "generated": "a nutritional bar"
+        },
+        {
+          "errors": 3,
+          "reference": "an additional buyer",
+          "generated": "a nutritional bar"
+        },
+        {
+          "errors": 3,
+          "reference": "story to",
+          "generated": "store it should"
+        }
+      ],
+      "normalized_hypothesis_sha256": "3fe2f1551ac5b0206f7799f4d411acac8b3f2b399a07e529074688675234d139",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.09395348837209302,
+        "cer": 0.06675252200042928,
+        "word_errors": 101,
+        "reference_words": 1075,
+        "char_errors": 311,
+        "reference_chars": 4659,
+        "normalized_hypothesis_sha256": "1c11b2b7d8a7825443314ce7fffab70aed524e8dd93f80f6cfc6d7fcab251f6c"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.07763401109057301,
+        "cer": 0.04887628191141174,
+        "word_errors": 84,
+        "reference_words": 1082,
+        "char_errors": 224,
+        "reference_chars": 4583,
+        "strict_word_errors": 86,
+        "normalized_hypothesis_sha256": "3fe2f1551ac5b0206f7799f4d411acac8b3f2b399a07e529074688675234d139"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "cf0ca0502457108e059227409c942bbcd01f1a8b34efaa0a4af98c131207e3f3"
+    },
+    {
+      "case": "en-reference-13",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.26,
+        436.6
+      ],
+      "wer": 0.03961748633879782,
+      "cer": 0.024964672633066416,
+      "word_errors": 58,
+      "reference_words": 1464,
+      "char_errors": 159,
+      "reference_chars": 6369,
+      "strict_word_errors": 78,
+      "acceptable_differences": {
+        "word_spacing": 20,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "fairytale",
+            "generated": "fairy tale"
+          },
+          {
+            "errors": 2,
+            "reference": "kitesurfing",
+            "generated": "kite surfing"
+          },
+          {
+            "errors": 2,
+            "reference": "start up",
+            "generated": "startup"
+          },
+          {
+            "errors": 2,
+            "reference": "kitesurfing",
+            "generated": "kite surfing"
+          },
+          {
+            "errors": 2,
+            "reference": "kitesurfing",
+            "generated": "kite surfing"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 7,
+          "reference": "",
+          "generated": "it is my risk tolerance yeah probably"
+        },
+        {
+          "errors": 4,
+          "reference": "an interest in kitesurfing",
+          "generated": "and interesting kite surfing"
+        },
+        {
+          "errors": 2,
+          "reference": "adobes",
+          "generated": "adobe is"
+        },
+        {
+          "errors": 2,
+          "reference": "it is",
+          "generated": "has"
+        },
+        {
+          "errors": 2,
+          "reference": "$900000000",
+          "generated": "us$900 1000000"
+        },
+        {
+          "errors": 2,
+          "reference": "",
+          "generated": "then just"
+        },
+        {
+          "errors": 2,
+          "reference": "in it",
+          "generated": ""
+        },
+        {
+          "errors": 2,
+          "reference": "$3200000000",
+          "generated": "us$3.2 1000000000"
+        }
+      ],
+      "normalized_hypothesis_sha256": "3afc87b11121c4e3d76658e6edacb9f5053617cd2547fb55d0b86cb8760d72bf",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.05439330543933055,
+        "cer": 0.025778902419737466,
+        "word_errors": 78,
+        "reference_words": 1434,
+        "char_errors": 163,
+        "reference_chars": 6323,
+        "normalized_hypothesis_sha256": "9816d9145307b47be74b9f7227726974842268af945f7d7efaf8539bf6174cfc"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.03961748633879782,
+        "cer": 0.024964672633066416,
+        "word_errors": 58,
+        "reference_words": 1464,
+        "char_errors": 159,
+        "reference_chars": 6369,
+        "strict_word_errors": 78,
+        "normalized_hypothesis_sha256": "3afc87b11121c4e3d76658e6edacb9f5053617cd2547fb55d0b86cb8760d72bf"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "67344c537bab235ab8a092a5b7e6e7a0df5785a521c3788424e98f256f713b28"
+    },
+    {
+      "case": "en-reference-14",
+      "language": "en",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.04,
+        2969.96
+      ],
+      "wer": 0.059546092653252225,
+      "cer": 0.04565998377564028,
+      "word_errors": 509,
+      "reference_words": 8548,
+      "char_errors": 1576,
+      "reference_chars": 34516,
+      "strict_word_errors": 511,
+      "acceptable_differences": {
+        "word_spacing": 2,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "set up",
+            "generated": "setup"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 19,
+          "reference": "so if you ask this question to a society that pronounces of just like off would that change anything",
+          "generated": ""
+        },
+        {
+          "errors": 16,
+          "reference": "that did not pronounce f is as f is in america we pronounce it of of",
+          "generated": "0"
+        },
+        {
+          "errors": 11,
+          "reference": "all right all right sorry it is sort of a joke",
+          "generated": ""
+        },
+        {
+          "errors": 9,
+          "reference": "green brown pink green blue yellow red great excellent",
+          "generated": "great you are excellent okay"
+        },
+        {
+          "errors": 8,
+          "reference": "green blue red blue red yellow red ah",
+          "generated": ""
+        },
+        {
+          "errors": 8,
+          "reference": "how did they go about measuring average happiness",
+          "generated": ""
+        },
+        {
+          "errors": 7,
+          "reference": "",
+          "generated": "if it is going to do something"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "and let us look at it"
+        }
+      ],
+      "normalized_hypothesis_sha256": "9d835364b0f78a95b9f85744e11e30a9df5bfcf1b18c97639c353939293d5bd0",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.07433671597994865,
+        "cer": 0.0616357285141026,
+        "word_errors": 608,
+        "reference_words": 8179,
+        "char_errors": 2135,
+        "reference_chars": 34639,
+        "normalized_hypothesis_sha256": "d6d75db7ca11a5327f78f891ddaa8d26eb53b7917dab5bdf9a4bc4006fe3fd01"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.06608594657375146,
+        "cer": 0.059290116411778136,
+        "word_errors": 569,
+        "reference_words": 8610,
+        "char_errors": 2078,
+        "reference_chars": 35048,
+        "strict_word_errors": 571,
+        "normalized_hypothesis_sha256": "9d835364b0f78a95b9f85744e11e30a9df5bfcf1b18c97639c353939293d5bd0"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "a7313572c40ce635f41bea35a1fa892cd2fb84591db384d8b4b502780f8a8682"
+    },
+    {
+      "case": "en-reference-15",
+      "language": "en",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        10.2,
+        3390.7000000000003
+      ],
+      "wer": 0.048831427150671305,
+      "cer": 0.042602482502987295,
+      "word_errors": 491,
+      "reference_words": 10055,
+      "char_errors": 1747,
+      "reference_chars": 41007,
+      "strict_word_errors": 497,
+      "acceptable_differences": {
+        "word_spacing": 6,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "supercomputers",
+            "generated": "super computers"
+          },
+          {
+            "errors": 2,
+            "reference": "pike fish",
+            "generated": "pikefish"
+          },
+          {
+            "errors": 2,
+            "reference": "nonspatial",
+            "generated": "non spatial"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 32,
+          "reference": "i was polishing the brass in the master bedroom i was buttering his lordship is scones below stairs sir i was planting my petunias in the potting shed constable arrest lady smythe",
+          "generated": ""
+        },
+        {
+          "errors": 26,
+          "reference": "if you see somebody even a familiar face you can either it helps identify them as 0 i know that person then obviously they are there",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "i feel like the shops changed but i do not know when or how",
+          "generated": ""
+        },
+        {
+          "errors": 13,
+          "reference": "every time i blink it changes from the house to the face aha",
+          "generated": "huh"
+        },
+        {
+          "errors": 11,
+          "reference": "jimmy when you are not attending but when you are attending",
+          "generated": "to me"
+        },
+        {
+          "errors": 10,
+          "reference": "i can see the face a lot easier than switching",
+          "generated": ""
+        },
+        {
+          "errors": 7,
+          "reference": "a significant affects so you should not",
+          "generated": ""
+        },
+        {
+          "errors": 7,
+          "reference": "the awnings changed the buildings changed colors",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "7fef9eff794e56c3a8b45bf9a8a258ccd8ada2133f01696202384c62005d6d9d",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.06631600660066006,
+        "cer": 0.05831344083402348,
+        "word_errors": 643,
+        "reference_words": 9696,
+        "char_errors": 2394,
+        "reference_chars": 41054,
+        "normalized_hypothesis_sha256": "5f622d44fd7b879b069bffa0e4d1216c5df01cb51170793802f6389267d60e44"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.05614762186698243,
+        "cer": 0.055332451605146084,
+        "word_errors": 569,
+        "reference_words": 10134,
+        "char_errors": 2301,
+        "reference_chars": 41585,
+        "strict_word_errors": 575,
+        "normalized_hypothesis_sha256": "7fef9eff794e56c3a8b45bf9a8a258ccd8ada2133f01696202384c62005d6d9d"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "4cfa5426c57c9032ddf70dbe7a6503c6dc8fa55b150ff1b82ced85ca3a5ab2cd"
+    },
+    {
+      "case": "en-reference-16",
+      "language": "en",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        12.16,
+        1115.001
+      ],
+      "wer": 0.015955601803676726,
+      "cer": 0.007317267159786845,
+      "word_errors": 46,
+      "reference_words": 2883,
+      "char_errors": 92,
+      "reference_chars": 12573,
+      "strict_word_errors": 62,
+      "acceptable_differences": {
+        "word_spacing": 16,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "u s",
+            "generated": "us"
+          },
+          {
+            "errors": 2,
+            "reference": "u s",
+            "generated": "us"
+          },
+          {
+            "errors": 2,
+            "reference": "u s",
+            "generated": "us"
+          },
+          {
+            "errors": 2,
+            "reference": "u s",
+            "generated": "us"
+          },
+          {
+            "errors": 2,
+            "reference": "u s",
+            "generated": "us"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 2,
+          "reference": "camara laye",
+          "generated": "kamara lai"
+        },
+        {
+          "errors": 2,
+          "reference": "live in",
+          "generated": "living"
+        },
+        {
+          "errors": 2,
+          "reference": "tortillas",
+          "generated": "to tears"
+        },
+        {
+          "errors": 2,
+          "reference": "",
+          "generated": "and now"
+        },
+        {
+          "errors": 2,
+          "reference": "tyler and",
+          "generated": "thailand"
+        },
+        {
+          "errors": 2,
+          "reference": "there are",
+          "generated": "the"
+        },
+        {
+          "errors": 2,
+          "reference": "hardworking",
+          "generated": "had walking"
+        },
+        {
+          "errors": 2,
+          "reference": "funmi iyanda",
+          "generated": "fumi yonda"
+        }
+      ],
+      "normalized_hypothesis_sha256": "eaa881c1459a88aba305f77e368128017161412249d333f5ee0ae88ba18b578f",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.027497389488339713,
+        "cer": 0.014845230574857865,
+        "word_errors": 79,
+        "reference_words": 2873,
+        "char_errors": 188,
+        "reference_chars": 12664,
+        "normalized_hypothesis_sha256": "610226dc62721612c2f4bb575b973ff0f2cc5268a567b3e6c57f61de92afa376"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.015955601803676726,
+        "cer": 0.007317267159786845,
+        "word_errors": 46,
+        "reference_words": 2883,
+        "char_errors": 92,
+        "reference_chars": 12573,
+        "strict_word_errors": 62,
+        "normalized_hypothesis_sha256": "eaa881c1459a88aba305f77e368128017161412249d333f5ee0ae88ba18b578f"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "9ed8038bf47d90c60355ac368bf7ad33f452caaaa375a6682b7377ff177c4072"
+    },
+    {
+      "case": "en-reference-17",
+      "language": "en",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        13.145,
+        1157.663
+      ],
+      "wer": 0.05169538632573652,
+      "cer": 0.042999193765116905,
+      "word_errors": 186,
+      "reference_words": 3598,
+      "char_errors": 640,
+      "reference_chars": 14884,
+      "strict_word_errors": 186,
+      "acceptable_differences": {
+        "word_spacing": 0,
+        "examples": []
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 7,
+          "reference": "that",
+          "generated": "it just did not come like got"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "this is going to be"
+        },
+        {
+          "errors": 4,
+          "reference": "was a teenager",
+          "generated": "1st started telling people"
+        },
+        {
+          "errors": 4,
+          "reference": "1st started telling people",
+          "generated": "was a teenager"
+        },
+        {
+          "errors": 4,
+          "reference": "or",
+          "generated": "he does not have"
+        },
+        {
+          "errors": 4,
+          "reference": "or",
+          "generated": "he does not have"
+        },
+        {
+          "errors": 4,
+          "reference": "and it is not",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "have been thinking",
+          "generated": "was thinking about it"
+        }
+      ],
+      "normalized_hypothesis_sha256": "11110f558dfe1266be4bf98ee2da522a0c8710197632e8860cee24bd95eabd2d",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.05585636933599316,
+        "cer": 0.049059139784946235,
+        "word_errors": 196,
+        "reference_words": 3509,
+        "char_errors": 730,
+        "reference_chars": 14880,
+        "normalized_hypothesis_sha256": "3f621871e1414bf5c3dbd99dd5d76632de185d3899afc6e7caf3b297a8a68e75"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.051666666666666666,
+        "cer": 0.042771771973410325,
+        "word_errors": 186,
+        "reference_words": 3600,
+        "char_errors": 637,
+        "reference_chars": 14893,
+        "strict_word_errors": 186,
+        "normalized_hypothesis_sha256": "11110f558dfe1266be4bf98ee2da522a0c8710197632e8860cee24bd95eabd2d"
+      },
+      "generated_chars_outside_reference_span": 10,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "afd6c8ece5b353a32880d3c2c6db8a47bb497cfd29dccd9f061719e73f8b90f2"
+    },
+    {
+      "case": "ja-reference-01",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.99,
+        166.253
+      ],
+      "cer": 0.007751937984496124,
+      "wer": 0.007751937984496124,
+      "char_errors": 5,
+      "reference_chars": 645,
+      "strict_char_errors": 9,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 4,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "とき",
+            "generated": "時"
+          },
+          {
+            "errors": 1,
+            "reference": "着",
+            "generated": "つ"
+          },
+          {
+            "errors": 1,
+            "reference": "着",
+            "generated": "つ"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 2,
+          "reference": "鳴気",
+          "generated": "明機"
+        },
+        {
+          "errors": 1,
+          "reference": "気",
+          "generated": "機"
+        },
+        {
+          "errors": 1,
+          "reference": "ー",
+          "generated": ""
+        },
+        {
+          "errors": 1,
+          "reference": "い",
+          "generated": "言"
+        }
+      ],
+      "normalized_hypothesis_sha256": "c13c63a06f7094e218ded56d7a1de552d1cd58e25b6b5602216193ace924d2cf",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9393939393939394,
+        "cer": 0.02599388379204893,
+        "word_errors": 62,
+        "reference_words": 66,
+        "char_errors": 17,
+        "reference_chars": 654,
+        "normalized_hypothesis_sha256": "93590fb4e12847f9e0cadf00a68674ae465720c2332c14adf1b5784f8a07bd71"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.016819571865443424,
+        "wer": 0.016819571865443424,
+        "char_errors": 11,
+        "reference_chars": 654,
+        "strict_char_errors": 16,
+        "normalized_hypothesis_sha256": "01a911e36d6d95d434035c44e76e283066f8461de8aee0a508cafb4c53fc9bd1"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "a74fb4301556a546a41f59c5374cb0bad8fe0b9fad7ea28d3313a360efd51ac9"
+    },
+    {
+      "case": "ja-reference-02",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        106.52,
+        402.3
+      ],
+      "partial_reference_coverage": true,
+      "reference_quality_note": "Caption timestamps cover only part of the media; review before using as full-video ground truth.",
+      "cer": 3.872340425531915,
+      "wer": 3.872340425531915,
+      "char_errors": 728,
+      "reference_chars": 188,
+      "strict_char_errors": 731,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 3,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "下",
+            "generated": "くだ"
+          },
+          {
+            "errors": 1,
+            "reference": "付",
+            "generated": "つ"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 94,
+          "reference": "ねゴーーーーーバーーーーン",
+          "generated": "さい箱根山大涌谷で新たな噴火口から水蒸気による噴火が起こり噴火警戒レベルが五に引き上げられました繰り返します箱根山大涌谷で噴火が発生噴火警戒レベルが五に引き上げられました大涌谷河口から二一"
+        },
+        {
+          "errors": 64,
+          "reference": "だ",
+          "generated": "ます大きな噴石が飛んできたり火砕流によって大きな被害が生じる恐れもあります警戒が必要な場所に住んでいる方などは避難が必要です火口"
+        },
+        {
+          "errors": 61,
+          "reference": "",
+          "generated": "神奈川県の箱根山大涌谷では火山性地震の増加などから噴火警戒レベルが四に引き上げられました体に感じる程度の地震が多く発生して"
+        },
+        {
+          "errors": 50,
+          "reference": "",
+          "generated": "ました気象庁は噴火警戒レベルを平常状態のレベル一からレベル二に引き上げ河口周辺への立ち入りは規制され"
+        },
+        {
+          "errors": 50,
+          "reference": "",
+          "generated": "ました気象庁ではごく小規模な噴火が発生したとして噴火警戒レベルを火口から居住地域近くまで入山を規制す"
+        },
+        {
+          "errors": 49,
+          "reference": "写真取",
+          "generated": "一か月がたちました火山活動が活発になってからおよそ二ヵ月がたちますがきょう初めて火山整備道が観測さ"
+        },
+        {
+          "errors": 45,
+          "reference": "るんだ",
+          "generated": "いて箱根町では河口周辺の立ち入りを規制しています箱根町用途では震度二の地震が三回という先ほ"
+        },
+        {
+          "errors": 38,
+          "reference": "よね運休",
+          "generated": "恐れがあり注意を呼びかけています現場から中継です大垣谷からは白い蒸気が吹き出"
+        }
+      ],
+      "normalized_hypothesis_sha256": "04c83228d181cfec26ca58352de4bcd115506157e2ff22d8dbf65fee340f1ab5",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 1.09375,
+        "cer": 3.878306878306878,
+        "word_errors": 35,
+        "reference_words": 32,
+        "char_errors": 733,
+        "reference_chars": 189,
+        "normalized_hypothesis_sha256": "1a266a21e6ef87b89794f041ffab5115b8f08782a0928aff7b5f1c976043adf5"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 3.8624338624338623,
+        "wer": 3.8624338624338623,
+        "char_errors": 730,
+        "reference_chars": 189,
+        "strict_char_errors": 733,
+        "normalized_hypothesis_sha256": "6a1edbc30f5717297ac1787529b4dd62f2eb5ea9789a7abb945daac1322d266a"
+      },
+      "generated_chars_outside_reference_span": 2066,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "47855fbdc29fd9d670da7da1a3bd94ded51e8c3b71332e4bdcf4927e305461aa"
+    },
+    {
+      "case": "ja-reference-03",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.92,
+        988.86
+      ],
+      "cer": 0.0490826781034072,
+      "wer": 0.0490826781034072,
+      "char_errors": 206,
+      "reference_chars": 4197,
+      "strict_char_errors": 252,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 46,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "いっそう",
+            "generated": "一層"
+          },
+          {
+            "errors": 4,
+            "reference": "政親",
+            "generated": "マサチカ"
+          },
+          {
+            "errors": 4,
+            "reference": "政親",
+            "generated": "マサチカ"
+          },
+          {
+            "errors": 3,
+            "reference": "蝮",
+            "generated": "まむし"
+          },
+          {
+            "errors": 2,
+            "reference": "裁",
+            "generated": "さば"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 9,
+          "reference": "守護の富樫政親舞台",
+          "generated": "下の戸賀氏正近部隊"
+        },
+        {
+          "errors": 5,
+          "reference": "富樫政親",
+          "generated": "戸賀氏正近"
+        },
+        {
+          "errors": 5,
+          "reference": "孝景条々朝",
+          "generated": "高影上場浅"
+        },
+        {
+          "errors": 5,
+          "reference": "富樫政親",
+          "generated": "戸賀氏正近"
+        },
+        {
+          "errors": 4,
+          "reference": "早雲さま",
+          "generated": "総運様"
+        },
+        {
+          "errors": 4,
+          "reference": "駿河いま",
+          "generated": "するが今"
+        },
+        {
+          "errors": 4,
+          "reference": "氏親",
+          "generated": "宇治地下"
+        },
+        {
+          "errors": 4,
+          "reference": "氏親",
+          "generated": "宇治地下"
+        }
+      ],
+      "normalized_hypothesis_sha256": "0c94e888ec620066f64f8d7a1ad1feb94c5d27bf1017c0cefea41328038b9186",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9664948453608248,
+        "cer": 0.06054827175208582,
+        "word_errors": 375,
+        "reference_words": 388,
+        "char_errors": 254,
+        "reference_chars": 4195,
+        "normalized_hypothesis_sha256": "2c9e4a3fae1181d0ae14c5e32ad31e7c2ca2ef7e3b81a9e18a57835e2e4b1cdf"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.0490826781034072,
+        "wer": 0.0490826781034072,
+        "char_errors": 206,
+        "reference_chars": 4197,
+        "strict_char_errors": 252,
+        "normalized_hypothesis_sha256": "0c94e888ec620066f64f8d7a1ad1feb94c5d27bf1017c0cefea41328038b9186"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "ba1f484f939dbb5eb9f648e4549c5f80c29ddf006c7c4e28781dc74c8ba65233"
+    },
+    {
+      "case": "ja-reference-04",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        1.769,
+        548.84
+      ],
+      "cer": 0.03500707213578501,
+      "wer": 0.03500707213578501,
+      "char_errors": 99,
+      "reference_chars": 2828,
+      "strict_char_errors": 110,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 11,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "さっそく",
+            "generated": "早速"
+          },
+          {
+            "errors": 2,
+            "reference": "のち",
+            "generated": "後"
+          },
+          {
+            "errors": 2,
+            "reference": "のち",
+            "generated": "後"
+          },
+          {
+            "errors": 1,
+            "reference": "カ",
+            "generated": "か"
+          },
+          {
+            "errors": 1,
+            "reference": "あ",
+            "generated": "合"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 7,
+          "reference": "その構想は義澄",
+          "generated": "良純"
+        },
+        {
+          "errors": 4,
+          "reference": "こうして",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "栴岳承芳",
+          "generated": "千学商法"
+        },
+        {
+          "errors": 4,
+          "reference": "栴岳承芳",
+          "generated": "千学商法"
+        },
+        {
+          "errors": 3,
+          "reference": "潤童子",
+          "generated": "順道寺"
+        },
+        {
+          "errors": 3,
+          "reference": "潤童子",
+          "generated": "順道寺"
+        },
+        {
+          "errors": 3,
+          "reference": "潤童子",
+          "generated": "順道寺"
+        },
+        {
+          "errors": 3,
+          "reference": "甲相駿",
+          "generated": "江蘇寸"
+        }
+      ],
+      "normalized_hypothesis_sha256": "f9ab56f24edb61c3446e9e2b2972325f504c4bff183eb498cb4d57c5f8deff67",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9305019305019305,
+        "cer": 0.04103289706402547,
+        "word_errors": 241,
+        "reference_words": 259,
+        "char_errors": 116,
+        "reference_chars": 2827,
+        "normalized_hypothesis_sha256": "6e36cc95f2bdb2164600cf8448f0135871d3066f4cc24c66f7a83657fddfb01f"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.03500707213578501,
+        "wer": 0.03500707213578501,
+        "char_errors": 99,
+        "reference_chars": 2828,
+        "strict_char_errors": 110,
+        "normalized_hypothesis_sha256": "f9ab56f24edb61c3446e9e2b2972325f504c4bff183eb498cb4d57c5f8deff67"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "cb1bc66cb0fc34092177a13407ba487567183cf0440725f8c33954ca25230f3b"
+    },
+    {
+      "case": "ja-reference-05",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.74,
+        584.4200000000001
+      ],
+      "cer": 0.20495049504950494,
+      "wer": 0.20495049504950494,
+      "char_errors": 414,
+      "reference_chars": 2020,
+      "strict_char_errors": 437,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 23,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "わくわく",
+            "generated": "ワクワク"
+          },
+          {
+            "errors": 3,
+            "reference": "まえも",
+            "generated": "前盛"
+          },
+          {
+            "errors": 3,
+            "reference": "所",
+            "generated": "ところ"
+          },
+          {
+            "errors": 3,
+            "reference": "所",
+            "generated": "ところ"
+          },
+          {
+            "errors": 3,
+            "reference": "きれい",
+            "generated": "綺麗"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 32,
+          "reference": "れお水は違いますかあっそうですねすいませんありがとうございますこ",
+          "generated": ""
+        },
+        {
+          "errors": 27,
+          "reference": "三千三百円ですはいどうぞはいどうもありがとうございます",
+          "generated": ""
+        },
+        {
+          "errors": 15,
+          "reference": "ちょっといいですかとねここがね",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "ごゆっくりなさってくださいね",
+          "generated": ""
+        },
+        {
+          "errors": 13,
+          "reference": "ありがとうございましたあっ",
+          "generated": ""
+        },
+        {
+          "errors": 12,
+          "reference": "に曲がってずっと行くと右",
+          "generated": ""
+        },
+        {
+          "errors": 10,
+          "reference": "はいありがとうござい",
+          "generated": "お邪魔し"
+        },
+        {
+          "errors": 10,
+          "reference": "いってらっしゃいませ",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "03e5c759c2f3a150479019e0a7c0aa118acca6c1a77834d33bd68831df786e5e",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.8601823708206687,
+        "cer": 0.24513064133016627,
+        "word_errors": 283,
+        "reference_words": 329,
+        "char_errors": 516,
+        "reference_chars": 2105,
+        "normalized_hypothesis_sha256": "0b1f1cea661c6e21c051aa0b25052abda1eeee549623f5102fe05fa8ad3ee27d"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.23666666666666666,
+        "wer": 0.23666666666666666,
+        "char_errors": 497,
+        "reference_chars": 2100,
+        "strict_char_errors": 510,
+        "normalized_hypothesis_sha256": "03e5c759c2f3a150479019e0a7c0aa118acca6c1a77834d33bd68831df786e5e"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "d736a472dcf9fbd509a8fffbaaf36585b930fb91b31690216584fc40d7222ccd"
+    },
+    {
+      "case": "ja-reference-06",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        14.134,
+        976.609
+      ],
+      "cer": 0.11682242990654206,
+      "wer": 0.11682242990654206,
+      "char_errors": 475,
+      "reference_chars": 4066,
+      "strict_char_errors": 579,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 104,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 43,
+          "reference": "",
+          "generated": "よかったと思った人は登録するのを忘れないでねdontforgettosubscribe"
+        },
+        {
+          "errors": 21,
+          "reference": "大丈夫ですかみくさんそうですねちょっとあの",
+          "generated": ""
+        },
+        {
+          "errors": 20,
+          "reference": "おっやっぱ向こうで買わなきゃいけないんだ",
+          "generated": ""
+        },
+        {
+          "errors": 16,
+          "reference": "すごくいい感じですよはい瑠璃光院",
+          "generated": "ルリ公園"
+        },
+        {
+          "errors": 15,
+          "reference": "あっなんか瑠璃光院っていういい",
+          "generated": "ルリ公園に"
+        },
+        {
+          "errors": 12,
+          "reference": "sayurisaying",
+          "generated": "さゆりセイング"
+        },
+        {
+          "errors": 12,
+          "reference": "チャンチャンチャンチャン",
+          "generated": ""
+        },
+        {
+          "errors": 12,
+          "reference": "sayurisaying",
+          "generated": "さゆりセイング"
+        }
+      ],
+      "normalized_hypothesis_sha256": "e72fb200814eeaaba443d49206409a6ac509bf127d082b259d94da82c0c17c7d",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9578313253012049,
+        "cer": 0.16682554814108674,
+        "word_errors": 636,
+        "reference_words": 664,
+        "char_errors": 700,
+        "reference_chars": 4196,
+        "normalized_hypothesis_sha256": "b3f5e80c92f1908afe317b3cb470de22bc7fa933dd089c09e2c28653c1858b1b"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.14265267175572519,
+        "wer": 0.14265267175572519,
+        "char_errors": 598,
+        "reference_chars": 4192,
+        "strict_char_errors": 699,
+        "normalized_hypothesis_sha256": "6d0b250685690ce3c0cdd5a92b72d5cb40f4161862e460911619239a1c83db26"
+      },
+      "generated_chars_outside_reference_span": 107,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "04224e8044e624b56b9df339bbe680a9aa726d1f57bd7602e9156861bd00d4d7"
+    },
+    {
+      "case": "ja-reference-07",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        960.84
+      ],
+      "cer": 0.025550477773161613,
+      "wer": 0.025550477773161613,
+      "char_errors": 123,
+      "reference_chars": 4814,
+      "strict_char_errors": 183,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 60,
+        "examples": [
+          {
+            "errors": 6,
+            "reference": "葉巻たばこ",
+            "generated": "ハマキタバコ"
+          },
+          {
+            "errors": 6,
+            "reference": "葉巻たばこ",
+            "generated": "ハマキタバコ"
+          },
+          {
+            "errors": 3,
+            "reference": "あきら",
+            "generated": "諦"
+          },
+          {
+            "errors": 3,
+            "reference": "ひとり",
+            "generated": "一人"
+          },
+          {
+            "errors": 2,
+            "reference": "そろ",
+            "generated": "揃"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 22,
+          "reference": "onakamura校正keikamimura",
+          "generated": ""
+        },
+        {
+          "errors": 11,
+          "reference": "葉巻こういう葉巻たばこ",
+          "generated": "ハマキタバコ"
+        },
+        {
+          "errors": 6,
+          "reference": "で葉巻たばこ",
+          "generated": "ハマキタバコ"
+        },
+        {
+          "errors": 5,
+          "reference": "tedx",
+          "generated": "テレックス"
+        },
+        {
+          "errors": 4,
+          "reference": "リンレイ",
+          "generated": "林田"
+        },
+        {
+          "errors": 4,
+          "reference": "モヤモヤ",
+          "generated": "もやもや"
+        },
+        {
+          "errors": 4,
+          "reference": "ました見",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "チマチマ",
+          "generated": "ちまちま"
+        }
+      ],
+      "normalized_hypothesis_sha256": "2bf5315f65618a78e37c60f3a576984da69f76ec786b6d36bc989700d32a971e",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9694989106753813,
+        "cer": 0.03990901571546733,
+        "word_errors": 445,
+        "reference_words": 459,
+        "char_errors": 193,
+        "reference_chars": 4836,
+        "normalized_hypothesis_sha256": "208678740c5c210806c5d4a392849969863f8f509a4c2eba8ebe145107e3bdc5"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.02648458514380302,
+        "wer": 0.02648458514380302,
+        "char_errors": 128,
+        "reference_chars": 4833,
+        "strict_char_errors": 188,
+        "normalized_hypothesis_sha256": "0b737e2c7e86da8916aa9b57e3ed145ffea115ff4450442059f843b1ec1b0c2e"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "9053b51711ebe0c71d94f17e682af2ccbe96c9008fdd3cbbc69ec4c5a1e74fb4"
+    },
+    {
+      "case": "ja-reference-08",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        3.29,
+        1182.98
+      ],
+      "cer": 0.09182186234817814,
+      "wer": 0.09182186234817814,
+      "char_errors": 567,
+      "reference_chars": 6175,
+      "strict_char_errors": 696,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 129,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "色々",
+            "generated": "いろいろ"
+          },
+          {
+            "errors": 4,
+            "reference": "だいたい",
+            "generated": "大体"
+          },
+          {
+            "errors": 4,
+            "reference": "大体",
+            "generated": "だいたい"
+          },
+          {
+            "errors": 4,
+            "reference": "われわれ",
+            "generated": "我々"
+          },
+          {
+            "errors": 4,
+            "reference": "われわれ",
+            "generated": "我々"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 30,
+          "reference": "",
+          "generated": "どうやったらそうやっていろんな人たちと知り合えるんですかって"
+        },
+        {
+          "errors": 24,
+          "reference": "",
+          "generated": "しかし健康長寿に関しては沖縄と長野かなりの開きが"
+        },
+        {
+          "errors": 24,
+          "reference": "",
+          "generated": "必要としてもらいたいという欲求が初めて生まれます"
+        },
+        {
+          "errors": 17,
+          "reference": "",
+          "generated": "しかしながら同時に憤りも感じました"
+        },
+        {
+          "errors": 15,
+          "reference": "",
+          "generated": "お金を返して欲しかったからです"
+        },
+        {
+          "errors": 14,
+          "reference": "と",
+          "generated": "みたいな話があるんですけどね"
+        },
+        {
+          "errors": 10,
+          "reference": "",
+          "generated": "これも人生の三分の百"
+        },
+        {
+          "errors": 9,
+          "reference": "",
+          "generated": "そうそうそうあのね"
+        }
+      ],
+      "normalized_hypothesis_sha256": "73f21f04d5cc9b6a61e3027a753a536e85ebcac6315680dba27d28dcdd691136",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9850498338870431,
+        "cer": 0.11545924967658473,
+        "word_errors": 593,
+        "reference_words": 602,
+        "char_errors": 714,
+        "reference_chars": 6184,
+        "normalized_hypothesis_sha256": "adec45f97f6d593a3f68289b66ad76fc6b21952c249cfe9b66a7b868a4d3de16"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.09183508488278092,
+        "wer": 0.09183508488278092,
+        "char_errors": 568,
+        "reference_chars": 6185,
+        "strict_char_errors": 698,
+        "normalized_hypothesis_sha256": "16a6965ae034e55d0eab8b57c0bf88dc0b00fd66b3cf31f6b74a890d4e2ae3b5"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "c7b667d9785bae385dbc6b0ace640447bb61cd4de408a53ee4aca73beb61686d"
+    },
+    {
+      "case": "ja-reference-09",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        5.92,
+        245.029
+      ],
+      "cer": 0.14705882352941177,
+      "wer": 0.14705882352941177,
+      "char_errors": 145,
+      "reference_chars": 986,
+      "strict_char_errors": 151,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 6,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "シノクボ",
+            "generated": "しのくぼ"
+          },
+          {
+            "errors": 2,
+            "reference": "上手",
+            "generated": "うま"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 16,
+          "reference": "shinokubo",
+          "generated": "しんおうくぼっていうのをしのくぼ"
+        },
+        {
+          "errors": 8,
+          "reference": "シノクボ",
+          "generated": "しのくぼみたいな"
+        },
+        {
+          "errors": 8,
+          "reference": "",
+          "generated": "なんかなんですか"
+        },
+        {
+          "errors": 7,
+          "reference": "ねピンポイント",
+          "generated": ""
+        },
+        {
+          "errors": 6,
+          "reference": "もの",
+          "generated": "新大久保はい"
+        },
+        {
+          "errors": 6,
+          "reference": "新大久保",
+          "generated": "シンオークボ"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "そうそうそう"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "よねだから"
+        }
+      ],
+      "normalized_hypothesis_sha256": "b63a3ec6a72322129116149a0539a1bf669c56d4611a7db45fc11ec31a9cd967",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9647058823529412,
+        "cer": 0.1536144578313253,
+        "word_errors": 82,
+        "reference_words": 85,
+        "char_errors": 153,
+        "reference_chars": 996,
+        "normalized_hypothesis_sha256": "946683acaeaa88736e8cebb30e16185003611d7acd95fa7d1a660b0749a26a0e"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.14587525150905434,
+        "wer": 0.14587525150905434,
+        "char_errors": 145,
+        "reference_chars": 994,
+        "strict_char_errors": 151,
+        "normalized_hypothesis_sha256": "9f5d2a0829c399b74e9ab8fb6e177112a6dcca43a91d7207c933a8777b26a0bd"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "56fa7013cdc150901c74adfd2e2773af8bcfb2ef52c94e32e974291d9ada60fe"
+    },
+    {
+      "case": "ja-reference-10",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        5.22,
+        1576.47
+      ],
+      "cer": 0.11322631055547663,
+      "wer": 0.11322631055547663,
+      "char_errors": 797,
+      "reference_chars": 7039,
+      "strict_char_errors": 893,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 96,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "ヨドバシ",
+            "generated": "淀橋"
+          },
+          {
+            "errors": 4,
+            "reference": "ヨドバシ",
+            "generated": "淀橋"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "しょうゆ",
+            "generated": "醤油"
+          },
+          {
+            "errors": 4,
+            "reference": "ビックリ",
+            "generated": "びっくり"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 30,
+          "reference": "二十代三十代が行く駅の中にあるjr駅にあるショッピングモール",
+          "generated": ""
+        },
+        {
+          "errors": 21,
+          "reference": "japanesestylemeatloaf",
+          "generated": "ああ"
+        },
+        {
+          "errors": 16,
+          "reference": "てそうですねやばいですねゆうすけ",
+          "generated": "たエスケ"
+        },
+        {
+          "errors": 11,
+          "reference": "って",
+          "generated": "じゃないですかそうそう"
+        },
+        {
+          "errors": 10,
+          "reference": "家電量販店そう",
+          "generated": "電気屋があることです"
+        },
+        {
+          "errors": 10,
+          "reference": "",
+          "generated": "何でしたっけウェダー"
+        },
+        {
+          "errors": 9,
+          "reference": "て結構いるというか",
+          "generated": "るんですけど"
+        },
+        {
+          "errors": 8,
+          "reference": "用意してないけど",
+          "generated": "これ"
+        }
+      ],
+      "normalized_hypothesis_sha256": "bea54fb6e04409ad825417ff68d0a4eb6fdd6344e2a41da875b1a1adbda91cc7",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9249448123620309,
+        "cer": 0.1336612789880534,
+        "word_errors": 838,
+        "reference_words": 906,
+        "char_errors": 951,
+        "reference_chars": 7115,
+        "normalized_hypothesis_sha256": "ecb3a75ea3c40b0808f99e7e88261dc4e3cf257523f1d1c9e3c92bd46f79dde2"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.11965691788526434,
+        "wer": 0.11965691788526434,
+        "char_errors": 851,
+        "reference_chars": 7112,
+        "strict_char_errors": 947,
+        "normalized_hypothesis_sha256": "9062e126019cd43aeababaff0605a27fcab984144a997ac40a30860a8a8f1b3c"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "f1cab9e08e6b22b24ca8b46c9db1d59a4c584dda3f0f9716865ad3614bd5eb9d"
+    },
+    {
+      "case": "ja-reference-11",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        688.1500000000001
+      ],
+      "cer": 0.03189420458965383,
+      "wer": 0.03189420458965383,
+      "char_errors": 82,
+      "reference_chars": 2571,
+      "strict_char_errors": 132,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 50,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "いっしょ",
+            "generated": "一緒"
+          },
+          {
+            "errors": 3,
+            "reference": "たぶん",
+            "generated": "多分"
+          },
+          {
+            "errors": 3,
+            "reference": "きれい",
+            "generated": "綺麗"
+          },
+          {
+            "errors": 3,
+            "reference": "たぶん",
+            "generated": "多分"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 17,
+          "reference": "十一月に仙台でイベント授業をします",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "ちょっと",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "なんだろ",
+          "generated": ""
+        },
+        {
+          "errors": 3,
+          "reference": "",
+          "generated": "はーい"
+        },
+        {
+          "errors": 3,
+          "reference": "みな",
+          "generated": "失敗皆"
+        },
+        {
+          "errors": 3,
+          "reference": "",
+          "generated": "なんか"
+        },
+        {
+          "errors": 3,
+          "reference": "",
+          "generated": "なんか"
+        },
+        {
+          "errors": 2,
+          "reference": "あれ",
+          "generated": "え"
+        }
+      ],
+      "normalized_hypothesis_sha256": "0ccf95015e4fb6ab9152008a9d9d568544a96fd1b25a7995e36d85dfde31966c",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9581151832460733,
+        "cer": 0.05409582689335394,
+        "word_errors": 183,
+        "reference_words": 191,
+        "char_errors": 140,
+        "reference_chars": 2588,
+        "normalized_hypothesis_sha256": "8a6a3b95e7d8be3c7670c35cb8d88ba30d7c68a4d6b231213bb19eb43d0c018e"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.03478933127174333,
+        "wer": 0.03478933127174333,
+        "char_errors": 90,
+        "reference_chars": 2587,
+        "strict_char_errors": 140,
+        "normalized_hypothesis_sha256": "99ff4b5a46ae59e3da3b597357a258bebd2dbf69c289e326340020454fb82924"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "175acd8524a02833be2429cb1291cc06e6b864530f528c8dc9f72f2a785f40f9"
+    },
+    {
+      "case": "ja-reference-12",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        813.4
+      ],
+      "cer": 0.09360660752523707,
+      "wer": 0.09360660752523707,
+      "char_errors": 306,
+      "reference_chars": 3269,
+      "strict_char_errors": 360,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 54,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "ときどき",
+            "generated": "時々"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "いろいろ",
+            "generated": "色々"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 33,
+          "reference": "こちらにタッチお願いしますあれ完了になってるちょっと待ってください",
+          "generated": ""
+        },
+        {
+          "errors": 28,
+          "reference": "イートインで利休ブレンドが一つとチーズケーキお一つですね",
+          "generated": ""
+        },
+        {
+          "errors": 21,
+          "reference": "セット割り引きさせていただいて千百八十二円",
+          "generated": "スイカ"
+        },
+        {
+          "errors": 17,
+          "reference": "みんなでチェックさせていただきます",
+          "generated": ""
+        },
+        {
+          "errors": 16,
+          "reference": "のでおかけになってお待ちください",
+          "generated": "ありがとうございますすみません"
+        },
+        {
+          "errors": 14,
+          "reference": "今年は仙台でも撮影したいです",
+          "generated": ""
+        },
+        {
+          "errors": 13,
+          "reference": "こちらでお召し上がりですか",
+          "generated": ""
+        },
+        {
+          "errors": 12,
+          "reference": "すみません申し訳ないです",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "9220343b6b2629b7fd941ca0af2abc249e9ff99bc103653b0c4d74ceb06858de",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9090909090909091,
+        "cer": 0.11525629360024264,
+        "word_errors": 230,
+        "reference_words": 253,
+        "char_errors": 380,
+        "reference_chars": 3297,
+        "normalized_hypothesis_sha256": "f4f02d0a2d925966ce96798f7d8a48b24ae31875c0e4f29cf9e2f5e14b93bcd7"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.10036385688295937,
+        "wer": 0.10036385688295937,
+        "char_errors": 331,
+        "reference_chars": 3298,
+        "strict_char_errors": 381,
+        "normalized_hypothesis_sha256": "b7f9c51366479ddaf4056adc45a35e08712a11dafb1d474eee0d66cd9a5bbc45"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "408aea89e10a7d2b4cfc4a5728dcbfbb6e1964ab95760b6dcf10443b7ddc000a"
+    },
+    {
+      "case": "ja-reference-13",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.0,
+        440.90000000000003
+      ],
+      "cer": 0.0650087260034904,
+      "wer": 0.0650087260034904,
+      "char_errors": 149,
+      "reference_chars": 2292,
+      "strict_char_errors": 156,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 7,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "皆",
+            "generated": "みな"
+          },
+          {
+            "errors": 2,
+            "reference": "まじ",
+            "generated": "マジ"
+          },
+          {
+            "errors": 1,
+            "reference": "分",
+            "generated": "わ"
+          },
+          {
+            "errors": 1,
+            "reference": "あ",
+            "generated": "会"
+          },
+          {
+            "errors": 1,
+            "reference": "い",
+            "generated": "言"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 10,
+          "reference": "",
+          "generated": "ダラダラやってるけど"
+        },
+        {
+          "errors": 9,
+          "reference": "",
+          "generated": "違う君だけのプリン"
+        },
+        {
+          "errors": 8,
+          "reference": "でも",
+          "generated": "はいはいはいはい"
+        },
+        {
+          "errors": 8,
+          "reference": "",
+          "generated": "ーじゃあねーはー"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "だけのプリン"
+        },
+        {
+          "errors": 6,
+          "reference": "国試",
+          "generated": "もしあの酷使"
+        },
+        {
+          "errors": 4,
+          "reference": "あ本当良",
+          "generated": "ほんとよ"
+        },
+        {
+          "errors": 4,
+          "reference": "いやー分",
+          "generated": "わ"
+        }
+      ],
+      "normalized_hypothesis_sha256": "59b14decb965c00b67fb77174c2ec4fb740af743dbe57d27dde2fb028d7f04bc",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9746835443037974,
+        "cer": 0.0808124459809853,
+        "word_errors": 231,
+        "reference_words": 237,
+        "char_errors": 187,
+        "reference_chars": 2314,
+        "normalized_hypothesis_sha256": "efdf99909ca00cb72d45bf5f7397e3c49f2b5164ab8c02cded6ec8ee75606e7b"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.07668977469670711,
+        "wer": 0.07668977469670711,
+        "char_errors": 177,
+        "reference_chars": 2308,
+        "strict_char_errors": 184,
+        "normalized_hypothesis_sha256": "fc80444521d1e340196727d90d321b5f01f6dcab0ed19cb7082e7126f7e01f68"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "594a847d8aa38de0474e8ea2b7d6ddef7decbcb2b413200778b932185cd7e915"
+    },
+    {
+      "case": "ja-reference-14",
+      "language": "ja",
+      "split": "calibration",
+      "reference_caption_bounds_s": [
+        0.08,
+        461.6
+      ],
+      "cer": 0.01984732824427481,
+      "wer": 0.01984732824427481,
+      "char_errors": 52,
+      "reference_chars": 2620,
+      "strict_char_errors": 143,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 91,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "ばいばい",
+            "generated": "バイバイ"
+          },
+          {
+            "errors": 3,
+            "reference": "綺麗",
+            "generated": "きれい"
+          },
+          {
+            "errors": 2,
+            "reference": "みな",
+            "generated": "皆"
+          },
+          {
+            "errors": 2,
+            "reference": "タメ",
+            "generated": "ため"
+          },
+          {
+            "errors": 2,
+            "reference": "タメ",
+            "generated": "ため"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 5,
+          "reference": "あと食べい",
+          "generated": "後旅行"
+        },
+        {
+          "errors": 4,
+          "reference": "step",
+          "generated": "ステップ"
+        },
+        {
+          "errors": 4,
+          "reference": "とき",
+          "generated": "時はこれ"
+        },
+        {
+          "errors": 2,
+          "reference": "ふう",
+          "generated": "風"
+        },
+        {
+          "errors": 2,
+          "reference": "時に",
+          "generated": "ら"
+        },
+        {
+          "errors": 2,
+          "reference": "タメ",
+          "generated": "ため"
+        },
+        {
+          "errors": 2,
+          "reference": "ふう",
+          "generated": "風"
+        },
+        {
+          "errors": 2,
+          "reference": "",
+          "generated": "はい"
+        }
+      ],
+      "normalized_hypothesis_sha256": "6005c120b2f1f129fce33bf728f51f5616b6bba94d381bd7e23d84f05f11af6d",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9715639810426541,
+        "cer": 0.0563165905631659,
+        "word_errors": 205,
+        "reference_words": 211,
+        "char_errors": 148,
+        "reference_chars": 2628,
+        "normalized_hypothesis_sha256": "46631ae655f15dc23eacfaa84a864268719e89d156619fa12b645f171fe3811c"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.02054794520547945,
+        "wer": 0.02054794520547945,
+        "char_errors": 54,
+        "reference_chars": 2628,
+        "strict_char_errors": 145,
+        "normalized_hypothesis_sha256": "16fed7e6bc96c63195980046f4fd9e4315ad11ee1933cab09326de451b2221e0"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "4ad09952a5896a0fe0448bed85332473d975bc2e9352c4ea59dc4caa115fbd82"
+    },
+    {
+      "case": "ja-reference-15",
+      "language": "ja",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        0.0,
+        799.29
+      ],
+      "cer": 0.24308755760368664,
+      "wer": 0.24308755760368664,
+      "char_errors": 1055,
+      "reference_chars": 4340,
+      "strict_char_errors": 1091,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 36,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 3,
+            "reference": "たぶん",
+            "generated": "多分"
+          },
+          {
+            "errors": 3,
+            "reference": "しゃり",
+            "generated": "シャリ"
+          },
+          {
+            "errors": 2,
+            "reference": "なじ",
+            "generated": "馴染"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 38,
+          "reference": "なriceisdancinginmymouthでも本当においしい米だから米が",
+          "generated": "最高"
+        },
+        {
+          "errors": 15,
+          "reference": "もうずっとなんかときどきずっと",
+          "generated": "ドキドキも"
+        },
+        {
+          "errors": 14,
+          "reference": "でそう今に至りますねなるほど",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "いいねたしかにいいじゃんへー",
+          "generated": ""
+        },
+        {
+          "errors": 12,
+          "reference": "へースイッチオフみたいな",
+          "generated": ""
+        },
+        {
+          "errors": 11,
+          "reference": "ねたぶんねそれはあるよ",
+          "generated": ""
+        },
+        {
+          "errors": 10,
+          "reference": "そうだねふーんそっか",
+          "generated": ""
+        },
+        {
+          "errors": 10,
+          "reference": "ねっ同じだねみんなね",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "655c205cb908ca923b709f7656fa7fc31c04c23cf9fde3a78f64799c85d7d33f",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9412997903563941,
+        "cer": 0.302059010825727,
+        "word_errors": 898,
+        "reference_words": 954,
+        "char_errors": 1423,
+        "reference_chars": 4711,
+        "normalized_hypothesis_sha256": "86e662c2eaecdc4e51d1945e70454f3265b774b751e3662b41a031aeb34ff6ce"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.2950541286351093,
+        "wer": 0.2950541286351093,
+        "char_errors": 1390,
+        "reference_chars": 4711,
+        "strict_char_errors": 1422,
+        "normalized_hypothesis_sha256": "98aad530ec6dab458024dcc7fd3f790b941b35647e042628bdb472595b7090fc"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "4f3f04269d8fb7b59012656b89448a7cd0b03a04b5191632eab3e165dd75949c"
+    },
+    {
+      "case": "ja-reference-16",
+      "language": "ja",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        0.0,
+        1051.8899999999999
+      ],
+      "cer": 0.16443546350088406,
+      "wer": 0.16443546350088406,
+      "char_errors": 651,
+      "reference_chars": 3959,
+      "strict_char_errors": 729,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 78,
+        "examples": [
+          {
+            "errors": 5,
+            "reference": "じゃが芋",
+            "generated": "ジャガイモ"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "にんじん",
+            "generated": "人参"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          },
+          {
+            "errors": 4,
+            "reference": "けっこう",
+            "generated": "結構"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 12,
+          "reference": "最初二十分走",
+          "generated": "さいしょにじゅっぷんはし"
+        },
+        {
+          "errors": 10,
+          "reference": "そうそういいねえっな",
+          "generated": "ごは"
+        },
+        {
+          "errors": 10,
+          "reference": "私小学校",
+          "generated": "わたししょうがっこう"
+        },
+        {
+          "errors": 10,
+          "reference": "そうですねそうなんか",
+          "generated": ""
+        },
+        {
+          "errors": 9,
+          "reference": "へーそうなんかあの",
+          "generated": ""
+        },
+        {
+          "errors": 8,
+          "reference": "",
+          "generated": "プルプルプルプル"
+        },
+        {
+          "errors": 8,
+          "reference": "今日",
+          "generated": "いいじゃんきょう"
+        },
+        {
+          "errors": 7,
+          "reference": "納豆玉子",
+          "generated": "なっとうたまご"
+        }
+      ],
+      "normalized_hypothesis_sha256": "527e2c5ca50749eeeeb8bd504452d87807dd2d8048f9883ea44fbd1012b7ce2a",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.8347701149425287,
+        "cer": 0.21703561116458134,
+        "word_errors": 581,
+        "reference_words": 696,
+        "char_errors": 902,
+        "reference_chars": 4156,
+        "normalized_hypothesis_sha256": "b64316cbef0ea5e9f734db61e7ec892fbcf6c0011eb425765d02cb1199bcc693"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.19908521906596052,
+        "wer": 0.19908521906596052,
+        "char_errors": 827,
+        "reference_chars": 4154,
+        "strict_char_errors": 894,
+        "normalized_hypothesis_sha256": "6bfe6b9a7c5c0f457578b5a9a8bc287c54627a6cb57db289b1a1e83fb68be95a"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "f4d08e569fa5523863d69d4f05e09a108452e26b0da66bf43b7ae9f2bb34974b"
+    },
+    {
+      "case": "en-reference-18",
+      "language": "en",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        27.103,
+        1165.213
+      ],
+      "wer": 0.048938134810710986,
+      "cer": 0.041066988169693314,
+      "word_errors": 159,
+      "reference_words": 3249,
+      "char_errors": 545,
+      "reference_chars": 13271,
+      "strict_word_errors": 165,
+      "acceptable_differences": {
+        "word_spacing": 6,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "every one",
+            "generated": "everyone"
+          },
+          {
+            "errors": 2,
+            "reference": "water mark",
+            "generated": "watermark"
+          },
+          {
+            "errors": 2,
+            "reference": "multimillionaire",
+            "generated": "multi millionaire"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 7,
+          "reference": "",
+          "generated": "but you know if she is doing"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "i think that was it anyway"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "and at the end of it"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "do you understand laughter really"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "the whole system was invented"
+        },
+        {
+          "errors": 4,
+          "reference": "like this",
+          "generated": "this by the way"
+        },
+        {
+          "errors": 4,
+          "reference": "",
+          "generated": "you know it is"
+        },
+        {
+          "errors": 4,
+          "reference": "founded",
+          "generated": "found her own company"
+        }
+      ],
+      "normalized_hypothesis_sha256": "756a2f1f79d04ba0224403579acb1de07b7e74fc4a385952559eade45ddc5a73",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.059121087575086946,
+        "cer": 0.05431971029487843,
+        "word_errors": 187,
+        "reference_words": 3163,
+        "char_errors": 735,
+        "reference_chars": 13531,
+        "normalized_hypothesis_sha256": "b5be9223fce93e6d7e00b659b88d7e9622bc9f09fa89e39652ccc246ed79315e"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.048938134810710986,
+        "cer": 0.041066988169693314,
+        "word_errors": 159,
+        "reference_words": 3249,
+        "char_errors": 545,
+        "reference_chars": 13271,
+        "strict_word_errors": 165,
+        "normalized_hypothesis_sha256": "756a2f1f79d04ba0224403579acb1de07b7e74fc4a385952559eade45ddc5a73"
+      },
+      "generated_chars_outside_reference_span": 225,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "f84c9c2bcd6fbc5323019ff1dd75fb0846add06d0ba49760187ceb08f5b4f331"
+    },
+    {
+      "case": "en-reference-19",
+      "language": "en",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        0.08,
+        129.85999999999999
+      ],
+      "wer": 0.04090909090909091,
+      "cer": 0.0416435313714603,
+      "word_errors": 18,
+      "reference_words": 440,
+      "char_errors": 75,
+      "reference_chars": 1801,
+      "strict_word_errors": 18,
+      "acceptable_differences": {
+        "word_spacing": 0,
+        "examples": []
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 9,
+          "reference": "share this video with someone whose creativity inspires you",
+          "generated": ""
+        },
+        {
+          "errors": 4,
+          "reference": "like this",
+          "generated": "this by the way"
+        },
+        {
+          "errors": 1,
+          "reference": "heard",
+          "generated": "had"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "little"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "and"
+        },
+        {
+          "errors": 1,
+          "reference": "girl",
+          "generated": "girls"
+        },
+        {
+          "errors": 1,
+          "reference": "",
+          "generated": "now"
+        }
+      ],
+      "normalized_hypothesis_sha256": "1035d69abb3258570d1db34e9366b26dd7f645b8b819ec81408fdc6171e647d9",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.04225352112676056,
+        "cer": 0.04201680672268908,
+        "word_errors": 18,
+        "reference_words": 426,
+        "char_errors": 75,
+        "reference_chars": 1785,
+        "normalized_hypothesis_sha256": "cb5e9add0800b1b908e5bb285003267a53767da71e92ede52c2ae30d4872ae73"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.04090909090909091,
+        "cer": 0.0416435313714603,
+        "word_errors": 18,
+        "reference_words": 440,
+        "char_errors": 75,
+        "reference_chars": 1801,
+        "strict_word_errors": 18,
+        "normalized_hypothesis_sha256": "1035d69abb3258570d1db34e9366b26dd7f645b8b819ec81408fdc6171e647d9"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "daba285559b8b6bd454ecf0d3ef2b726067d04fa88869c1cb968de363b799db8"
+    },
+    {
+      "case": "en-reference-20",
+      "language": "en",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        0.0,
+        3433.3300000000004
+      ],
+      "wer": 0.030328828349473237,
+      "cer": 0.01932534288891635,
+      "word_errors": 285,
+      "reference_words": 9397,
+      "char_errors": 782,
+      "reference_chars": 40465,
+      "strict_word_errors": 303,
+      "acceptable_differences": {
+        "word_spacing": 18,
+        "examples": [
+          {
+            "errors": 2,
+            "reference": "t h",
+            "generated": "th"
+          },
+          {
+            "errors": 2,
+            "reference": "over emphasizing",
+            "generated": "overemphasizing"
+          },
+          {
+            "errors": 2,
+            "reference": "bf",
+            "generated": "b f"
+          },
+          {
+            "errors": 2,
+            "reference": "hum bio",
+            "generated": "humbio"
+          },
+          {
+            "errors": 2,
+            "reference": "catchup",
+            "generated": "catch up"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 18,
+          "reference": "243 2649 650 3260 256 5779 832 2449 291 3171 231 4026 593 2449 743 8840 831 5287",
+          "generated": "2432649 6503260 2565779 8322449 2 913171 2314 26 5932449 7438840 8315287"
+        },
+        {
+          "errors": 8,
+          "reference": "17000000000",
+          "generated": "one 7000000000 7000000000 you are just adding anything"
+        },
+        {
+          "errors": 7,
+          "reference": "",
+          "generated": "can you just head it on back"
+        },
+        {
+          "errors": 6,
+          "reference": "0 my god okay what is",
+          "generated": ""
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "you are having one 2 3"
+        },
+        {
+          "errors": 6,
+          "reference": "",
+          "generated": "we i with any luck will"
+        },
+        {
+          "errors": 5,
+          "reference": "an 8.5",
+          "generated": "and 8 and one half"
+        },
+        {
+          "errors": 5,
+          "reference": "",
+          "generated": "almost the length that is"
+        }
+      ],
+      "normalized_hypothesis_sha256": "f3228b4358d437bfa5049eab041963d8359f2c79c83c8ac442ff4b37c0982ce9",
+      "primary_metric": "wer",
+      "strict_v1_score": {
+        "wer": 0.037729694465586605,
+        "cer": 0.024365656963021242,
+        "word_errors": 347,
+        "reference_words": 9197,
+        "char_errors": 991,
+        "reference_chars": 40672,
+        "normalized_hypothesis_sha256": "491298a1e7fbbe9a93989f49cadadb75a263039d536da0aea28b9d10c32a0495"
+      },
+      "annotations_retained_v2_score": {
+        "wer": 0.030328828349473237,
+        "cer": 0.01932534288891635,
+        "word_errors": 285,
+        "reference_words": 9397,
+        "char_errors": 782,
+        "reference_chars": 40465,
+        "strict_word_errors": 303,
+        "normalized_hypothesis_sha256": "f3228b4358d437bfa5049eab041963d8359f2c79c83c8ac442ff4b37c0982ce9"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "Whisper EnglishTextNormalizer, spelling map ok=okay, ASCII apostrophes; transformers 4.57.6; bracketed annotations removed; word spacing tolerated; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "ae67f5530ba98e2d35c8aa22f03739a339cd08406db66e1dfc04f61b96cc8ad4"
+    },
+    {
+      "case": "ja-reference-17",
+      "language": "ja",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        0.0,
+        1688.82
+      ],
+      "cer": 0.11108037072900816,
+      "wer": 0.11108037072900816,
+      "char_errors": 803,
+      "reference_chars": 7229,
+      "strict_char_errors": 855,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 52,
+        "examples": [
+          {
+            "errors": 5,
+            "reference": "味覇",
+            "generated": "ウェイパー"
+          },
+          {
+            "errors": 5,
+            "reference": "味覇",
+            "generated": "ウェイパー"
+          },
+          {
+            "errors": 4,
+            "reference": "色々",
+            "generated": "いろいろ"
+          },
+          {
+            "errors": 3,
+            "reference": "きれい",
+            "generated": "綺麗"
+          },
+          {
+            "errors": 3,
+            "reference": "ホウキ",
+            "generated": "放棄"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 25,
+          "reference": "sponsoredbymakitaみたいななんか僕",
+          "generated": "コンサートバイマキタみたいな全然全然なんかよくその"
+        },
+        {
+          "errors": 16,
+          "reference": "sayurisayingcomに",
+          "generated": "さゆりセイングコムで"
+        },
+        {
+          "errors": 12,
+          "reference": "よろしくお願いしますはい",
+          "generated": ""
+        },
+        {
+          "errors": 12,
+          "reference": "ホウキ",
+          "generated": "あのなんて言ですかほうき"
+        },
+        {
+          "errors": 11,
+          "reference": "ョボジョボーッてこうや",
+          "generated": "ャバ"
+        },
+        {
+          "errors": 10,
+          "reference": "",
+          "generated": "あーわかりますなんか"
+        },
+        {
+          "errors": 10,
+          "reference": "マキタの掃除機がいい",
+          "generated": "ですよそうなん"
+        },
+        {
+          "errors": 9,
+          "reference": "なのでごめんなさい",
+          "generated": "だと思います"
+        }
+      ],
+      "normalized_hypothesis_sha256": "a611cbc6a5798ba13eacd21d8b4ecd2d826c768e8967b9342a5f77f778ab1cb3",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9703125,
+        "cer": 0.167806010576551,
+        "word_errors": 1242,
+        "reference_words": 1280,
+        "char_errors": 1301,
+        "reference_chars": 7753,
+        "normalized_hypothesis_sha256": "8686f46dc5ec587ba780840aac53410e20e20945d173f6847ba7d901745211cd"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.15987055016181229,
+        "wer": 0.15987055016181229,
+        "char_errors": 1235,
+        "reference_chars": 7725,
+        "strict_char_errors": 1288,
+        "normalized_hypothesis_sha256": "50a5626927eee14c34b9ed836e0845a562a06788bcc8e7a7231d10aa918790e1"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "80036fc729a07c12e249e221241c43fa41d67029ad32ab7ae07165143763f5d6"
+    },
+    {
+      "case": "ja-reference-18",
+      "language": "ja",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        0.0,
+        1968.0
+      ],
+      "cer": 0.1519828510182208,
+      "wer": 0.1519828510182208,
+      "char_errors": 1418,
+      "reference_chars": 9330,
+      "strict_char_errors": 1472,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 54,
+        "examples": [
+          {
+            "errors": 3,
+            "reference": "きれい",
+            "generated": "綺麗"
+          },
+          {
+            "errors": 3,
+            "reference": "きれい",
+            "generated": "綺麗"
+          },
+          {
+            "errors": 2,
+            "reference": "時",
+            "generated": "とき"
+          },
+          {
+            "errors": 2,
+            "reference": "時",
+            "generated": "とき"
+          },
+          {
+            "errors": 2,
+            "reference": "タメ",
+            "generated": "ため"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 16,
+          "reference": "ショーンkが出てきたな笑はははは",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "マ全然変わっちゃったんだけど",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "でもyuyuさんは呼び方変か",
+          "generated": "そうで"
+        },
+        {
+          "errors": 14,
+          "reference": "そのまま本当にそのままなんか",
+          "generated": ""
+        },
+        {
+          "errors": 13,
+          "reference": "いやいやとんでもないですよ",
+          "generated": "sr"
+        },
+        {
+          "errors": 13,
+          "reference": "あんまり気にしすぎそんなに",
+          "generated": ""
+        },
+        {
+          "errors": 13,
+          "reference": "ちょっとぎこちないねそれも",
+          "generated": ""
+        },
+        {
+          "errors": 12,
+          "reference": "今applewatch",
+          "generated": "なんか今アップルウォッチ"
+        }
+      ],
+      "normalized_hypothesis_sha256": "053bfe522a8de640b67d61455bb8f9ea4a0329c396382c9faaff7546083353a1",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9811738648947951,
+        "cer": 0.1844220070059757,
+        "word_errors": 1772,
+        "reference_words": 1806,
+        "char_errors": 1790,
+        "reference_chars": 9706,
+        "normalized_hypothesis_sha256": "a27c7038f275b5db5cd79c0c85c6b32fd58e408323c543ffbffb28e5f550a3c9"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.17810760667903525,
+        "wer": 0.17810760667903525,
+        "char_errors": 1728,
+        "reference_chars": 9702,
+        "strict_char_errors": 1779,
+        "normalized_hypothesis_sha256": "4f45470213bf7ca0b33f7d37afa0dac8f0708ccafdeaa18e4d43634c1576f1ec"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "76ea5f4e36dd3fae711ad6da10f1fa31bb2fc3e60ab0f36a6cc0269db28fb1b0"
+    },
+    {
+      "case": "ja-reference-19",
+      "language": "ja",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        4.73,
+        510.449
+      ],
+      "cer": 0.07647261453668619,
+      "wer": 0.07647261453668619,
+      "char_errors": 222,
+      "reference_chars": 2903,
+      "strict_char_errors": 272,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 50,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "いろいろ",
+            "generated": "色々"
+          },
+          {
+            "errors": 4,
+            "reference": "ぶさいく",
+            "generated": "ブサイク"
+          },
+          {
+            "errors": 4,
+            "reference": "ぶさいく",
+            "generated": "ブサイク"
+          },
+          {
+            "errors": 4,
+            "reference": "ぶさいく",
+            "generated": "ブサイク"
+          },
+          {
+            "errors": 2,
+            "reference": "皆",
+            "generated": "みな"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 10,
+          "reference": "instagrams",
+          "generated": "インスタグラム"
+        },
+        {
+          "errors": 9,
+          "reference": "instagram",
+          "generated": "インスタグラム"
+        },
+        {
+          "errors": 9,
+          "reference": "instagram",
+          "generated": "インスタグラムの"
+        },
+        {
+          "errors": 9,
+          "reference": "instagram",
+          "generated": "インスタグラムを"
+        },
+        {
+          "errors": 7,
+          "reference": "podcast",
+          "generated": "ポッドキャスト"
+        },
+        {
+          "errors": 7,
+          "reference": "deleteを",
+          "generated": "デリート"
+        },
+        {
+          "errors": 7,
+          "reference": "podcast",
+          "generated": "ポッドキャスト"
+        },
+        {
+          "errors": 7,
+          "reference": "podcast",
+          "generated": "ポッドキャスト"
+        }
+      ],
+      "normalized_hypothesis_sha256": "2f8ac34ee886ebc7c20e5bf5a5288d6bd262d59867ed83e89bfd3d270eff9bbd",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 1.0,
+        "cer": 0.09406110538963268,
+        "word_errors": 196,
+        "reference_words": 196,
+        "char_errors": 274,
+        "reference_chars": 2913,
+        "normalized_hypothesis_sha256": "a30bd34fc2fd84d217745211b8f8b014a6fe1402dcba2acb12664cfa75f05c47"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.07689667009955373,
+        "wer": 0.07689667009955373,
+        "char_errors": 224,
+        "reference_chars": 2913,
+        "strict_char_errors": 274,
+        "normalized_hypothesis_sha256": "8bcd18292cc6c1b98366e9aaa959a21af8fa360eee83e275b5b2a540160d0e82"
+      },
+      "generated_chars_outside_reference_span": 0,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "8cb198ad0cbfe4b92037ffbdf90d5b78b6e007be1f391047ed34471cf264b31a"
+    },
+    {
+      "case": "ja-reference-20",
+      "language": "ja",
+      "split": "holdout",
+      "reference_caption_bounds_s": [
+        5.549,
+        2440.769
+      ],
+      "reference_corrections": [
+        {
+          "pattern": "^(?:noriko|ursさん|shounoさん|intro)(?= |$)",
+          "reason": "Creator captions prefix speaker turns with a space-delimited name label (noriko, ursさん, shounoさん) and one 'intro' heading. Labels are not speech; names spoken mid-line (noriko先生) are kept.",
+          "removed": 343
+        }
+      ],
+      "cer": 0.1642213642213642,
+      "wer": 0.1642213642213642,
+      "char_errors": 1914,
+      "reference_chars": 11655,
+      "strict_char_errors": 1970,
+      "acceptable_differences": {
+        "kana_kanji_spelling": 56,
+        "examples": [
+          {
+            "errors": 4,
+            "reference": "ときどき",
+            "generated": "時々"
+          },
+          {
+            "errors": 4,
+            "reference": "しょうの",
+            "generated": "庄野"
+          },
+          {
+            "errors": 4,
+            "reference": "しょうの",
+            "generated": "庄野"
+          },
+          {
+            "errors": 3,
+            "reference": "のりこ",
+            "generated": "ノリコ"
+          },
+          {
+            "errors": 2,
+            "reference": "とき",
+            "generated": "時"
+          }
+        ]
+      },
+      "largest_remaining_differences": [
+        {
+          "errors": 22,
+          "reference": "ちょっと自信ないですけどいえいえ大丈夫大丈夫",
+          "generated": ""
+        },
+        {
+          "errors": 18,
+          "reference": "確かねそうですねよく出てきた言葉天命",
+          "generated": "天命とか神明"
+        },
+        {
+          "errors": 17,
+          "reference": "noriko先生はお元気でしょうか",
+          "generated": ""
+        },
+        {
+          "errors": 17,
+          "reference": "みかさのみやあきこじょうおうでんか",
+          "generated": ""
+        },
+        {
+          "errors": 17,
+          "reference": "中でもうちょっと結婚のごめんなさい",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "だからずっと家で専業主婦ああ",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "そうそうどうぞはい日本大使館",
+          "generated": ""
+        },
+        {
+          "errors": 14,
+          "reference": "ねそうですねはいわかるわかる",
+          "generated": ""
+        }
+      ],
+      "normalized_hypothesis_sha256": "01c7a4f5c6ccf2eeaaa4ce7f67f99b5ef133099fb5f581fe1f9e097e4fafe72d",
+      "primary_metric": "cer",
+      "strict_v1_score": {
+        "wer": 0.9832285115303984,
+        "cer": 0.17608198526297958,
+        "word_errors": 938,
+        "reference_words": 954,
+        "char_errors": 2079,
+        "reference_chars": 11807,
+        "normalized_hypothesis_sha256": "3fd08b99e67d24823b4e840eb4fa284a4d7730018efa6630d99930da96978e7e"
+      },
+      "annotations_retained_v2_score": {
+        "cer": 0.17050652210740302,
+        "wer": 0.17050652210740302,
+        "char_errors": 2013,
+        "reference_chars": 11806,
+        "strict_char_errors": 2070,
+        "normalized_hypothesis_sha256": "61dc932f6c0aa6c51ad7bfa5afbe817e4f37883561eee4d68d3e459ab348f59e"
+      },
+      "generated_chars_outside_reference_span": 2,
+      "normalization": "benchmarks.run.normalize_text v1; Arabic numbers as kanji numerals; same-reading kana/kanji spelling tolerated via pykakasi 2.3.0; caption annotations, speaker labels and fillers removed (v4)",
+      "normalized_reference_exact_match": false,
+      "reference_status": "creator_provided_not_independently_reviewed",
+      "speaker_accuracy": null,
+      "acoustic_timing_accuracy": null,
+      "spoken_only_accuracy": null,
+      "generated_sha256": "497dcd549631350dda72e36d55ec3bc37d5d3903a791f1aeaa730be5b86e6fa9"
+    }
+  ],
+  "groups": [
+    {
+      "language": "en",
+      "split": "calibration",
+      "cases": 14,
+      "scored": 14,
+      "primary_metric": "wer",
+      "reference_weighted_error_rate": 0.05384906135819579,
+      "reference_quality_flagged": 1,
+      "full_coverage_reference_weighted_error_rate": 0.05384906135819579,
+      "partial_coverage_excluded": 0
+    },
+    {
+      "language": "en",
+      "split": "holdout",
+      "cases": 6,
+      "scored": 6,
+      "primary_metric": "wer",
+      "reference_weighted_error_rate": 0.04000405104314361,
+      "reference_quality_flagged": 0,
+      "full_coverage_reference_weighted_error_rate": 0.04000405104314361,
+      "partial_coverage_excluded": 0
+    },
+    {
+      "language": "ja",
+      "split": "calibration",
+      "cases": 14,
+      "scored": 14,
+      "primary_metric": "cer",
+      "reference_weighted_error_rate": 0.0948981926332647,
+      "reference_quality_flagged": 1,
+      "full_coverage_reference_weighted_error_rate": 0.07858094756674786,
+      "partial_coverage_excluded": 1
+    },
+    {
+      "language": "ja",
+      "split": "holdout",
+      "cases": 6,
+      "scored": 6,
+      "primary_metric": "cer",
+      "reference_weighted_error_rate": 0.1538207834381977,
+      "reference_quality_flagged": 0,
+      "full_coverage_reference_weighted_error_rate": 0.1538207834381977,
+      "partial_coverage_excluded": 0
+    }
+  ]
+}
