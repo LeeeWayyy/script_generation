@@ -6,6 +6,7 @@ and inspected without loading torch/whisperx.
 
 from __future__ import annotations
 
+import re
 import unicodedata
 from dataclasses import dataclass, field
 from typing import Optional
@@ -33,6 +34,23 @@ def is_windows_reserved_basename(name: str) -> bool:
         return True
     return (len(stem) > 3 and stem[:3] in {"COM", "LPT"}
             and stem[3:].isdigit())
+
+
+def word_offsets(text: str, words) -> Optional[list[tuple[int, int]]]:
+    """Exact ``(start, end)`` character span of each word in ``text``.
+
+    Gaps between words may hold only whitespace/punctuation (aligners drop
+    characters outside their vocabulary); any unmatched letter or digit means
+    the words don't account for the text, so return None rather than guess.
+    """
+    spans, cursor = [], 0
+    for word in words:
+        position = text.find(word.word, cursor) if word.word.strip() else -1
+        if position < 0 or re.search(r"\w", text[cursor:position]):
+            return None
+        cursor = position + len(word.word)
+        spans.append((position, cursor))
+    return None if re.search(r"\w", text[cursor:]) else spans
 
 
 @dataclass
@@ -81,32 +99,37 @@ class Transcript:
         found = {seg.speaker for seg in self.segments if seg.speaker}
         return sorted(found)
 
-    def to_dict(self) -> dict:
+    def to_dict(self, *, offsets: bool = False) -> dict:
         """Frozen legacy JSON shape used by ``transcript[-remote] -f json``.
 
         Keep this explicit: new dataclass fields belong in versioned extraction
-        envelopes, not in the byte-stable legacy output.
+        envelopes, not in the byte-stable legacy output. ``offsets`` (opt-in
+        reading units only) adds each word's ``char_start``/``char_end`` in its
+        segment's ``text``, null when the words don't map onto the text.
         """
+        def segment_dict(segment):
+            spans = word_offsets(segment.text, segment.words) if offsets else None
+            return {
+                "text": segment.text,
+                "start": segment.start,
+                "end": segment.end,
+                "speaker": segment.speaker,
+                "words": [
+                    {
+                        "word": word.word,
+                        "start": word.start,
+                        "end": word.end,
+                        "score": word.score,
+                        "speaker": word.speaker,
+                        **({"char_start": spans[i][0] if spans else None,
+                            "char_end": spans[i][1] if spans else None} if offsets else {}),
+                    }
+                    for i, word in enumerate(segment.words)
+                ],
+            }
+
         return {
-            "segments": [
-                {
-                    "text": segment.text,
-                    "start": segment.start,
-                    "end": segment.end,
-                    "speaker": segment.speaker,
-                    "words": [
-                        {
-                            "word": word.word,
-                            "start": word.start,
-                            "end": word.end,
-                            "score": word.score,
-                            "speaker": word.speaker,
-                        }
-                        for word in segment.words
-                    ],
-                }
-                for segment in self.segments
-            ],
+            "segments": [segment_dict(segment) for segment in self.segments],
             "language": self.language,
             "meta": self.meta,
         }

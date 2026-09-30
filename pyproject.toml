@@ -63,6 +63,9 @@ server = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",
+    # unit=sentence: multilingual (incl. ja/zh) sentence-boundary model, run on
+    # CPU via onnxruntime only for sources without punctuation. Lazy-imported.
+    "punctuators>=0.0.7,<0.1",
     # Media-extraction (image_note OCR, podcast RSS). All lazy-imported.
     # Pinned <3: PaddleOCR 3.x renamed the constructor kwargs (show_log removed,
     # use_angle_cls -> use_textline_orientation, det_limit_side_len ->
