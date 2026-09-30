@@ -5,7 +5,7 @@ from functools import lru_cache
 import math
 import re
 
-from .types import Transcript, word_offsets
+from .types import Segment, Transcript, word_offsets
 
 
 @lru_cache(maxsize=1)
@@ -304,6 +304,114 @@ def _join_boundaries(transcript: Transcript, boundaries: list[float], *, basis: 
            else "sentence_continuity_joins")
     readable[key] = readable.get(key, []) + corrections
     return replace(transcript, segments=segments, meta={**transcript.meta, "readable": readable})
+
+
+_SENTENCE_END = re.compile(r'[.!?。！？…]["”’)）」』]*$')
+_SOFT_BREAK = re.compile(r'[,;:，、；：]["”’)）」』]*$')
+
+
+def _timed(word):
+    return all(isinstance(t, (int, float)) and not isinstance(t, bool) and math.isfinite(t)
+               for t in (word.start, word.end)) and 0 <= word.start <= word.end
+
+
+def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
+                        min_seconds: float = 2.0) -> Transcript:
+    """Regroup aligned words into whole sentences across source segments.
+
+    A sentence ends at terminal punctuation and never at a speaker change: mixed
+    sentences get ``speaker=None`` and keep every word's own label. A sentence
+    over ``max_seconds`` (e.g. unpunctuated captions) is split only between
+    words (Japanese: between BudouX phrases) at the longest pause, preferring a
+    comma or speaker change; those boundaries are listed as forced. Segments
+    whose words don't map onto their text pass through unchanged.
+
+    ponytail: punctuation + pause heuristics; abbreviations like "Dr." end a
+    sentence. Add a punctuation-restoration model if captions prove it inadequate.
+    """
+    language = (transcript.language or "").split("-")[0].lower()
+    joiner = "" if language in ("ja", "zh") else " "
+    segments, fallbacks, forced, units = [], [], [], []
+
+    def build(group):
+        text, starts, previous = "", [], None
+        for piece, _, source_index in group:
+            if previous is not None and source_index != previous and not text[-1:].isspace():
+                text += joiner
+            starts.append(len(text))
+            text += piece
+            previous = source_index
+        return text.rstrip(), starts
+
+    def split(group):
+        timed = [w for _, w, _ in group if _timed(w)]
+        if len(timed) < 2 or timed[-1].end - timed[0].start <= max_seconds:
+            return [group]
+        text, starts = build(group)
+        phrases = _phrase_starts(text) if language == "ja" else None
+        best, best_key = None, None
+        for i in range(1, len(group)):
+            a, b = group[i - 1][1], group[i][1]
+            if not (_timed(a) and _timed(b)) or (phrases is not None and starts[i] not in phrases):
+                continue
+            score = (b.start - a.end
+                     + .5 * bool(_SOFT_BREAK.search(group[i - 1][0].rstrip()))
+                     + .5 * bool(a.speaker and b.speaker and a.speaker != b.speaker))
+            balanced = min(a.end - timed[0].start, timed[-1].end - b.start) >= min_seconds
+            key = (balanced, score, -abs(2 * i - len(group)))
+            if best_key is None or key > best_key:
+                best, best_key = i, key
+        if best is None:
+            return [group]
+        return split(group[:best]) + split(group[best:])
+
+    def flush():
+        if not units:
+            return
+        pieces = split(list(units))
+        for number, group in enumerate(pieces):
+            words = [w for _, w, _ in group]
+            timed = [w for w in words if _timed(w)]
+            labels = {w.speaker for w in words}
+            sources = {source_index for _, _, source_index in group}
+            segments.append(Segment(
+                text=build(group)[0], words=words,
+                start=timed[0].start if timed else None, end=timed[-1].end if timed else None,
+                speaker=next(iter(labels)) if len(labels) == 1 else None,
+                music=any(transcript.segments[i].music for i in sources),
+            ))
+            if number < len(pieces) - 1:
+                forced.append(len(segments) - 1)
+        units.clear()
+
+    pending = False
+    for source_index, source in enumerate(transcript.segments):
+        spans = word_offsets(source.text, source.words) if source.words else None
+        if spans is None:
+            flush()
+            pending = False
+            segments.append(replace(source))
+            fallbacks.append({"segment_index": len(segments) - 1,
+                              "source_segment_index": source_index,
+                              "reason": "no_words" if not source.words else "words_do_not_match_text"})
+            continue
+        bounds = [0] + [start for start, _ in spans[1:]] + [len(source.text)]
+        for i, word in enumerate(source.words):
+            # "so... we" trails off mid-sentence; ASR lowercases real starts too,
+            # so only an ellipsis followed by lowercase continues.
+            if pending and not (pending == "ellipsis" and word.word.lstrip()[:1].islower()):
+                flush()
+            pending = False
+            units.append((source.text[bounds[i]:bounds[i + 1]], word, source_index))
+            end = units[-1][0].rstrip()
+            if _SENTENCE_END.search(end):
+                pending = "ellipsis" if re.search(r'(\.\.\.|…)["”’)）」』]*$', end) else True
+    flush()
+    return replace(transcript, segments=segments, meta={
+        **transcript.meta,
+        "sentences": {"version": 1, "max_seconds": max_seconds, "punctuation_restored": False,
+                      "forced_boundaries": forced, "fallbacks": fallbacks},
+    })
 
 
 def main():

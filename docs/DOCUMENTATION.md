@@ -790,16 +790,45 @@ Illustrative result (times and words are examples, not measured interview output
     {"text": "Hello.", "start": 1.2, "end": 1.7,
      "speaker": "SPEAKER_00",
      "words": [{"word": "Hello.", "start": 1.2, "end": 1.7,
-                "score": 0.95, "speaker": "SPEAKER_00"}]}
+                "score": 0.95, "speaker": "SPEAKER_00",
+                "char_start": 0, "char_end": 6}]}
   ],
   "language": "en",
   "meta": {
     "align_requested": true, "align_succeeded": true,
     "diarize_requested": true, "diarize_succeeded": true,
-    "readable": {"version": 1, "punctuation_restored": false, "fallbacks": []}
+    "readable": {"version": 2, "punctuation_restored": false, "fallbacks": []}
   }
 }
 ```
+
+`char_start`/`char_end` (added in readable version 2) are each word's exact
+character span in its row's `text`, so `text[char_start:char_end] == word`.
+Only whitespace and punctuation may sit between words (aligners drop characters
+outside their vocabulary); if any letter or digit is unaccounted for, the row's
+offsets are null rather than guessed. The plain `format=json` result never
+carries offsets.
+
+#### Whole sentences
+
+```text
+GET /jobs/{id}/result?format=json&unit=sentence
+```
+
+Instead of chopping, this regroups aligned words into whole sentences across
+source segments, leaving any further splitting to the client. A sentence ends at
+terminal punctuation (`. ! ? 。 ！ ？ …`); an ellipsis followed by a lowercase word
+continues. It never breaks at a speaker change: a mixed sentence has
+`speaker:null` and every word keeps its own `speaker`. A sentence longer than 30
+seconds (typically unpunctuated captions) is split only between words (Japanese:
+only between BudouX phrases) at the longest pause, preferring a comma or speaker
+change and keeping both sides at least 2 seconds when possible;
+`meta.sentences.forced_boundaries` lists the indices of rows that end at such a
+split rather than punctuation. Rows carry `char_start`/`char_end` as above.
+Segments whose words don't map onto their text (alignment off or failed) pass
+through unchanged and are listed in `meta.sentences.fallbacks` with a `reason`.
+Abbreviations such as "Dr." end a sentence; no punctuation is restored. It is
+JSON-only and cannot be combined with `readable=true`.
 
 When alignment is unavailable or words cannot be mapped to the source text,
 text still breaks into short units. Newly split units have `start:null,end:null`

@@ -976,7 +976,8 @@ def create_app(
         return _public(job)
 
     @app.get("/jobs/{job_id}/result", response_class=PlainTextResponse)
-    def get_result(job_id: str, format: str = "txt", readable: bool = False):
+    def get_result(job_id: str, format: str = "txt", readable: bool = False,
+                   unit: str = "segment"):
         job = _asr_job(job_id)
         if job is None:
             raise HTTPException(status_code=404, detail="No such job.")
@@ -986,6 +987,14 @@ def create_app(
             raise HTTPException(status_code=409, detail=f"Job not finished (status: {job.status}).")
         if format not in FORMATS:
             raise HTTPException(status_code=400, detail=f"format must be one of {FORMATS}")
+        if unit not in ("segment", "sentence"):
+            raise HTTPException(status_code=400, detail="unit must be 'segment' or 'sentence'")
+        if unit == "sentence":
+            if format != "json" or readable:
+                raise HTTPException(status_code=400,
+                                    detail="unit=sentence requires format=json without readable")
+            from .readable import sentence_transcript
+            return render(sentence_transcript(job.transcript), format, offsets=True)
         if readable:
             if format != "json":
                 raise HTTPException(status_code=400, detail="readable=true requires format=json")
