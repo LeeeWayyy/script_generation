@@ -10,7 +10,7 @@ from .types import Transcript
 FORMATS = ("txt", "srt", "vtt", "json")
 
 
-def render(transcript: Transcript, fmt: str) -> str:
+def render(transcript: Transcript, fmt: str, *, offsets: bool = False) -> str:
     fmt = fmt.lower()
     if fmt == "txt":
         return to_txt(transcript)
@@ -19,7 +19,7 @@ def render(transcript: Transcript, fmt: str) -> str:
     if fmt == "vtt":
         return to_vtt(transcript)
     if fmt == "json":
-        return to_json(transcript)
+        return to_json(transcript, offsets=offsets)
     raise ValueError(f"Unknown format '{fmt}'. Choose from: {', '.join(FORMATS)}")
 
 
@@ -59,8 +59,8 @@ def to_vtt(transcript: Transcript) -> str:
     return "\n".join(blocks)
 
 
-def to_json(transcript: Transcript) -> str:
-    return json.dumps(transcript.to_dict(), indent=2, ensure_ascii=False)
+def to_json(transcript: Transcript, *, offsets: bool = False) -> str:
+    return json.dumps(transcript.to_dict(offsets=offsets), indent=2, ensure_ascii=False)
 
 
 def _label(seg) -> str:

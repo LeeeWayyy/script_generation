@@ -127,3 +127,25 @@ def test_engine_does_not_assign_unknown_words_to_segment_majority():
     }]}, language='en')
     assert [s.text for s in source.segments] == ['I think', 'no']
     assert [s.speaker for s in source.segments] == [None, 'B']
+
+
+def test_word_offsets_skip_dropped_punctuation_but_not_letters():
+    from transcript.types import word_offsets
+    text = 'はい。そうです、ね'
+    chars = [Word(c) for c in text if c not in '。、']
+    assert word_offsets(text, chars) == [(0, 1), (1, 2), (3, 4), (4, 5), (5, 6), (6, 7), (8, 9)]
+    assert word_offsets('Hi, there.', [Word('Hi'), Word('there')]) == [(0, 2), (4, 9)]
+    assert word_offsets('Hi big there', [Word('Hi'), Word('there')]) is None
+    assert word_offsets('Hi there', [Word('Hi')]) is None
+
+
+def test_dropped_punctuation_keeps_word_timing_and_sentence_end():
+    words = [Word('Yes', 0, .3, speaker='A'), Word('I', .4, .5, speaker='A'),
+             Word('agree', .5, .9, speaker='A')]
+    result = readable_transcript(Transcript([Segment('Yes. I agree.', 0, .9, 'A', words)], 'en'))
+    assert [s.text for s in result.segments] == ['Yes.', 'I agree.']
+    assert [(s.start, s.end) for s in result.segments] == [(0, .3), (.4, .9)]
+    assert result.meta['readable']['fallbacks'] == []
+    segments = result.to_dict(offsets=True)['segments']
+    assert [(w['char_start'], w['char_end']) for w in segments[1]['words']] == [(0, 1), (2, 7)]
+    assert 'char_start' not in Transcript([Segment('Yes.', 0, .3, words=words[:1])]).to_dict()['segments'][0]['words'][0]

@@ -5,7 +5,7 @@ from functools import lru_cache
 import math
 import re
 
-from .types import Transcript
+from .types import Transcript, word_offsets
 
 
 @lru_cache(maxsize=1)
@@ -28,17 +28,17 @@ def readable_transcript(transcript: Transcript) -> Transcript:
     for source_index, source in enumerate(transcript.segments):
         words = source.words
         # Use word offsets only when they account for all spoken text.
-        positions, cursor = [], 0
-        for word in words:
-            position = source.text.find(word.word, cursor) if word.word else -1
-            if position < 0 or source.text[cursor:position].strip():
-                break
-            positions.append(position)
-            cursor = position + len(word.word)
-        mapped = bool(words) and len(positions) == len(words) and not source.text[cursor:].strip()
+        spans = word_offsets(source.text, words) if words else None
+        mapped = spans is not None
         tokens = [w.word for w in words] if mapped else re.findall(r"\S+", source.text)
-        if not mapped:
-            positions = [m.start() for m in re.finditer(r"\S+", source.text)]
+        positions = ([start for start, _ in spans] if mapped
+                     else [m.start() for m in re.finditer(r"\S+", source.text)])
+
+        def trailing(index):
+            # A token plus the text up to the next one: an aligner may drop the
+            # punctuation from the word itself while the text still carries it.
+            stop = positions[index + 1] if index + 1 < len(tokens) else len(source.text)
+            return source.text[positions[index]:stop].rstrip()
         if not tokens:
             segments.append(replace(source))
             continue
@@ -72,12 +72,12 @@ def readable_transcript(transcript: Transcript) -> Transcript:
             # as "it.". Speaker changes, pauses, and the 8-second limit still win.
             if length and mapped and not japanese and timed(first):
                 ending = next((j for j in range(i, min(i + 4, len(tokens)))
-                               if re.search(r'[.!?]["\u201d\u2019]*$', tokens[j])), None)
+                               if re.search(r'[.!?]["\u201d\u2019]*$', trailing(j))), None)
                 if (ending is not None and timed(ending)
                         and words[ending].end - words[first].start <= 8):
                     length = False
             if (changed or pause or (length and (not japanese or positions[i] in phrase_starts))
-                    or re.search(r'[.!?。！？]["\u201d\u2019]*$', tokens[i - 1])):
+                    or re.search(r'[.!?。！？]["\u201d\u2019]*$', trailing(i - 1))):
                 starts.append(i)
                 last_speaker = speaker(i)
             elif speaker(i) is not None:
@@ -110,7 +110,7 @@ def readable_transcript(transcript: Transcript) -> Transcript:
                 })
     result = replace(transcript, segments=segments, meta={
         **transcript.meta,
-        "readable": {"version": 1, "punctuation_restored": False, "fallbacks": fallback},
+        "readable": {"version": 2, "punctuation_restored": False, "fallbacks": fallback},
     })
     return _join_japanese_fragments(result) if japanese else _join_sentence_continuations(result)
 
@@ -320,12 +320,14 @@ def main():
     args = parser.parse_args()
     data = json.loads(args.input.read_text(encoding="utf-8"))
     transcript = Transcript(
-        segments=[Segment(**{**s, "words": [Word(**w) for w in s.get("words", [])]})
+        segments=[Segment(**{**s, "words": [Word(**{k: v for k, v in w.items()
+                                                       if k not in ("char_start", "char_end")})
+                                           for w in s.get("words", [])]})
                   for s in data["segments"]], language=data.get("language"), meta=data.get("meta", {}),
     )
     try:
         result = join_reviewed_boundaries(transcript, args.join_at)
-        output = json.dumps(result.to_dict(), indent=2, ensure_ascii=False, allow_nan=False)
+        output = json.dumps(result.to_dict(offsets=True), indent=2, ensure_ascii=False, allow_nan=False)
         # Never overwrite a saved result or an active library, even if paths alias.
         with args.output.open("x", encoding="utf-8") as stream:
             stream.write(output + "\n")

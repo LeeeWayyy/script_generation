@@ -990,7 +990,7 @@ def create_app(
             if format != "json":
                 raise HTTPException(status_code=400, detail="readable=true requires format=json")
             from .readable import readable_transcript
-            return render(readable_transcript(job.transcript), format)
+            return render(readable_transcript(job.transcript), format, offsets=True)
         return render(job.transcript, format)
 
     @app.delete("/jobs/{job_id}", status_code=204)
