@@ -818,7 +818,19 @@ GET /jobs/{id}/result?format=json&unit=sentence
 Instead of chopping, this regroups aligned words into whole sentences across
 source segments, leaving any further splitting to the client. A sentence ends at
 terminal punctuation (`. ! ? 。 ！ ？ …`); an ellipsis followed by a lowercase word
-continues. It never breaks at a speaker change: a mixed sentence has
+continues. When the source has fewer than one full stop per 30 seconds (for
+example Japanese captions), a multilingual punctuation model
+(`1-800-BAD-CODE/xlm-roberta_punctuation_fullstop_truecase`, via the
+`punctuators` package in the `server` extra, CPU) proposes sentence ends inside
+runs longer than 10 seconds. A proposal is used only when it falls between words
+and the audio has a pause of at least 0.5 seconds there; on measured captions,
+every wrong proposal (mid-word or mid-clause) had no pause. The model's rewritten
+text is only used to locate breaks; returned text is never changed
+(`punctuation_restored` stays false). `meta.sentences.punctuation_model` reports
+whether it ran and any load error (the view then falls back to pauses), and
+`meta.sentences.model_boundaries` lists rows that end at a model boundary. The
+first such request downloads/loads the model (about 30 seconds). Punctuated
+sources never call it. It never breaks at a speaker change: a mixed sentence has
 `speaker:null` and every word keeps its own `speaker`. A sentence longer than 30
 seconds (typically unpunctuated captions) is split only between words (Japanese:
 only between BudouX phrases) at the longest pause, preferring a comma or speaker
@@ -827,7 +839,7 @@ change and keeping both sides at least 2 seconds when possible;
 split rather than punctuation. Rows carry `char_start`/`char_end` as above.
 Segments whose words don't map onto their text (alignment off or failed) pass
 through unchanged and are listed in `meta.sentences.fallbacks` with a `reason`.
-Abbreviations such as "Dr." end a sentence; no punctuation is restored. It is
+Abbreviations such as "Dr." end a sentence. It is
 JSON-only and cannot be combined with `readable=true`.
 
 When alignment is unavailable or words cannot be mapped to the source text,

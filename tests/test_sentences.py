@@ -32,7 +32,8 @@ def test_long_unpunctuated_run_splits_between_words_at_longest_pause():
     words[5].end += 1.5
     words[2].word = 'three,'  # a comma alone doesn't beat a 1.5 s longer pause
     text = ' '.join(w.word for w in words)
-    result = sentence_transcript(Transcript([Segment(text, 0, 36, words=words)], 'en'))
+    result = sentence_transcript(Transcript([Segment(text, 0, 36, words=words)], 'en'),
+                                 predict=lambda texts: [None] * len(texts))
     assert [s.text for s in result.segments] == ['one two three, four five', 'six seven eight']
     assert [w for s in result.segments for w in s.words] == words
     assert result.meta['sentences']['forced_boundaries'] == [0]
@@ -45,7 +46,8 @@ def test_japanese_split_waits_for_a_phrase_boundary():
     for later in words[phrase + 1:]:  # biggest pause sits inside the next phrase
         later.start += 3
         later.end += 3
-    result = sentence_transcript(Transcript([Segment(text, 0, 45, words=words)], 'ja'))
+    result = sentence_transcript(Transcript([Segment(text, 0, 45, words=words)], 'ja'),
+                                 predict=lambda texts: [None] * len(texts))
     assert [s.text for s in result.segments] == [text[:phrase], text[phrase:]]
 
 
@@ -83,3 +85,50 @@ def test_result_route_unit_sentence(monkeypatch, tmp_path):
                        {'format': 'json', 'unit': 'word'}):
             assert client.get(path, params=params).status_code == 400
         assert client.get(path, params={'format': 'json'}).json() == transcript.to_dict()
+
+
+def test_model_boundaries_need_a_pause_and_sparse_punctuation():
+    text = 'はいそうですね次に行きます'
+    gaps = {2: 1.0, 7: 0.0}  # model proposes both; only the paused one is used
+    words, clock = [], 0.0
+    for i, c in enumerate(text):
+        clock += gaps.get(i, 0)
+        words.append(Word(c, clock, clock + 1))
+        clock += 1
+    calls = []
+
+    def predict(texts):
+        calls.append(texts)
+        return [{2, 7}]
+    result = sentence_transcript(Transcript([Segment(text, 0, clock, words=words)], 'ja'),
+                                 predict=predict)
+    assert calls == [[text]]
+    assert [s.text for s in result.segments] == ['はい', 'そうですね次に行きます']
+    meta = result.meta['sentences']
+    assert meta['model_boundaries'] == [0] and meta['punctuation_model']['used']
+    punctuated = ('ok. ' * 30).strip()
+    words = timed_words(punctuated)
+    sentence_transcript(Transcript([Segment(punctuated, 0, 15, words=words)], 'en'), predict=predict)
+    assert len(calls) == 1  # a full stop every half second: the model is never asked
+
+
+def test_model_failure_is_reported_not_raised():
+    def broken(texts):
+        raise ImportError('punctuators missing')
+    words = timed_words('one two three four five six seven eight', step=2)
+    result = sentence_transcript(Transcript([Segment('one two three four five six seven eight', 0, 16,
+                                                     words=words)], 'en'), predict=broken)
+    assert [s.text for s in result.segments] == ['one two three four five six seven eight']
+    assert result.meta['sentences']['punctuation_model']['error'] == 'ImportError: punctuators missing'
+
+
+def test_predicted_starts_map_back_through_rewritten_text(monkeypatch):
+    from transcript import readable
+
+    class Model:
+        def infer(self, texts, apply_sbd):
+            return [['水素を2倍入れた。', 'ねー。', 'でも、見えた。'], ['changed words.', 'x']]
+    monkeypatch.setattr(readable, '_punctuation_model', lambda: Model())
+    text = '水素を２倍入れたねーでも見えた'
+    assert readable._predicted_sentence_starts([text, 'other words x']) == [
+        {text.index('ね'), text.index('で')}, None]

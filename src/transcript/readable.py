@@ -4,6 +4,7 @@ from dataclasses import asdict, replace
 from functools import lru_cache
 import math
 import re
+import unicodedata
 
 from .types import Segment, Transcript, word_offsets
 
@@ -308,6 +309,8 @@ def _join_boundaries(transcript: Transcript, boundaries: list[float], *, basis: 
 
 _SENTENCE_END = re.compile(r'[.!?。！？…]["”’)）」』]*$')
 _SOFT_BREAK = re.compile(r'[,;:，、；：]["”’)）」』]*$')
+_FULL_STOP = re.compile(r'[.!?。！？]["”’)）」』]*$')
+PUNCTUATION_MODEL = "1-800-BAD-CODE/xlm-roberta_punctuation_fullstop_truecase"
 
 
 def _timed(word):
@@ -315,23 +318,56 @@ def _timed(word):
                for t in (word.start, word.end)) and 0 <= word.start <= word.end
 
 
+@lru_cache(maxsize=1)
+def _punctuation_model():
+    from punctuators.models import PunctCapSegModelONNX
+    return PunctCapSegModelONNX.from_pretrained(PUNCTUATION_MODEL)
+
+
+def _letters(text):
+    """(normalized letter/digit, index in ``text``) pairs, ignoring punctuation."""
+    return [(ch, i) for i, c in enumerate(text)
+            for ch in unicodedata.normalize("NFKC", c).casefold() if ch.isalnum()]
+
+
+def _predicted_sentence_starts(texts):
+    """Per text, offsets of letters where the model starts a new sentence.
+
+    The model rewrites punctuation, case and width, so its output is used only
+    to locate full stops, mapped back by letter count; None when its letters
+    differ from the input's (it must never change what was said).
+    """
+    results = []
+    for text, sentences in zip(texts, _punctuation_model().infer(texts, apply_sbd=True)):
+        letters, starts, count = _letters(text), set(), 0
+        for sentence in sentences[:-1]:
+            count += len(_letters(sentence))
+            if _FULL_STOP.search(sentence.strip()) and count < len(letters):
+                starts.add(letters[count][1])
+        same = [ch for ch, _ in letters] == [ch for s in sentences for ch, _ in _letters(s)]
+        results.append(starts if same else None)
+    return results
+
+
 def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
-                        min_seconds: float = 2.0) -> Transcript:
+                        min_seconds: float = 2.0, model_seconds: float = 10.0,
+                        model_pause: float = 0.5, predict=_predicted_sentence_starts) -> Transcript:
     """Regroup aligned words into whole sentences across source segments.
 
     A sentence ends at terminal punctuation and never at a speaker change: mixed
-    sentences get ``speaker=None`` and keep every word's own label. A sentence
-    over ``max_seconds`` (e.g. unpunctuated captions) is split only between
-    words (Japanese: between BudouX phrases) at the longest pause, preferring a
-    comma or speaker change; those boundaries are listed as forced. Segments
-    whose words don't map onto their text pass through unchanged.
+    sentences get ``speaker=None`` and keep every word's own label. When the
+    source has under one full stop per 30 seconds (e.g. Japanese captions), a
+    punctuation model proposes sentence ends inside runs over ``model_seconds``;
+    only its full stops that fall between words with a pause of at least
+    ``model_pause`` are used, and the text is never rewritten. A sentence still over ``max_seconds``
+    is split between words at the longest pause, preferring a comma or speaker
+    change. Segments whose words don't map onto their text pass through.
 
-    ponytail: punctuation + pause heuristics; abbreviations like "Dr." end a
-    sentence. Add a punctuation-restoration model if captions prove it inadequate.
+    ponytail: abbreviations like "Dr." end a sentence in punctuated sources.
     """
     language = (transcript.language or "").split("-")[0].lower()
     joiner = "" if language in ("ja", "zh") else " "
-    segments, fallbacks, forced, units = [], [], [], []
+    items, units, fallbacks = [], [], []
 
     def build(group):
         text, starts, previous = "", [], None
@@ -343,16 +379,24 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
             previous = source_index
         return text.rstrip(), starts
 
-    def split(group):
+    def duration(group):
         timed = [w for _, w, _ in group if _timed(w)]
-        if len(timed) < 2 or timed[-1].end - timed[0].start <= max_seconds:
-            return [group]
+        return timed[-1].end - timed[0].start if len(timed) > 1 else 0
+
+    def allowed(group):
+        """Unit indices where a split falls between words (Japanese: phrases)."""
         text, starts = build(group)
         phrases = _phrase_starts(text) if language == "ja" else None
+        return [i for i in range(1, len(group)) if phrases is None or starts[i] in phrases]
+
+    def split(group):
+        if duration(group) <= max_seconds:
+            return [group]
+        timed = [w for _, w, _ in group if _timed(w)]
         best, best_key = None, None
-        for i in range(1, len(group)):
+        for i in allowed(group):
             a, b = group[i - 1][1], group[i][1]
-            if not (_timed(a) and _timed(b)) or (phrases is not None and starts[i] not in phrases):
+            if not (_timed(a) and _timed(b)):
                 continue
             score = (b.start - a.end
                      + .5 * bool(_SOFT_BREAK.search(group[i - 1][0].rstrip()))
@@ -366,23 +410,9 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
         return split(group[:best]) + split(group[best:])
 
     def flush():
-        if not units:
-            return
-        pieces = split(list(units))
-        for number, group in enumerate(pieces):
-            words = [w for _, w, _ in group]
-            timed = [w for w in words if _timed(w)]
-            labels = {w.speaker for w in words}
-            sources = {source_index for _, _, source_index in group}
-            segments.append(Segment(
-                text=build(group)[0], words=words,
-                start=timed[0].start if timed else None, end=timed[-1].end if timed else None,
-                speaker=next(iter(labels)) if len(labels) == 1 else None,
-                music=any(transcript.segments[i].music for i in sources),
-            ))
-            if number < len(pieces) - 1:
-                forced.append(len(segments) - 1)
-        units.clear()
+        if units:
+            items.append(list(units))
+            units.clear()
 
     pending = False
     for source_index, source in enumerate(transcript.segments):
@@ -390,10 +420,7 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
         if spans is None:
             flush()
             pending = False
-            segments.append(replace(source))
-            fallbacks.append({"segment_index": len(segments) - 1,
-                              "source_segment_index": source_index,
-                              "reason": "no_words" if not source.words else "words_do_not_match_text"})
+            items.append((source_index, source))
             continue
         bounds = [0] + [start for start, _ in spans[1:]] + [len(source.text)]
         for i, word in enumerate(source.words):
@@ -407,9 +434,69 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
             if _SENTENCE_END.search(end):
                 pending = "ellipsis" if re.search(r'(\.\.\.|…)["”’)）」』]*$', end) else True
     flush()
+
+    # Ask the model only when the source itself is short on full stops: on
+    # punctuated speech it invents breaks ("Four score.|And seven years ago").
+    spoken = sum(s.end - s.start for s in transcript.segments
+                 if isinstance(s.start, (int, float)) and isinstance(s.end, (int, float)))
+    stops = sum(len(re.findall(r'[.!?。！？]', s.text)) for s in transcript.segments)
+    sparse = spoken >= model_seconds and stops * 30 < spoken
+    model = {"name": PUNCTUATION_MODEL, "used": False, "error": None}
+    cuts = {}
+    candidates = [n for n, item in enumerate(items)
+                  if isinstance(item, list) and duration(item) > model_seconds] if sparse else []
+    if candidates:
+        try:
+            predicted = predict([build(items[n])[0] for n in candidates])
+            model["used"] = True
+        except Exception as exc:  # optional dependency / download failure
+            predicted = []
+            model["error"] = f"{type(exc).__name__}: {exc}"
+        for n, starts in zip(candidates, predicted):
+            if not starts:
+                continue
+            group = items[n]
+            offsets = build(group)[1]
+            # A predicted sentence must start on a word's first letter and be
+            # confirmed by a pause: on real captions every mid-word or mid-clause
+            # prediction ("させる|と", "粒2 |つく") had no gap, every true one ≥0.8 s.
+            cuts[n] = [i for i in range(1, len(group))
+                       if _timed(group[i - 1][1]) and _timed(group[i][1])
+                       and group[i][1].start - group[i - 1][1].end >= model_pause
+                       and next((offsets[i] + k for k, c in enumerate(group[i][0]) if c.isalnum()),
+                                None) in starts]
+
+    segments, forced, model_boundaries = [], [], []
+    for n, item in enumerate(items):
+        if not isinstance(item, list):
+            source_index, source = item
+            segments.append(replace(source))
+            fallbacks.append({"segment_index": len(segments) - 1,
+                              "source_segment_index": source_index,
+                              "reason": "no_words" if not source.words else "words_do_not_match_text"})
+            continue
+        edges = [0, *cuts.get(n, []), len(item)]
+        for k, (a, b) in enumerate(zip(edges, edges[1:])):
+            pieces = split(item[a:b])
+            for number, group in enumerate(pieces):
+                words = [w for _, w, _ in group]
+                timed = [w for w in words if _timed(w)]
+                labels = {w.speaker for w in words}
+                sources = {source_index for _, _, source_index in group}
+                segments.append(Segment(
+                    text=build(group)[0], words=words,
+                    start=timed[0].start if timed else None, end=timed[-1].end if timed else None,
+                    speaker=next(iter(labels)) if len(labels) == 1 else None,
+                    music=any(transcript.segments[i].music for i in sources),
+                ))
+                if number < len(pieces) - 1:
+                    forced.append(len(segments) - 1)
+                elif k < len(edges) - 2:
+                    model_boundaries.append(len(segments) - 1)
     return replace(transcript, segments=segments, meta={
         **transcript.meta,
-        "sentences": {"version": 1, "max_seconds": max_seconds, "punctuation_restored": False,
+        "sentences": {"version": 2, "max_seconds": max_seconds, "punctuation_restored": False,
+                      "punctuation_model": model, "model_boundaries": model_boundaries,
                       "forced_boundaries": forced, "fallbacks": fallbacks},
     })
 
