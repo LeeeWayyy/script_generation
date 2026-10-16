@@ -22,7 +22,7 @@ from .engine import _pkg_version
 
 def _is_kanji(ch: str) -> bool:
     return ("一" <= ch <= "鿿" or "㐀" <= ch <= "䶿" or "豈" <= ch <= "﫿"
-            or "\U00020000" <= ch <= "\U0003134f" or ch in "々〆ヶ")
+            or "\U00020000" <= ch <= "\U0003134f" or ch in "々〆ヶ〇")
 
 
 def _hiragana(kana: str) -> str:

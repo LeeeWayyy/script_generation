@@ -38,6 +38,8 @@ def test_chinese_readings_settle_polyphones_per_hanzi():
     assert [(text[s['char_start']], s['reading']) for s in spans] == [
         ('我', 'wǒ'), ('用', 'yòng'), ('去', 'qù'), ('银', 'yín'), ('行', 'háng'),
         ('还', 'huán'), ('钱', 'qián')]
+    assert [s['reading'] for s in chinese_readings('二〇二六年')] == [
+        'èr', 'líng', 'èr', 'liù', 'nián']
 
 
 def test_missing_library_is_reported_and_other_languages_untouched(monkeypatch):
