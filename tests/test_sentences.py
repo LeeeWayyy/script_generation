@@ -68,6 +68,38 @@ def test_unmapped_segment_passes_through_and_is_reported():
         (1, 'no_words'), (2, 'words_do_not_match_text')]
 
 
+
+def test_segments_join_by_the_scripts_they_meet():
+    def joined(language, *texts):
+        segments, clock = [], 0.0
+        for text in texts:
+            segments.append(Segment(text, clock, clock + 1, words=[Word(text, clock, clock + 1)]))
+            clock += 1
+        return [s.text for s in sentence_transcript(Transcript(segments, language)).segments]
+    assert joined('ja', '今日は', '晴れ。') == ['今日は晴れ。']
+    assert joined('ja', 'Hello', 'world.') == ['Hello world.']
+    assert joined('ja', 'これは', 'iPhone。') == ['これはiPhone。']
+    assert joined('th', 'สวัสดี', 'ครับ.') == ['สวัสดีครับ.']
+    assert joined('en', 'Hello', 'world.') == ['Hello world.']
+
+
+def test_untimed_edge_words_widen_sentence_bounds_or_null_them():
+    def sentence(*words, source_end=None, then=None):
+        segments = [Segment(' '.join(w.word for w in words), 0, source_end, words=list(words))]
+        if then is not None:
+            segments.append(Segment('Next.', then, then + 1, words=[Word('Next.', then, then + 1)]))
+        return sentence_transcript(Transcript(segments, 'en'))
+    result = sentence(Word('One', 0, 1), Word('two.'), then=3)
+    assert (result.segments[0].start, result.segments[0].end) == (0, 3)
+    assert result.meta['sentences']['estimated_bounds'] == [0]
+    result = sentence(Word('One', 0, 1), Word('two.'), source_end=2, then=3)
+    assert (result.segments[0].start, result.segments[0].end) == (0, 2)
+    result = sentence(Word('One', 0, 1), Word('two.'))
+    assert result.segments[0].end is None
+    result = sentence(Word('One', 1, 1.5), Word('two.', .5, 2))  # out of order
+    assert (result.segments[0].start, result.segments[0].end) == (.5, 2)
+    assert result.meta['sentences']['estimated_bounds'] == []
+
 def test_result_route_unit_sentence(monkeypatch, tmp_path):
     from transcript.server import Job, create_app
     monkeypatch.delenv('TRANSCRIPT_TOKEN', raising=False)

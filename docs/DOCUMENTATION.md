@@ -837,6 +837,13 @@ only between BudouX phrases) at the longest pause, preferring a comma or speaker
 change and keeping both sides at least 2 seconds when possible;
 `meta.sentences.forced_boundaries` lists the indices of rows that end at such a
 split rather than punctuation. Rows carry `char_start`/`char_end` as above.
+Text from two source segments joins with nothing next to a script written
+without spaces (Japanese, Chinese, Thai and full-width punctuation) and with a
+space otherwise, so `Hello` + `world.` stays two words in a Japanese transcript.
+A row spans its timed words (earliest start, latest end). When its first or last
+word has no timing, the row widens to the nearest known time outside it (the
+neighbouring rows' words, or the source segment's own edge) and is listed in
+`meta.sentences.estimated_bounds`; with no such time that bound is `null`.
 Segments whose words don't map onto their text (alignment off or failed) pass
 through unchanged and are listed in `meta.sentences.fallbacks` with a `reason`.
 Abbreviations such as "Dr." end a sentence. It is

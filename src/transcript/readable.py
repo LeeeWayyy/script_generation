@@ -349,6 +349,88 @@ def _predicted_sentence_starts(texts):
     return results
 
 
+def _no_space(ch):
+    """A character of a script written without spaces between words."""
+    if not ch:
+        return False
+    if unicodedata.category(ch).startswith("P") and unicodedata.east_asian_width(ch) in ("W", "F"):
+        return True  # 。、「」！？ and other full-width punctuation
+    name = unicodedata.name(ch, "")
+    return name.startswith(("CJK ", "HIRAGANA", "KATAKANA", "THAI", "LAO", "KHMER",
+                            "MYANMAR", "TIBETAN", "IDEOGRAPHIC", "HALFWIDTH KATAKANA"))
+
+
+def _joiner(before, after):
+    """What joins two source segments' text: nothing next to a no-space script
+    (Japanese, Chinese, Thai...), a space between any others ("Hello world")."""
+    return "" if _no_space(before) or _no_space(after) else " "
+
+
+def _time(value):
+    return (isinstance(value, (int, float)) and not isinstance(value, bool)
+            and math.isfinite(value) and value >= 0)
+
+
+def _outer_bounds(transcript, segments, grouped):
+    """Give sentences whose first or last word is untimed bounds that hold them.
+
+    Such a word lies after the previous sentence's last timed word (or its own
+    segment's start, when it opens that segment) and before the next sentence's
+    first; the tightest of those bounds is used, or None when none is known, so
+    a sentence's times never leave out its own words. Returns those sentences'
+    indices; starts are kept in order for clients that require it.
+    """
+    def known(segment):
+        times = [(w.start, w.end) for w in segment.words if _timed(w)] if segment.words else []
+        if not segment.words and _time(segment.start) and _time(segment.end):
+            times = [(segment.start, segment.end)]
+        return times
+
+    spans = [known(s) for s in segments]
+    before, latest = [], None
+    for times in spans:
+        before.append(latest)
+        if times:
+            latest = max([latest or 0, *(end for _, end in times)])
+    after, earliest = [None] * len(spans), None
+    for i in range(len(spans) - 1, -1, -1):
+        after[i] = earliest
+        if spans[i]:
+            earliest = min([*(start for start, _ in spans[i]),
+                            *([earliest] if earliest is not None else [])])
+
+    def source_of(word, group):
+        return next(transcript.segments[k] for _, w, k in group if w is word)
+
+    estimated, last_start = [], None
+    for index, group in grouped:
+        segment = segments[index]
+        first, last = segment.words[0], segment.words[-1]
+        start, end, changed = segment.start, segment.end, False
+        if not _timed(first):
+            source = source_of(first, group)
+            lower = [t for t in (before[index], source.start if source.words[0] is first else None)
+                     if _time(t)]
+            start = min([max(lower), *([start] if start is not None else [])]) if lower else None
+            changed = True
+        if not _timed(last):
+            source = source_of(last, group)
+            upper = [t for t in (after[index], source.end if source.words[-1] is last else None)
+                     if _time(t)]
+            end = max([min(upper), *([end] if end is not None else [])]) if upper else None
+            changed = True
+        if start is not None and last_start is not None and start < last_start:
+            start, changed = last_start, True
+        if start is not None and end is not None and end < start:
+            start = end = None
+        if changed:
+            segments[index] = replace(segment, start=start, end=end)
+            estimated.append(index)
+        if start is not None:
+            last_start = start
+    return estimated
+
+
 def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
                         min_seconds: float = 2.0, model_seconds: float = 10.0,
                         model_pause: float = 0.5, predict=_predicted_sentence_starts) -> Transcript:
@@ -366,14 +448,14 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
     ponytail: abbreviations like "Dr." end a sentence in punctuated sources.
     """
     language = (transcript.language or "").split("-")[0].lower()
-    joiner = "" if language in ("ja", "zh") else " "
     items, units, fallbacks = [], [], []
 
     def build(group):
         text, starts, previous = "", [], None
         for piece, _, source_index in group:
-            if previous is not None and source_index != previous and not text[-1:].isspace():
-                text += joiner
+            if (previous is not None and source_index != previous
+                    and not text[-1:].isspace() and not piece[:1].isspace()):
+                text += _joiner(text[-1:], piece[:1])
             starts.append(len(text))
             text += piece
             previous = source_index
@@ -466,7 +548,7 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
                        and next((offsets[i] + k for k, c in enumerate(group[i][0]) if c.isalnum()),
                                 None) in starts]
 
-    segments, forced, model_boundaries = [], [], []
+    segments, forced, model_boundaries, grouped = [], [], [], []
     for n, item in enumerate(items):
         if not isinstance(item, list):
             source_index, source = item
@@ -483,9 +565,11 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
                 timed = [w for w in words if _timed(w)]
                 labels = {w.speaker for w in words}
                 sources = {source_index for _, _, source_index in group}
+                grouped.append((len(segments), group))
                 segments.append(Segment(
                     text=build(group)[0], words=words,
-                    start=timed[0].start if timed else None, end=timed[-1].end if timed else None,
+                    start=min(w.start for w in timed) if timed else None,
+                    end=max(w.end for w in timed) if timed else None,
                     speaker=next(iter(labels)) if len(labels) == 1 else None,
                     music=any(transcript.segments[i].music for i in sources),
                 ))
@@ -493,11 +577,13 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
                     forced.append(len(segments) - 1)
                 elif k < len(edges) - 2:
                     model_boundaries.append(len(segments) - 1)
+    estimated = _outer_bounds(transcript, segments, grouped)
     return replace(transcript, segments=segments, meta={
         **transcript.meta,
         "sentences": {"version": 2, "max_seconds": max_seconds, "punctuation_restored": False,
                       "punctuation_model": model, "model_boundaries": model_boundaries,
-                      "forced_boundaries": forced, "fallbacks": fallbacks},
+                      "forced_boundaries": forced, "estimated_bounds": estimated,
+                      "fallbacks": fallbacks},
     })
 
 
