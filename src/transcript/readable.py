@@ -307,9 +307,9 @@ def _join_boundaries(transcript: Transcript, boundaries: list[float], *, basis: 
     return replace(transcript, segments=segments, meta={**transcript.meta, "readable": readable})
 
 
-_SENTENCE_END = re.compile(r'[.!?。！？…]["”’)）」』]*$')
+_SENTENCE_END = re.compile(r'[.!?。！？…]["”’\')）」』]*$')
 _SOFT_BREAK = re.compile(r'[,;:，、；：]["”’)）」』]*$')
-_FULL_STOP = re.compile(r'[.!?。！？]["”’)）」』]*$')
+_FULL_STOP = re.compile(r'[.!?。！？]["”’\')）」』]*$')
 PUNCTUATION_MODEL = "1-800-BAD-CODE/xlm-roberta_punctuation_fullstop_truecase"
 
 
@@ -514,14 +514,17 @@ def sentence_transcript(transcript: Transcript, *, max_seconds: float = 30.0,
             units.append((source.text[bounds[i]:bounds[i + 1]], word, source_index))
             end = units[-1][0].rstrip()
             if _SENTENCE_END.search(end):
-                pending = "ellipsis" if re.search(r'(\.\.\.|…)["”’)）」』]*$', end) else True
+                pending = "ellipsis" if re.search(r'(\.\.\.|…)["”’\')）」』]*$', end) else True
     flush()
 
     # Ask the model only when the source itself is short on full stops: on
     # punctuated speech it invents breaks ("Four score.|And seven years ago").
     spoken = sum(s.end - s.start for s in transcript.segments
                  if isinstance(s.start, (int, float)) and isinstance(s.end, (int, float)))
-    stops = sum(len(re.findall(r'[.!?。！？]', s.text)) for s in transcript.segments)
+    # Count sentence ends, not characters: "?!" or "..." is one, and an ellipsis that
+    # runs on into lowercase ("so... we") is none, as in the parser above.
+    stops = sum(len(re.findall(r'[.!?。！？]+', s.text))
+                - len(re.findall(r'\.{3}["”’\')）」』]*\s+[a-z]', s.text)) for s in transcript.segments)
     sparse = spoken >= model_seconds and stops * 30 < spoken
     model = {"name": PUNCTUATION_MODEL, "used": False, "error": None}
     cuts = {}

@@ -57,6 +57,21 @@ def test_ellipsis_continues_but_period_before_lowercase_ends():
     assert [s.text for s in result.segments] == ['so... we left.', 'then home.']
 
 
+
+def test_ascii_closing_quote_ends_a_sentence():
+    text = "He said 'go.' Then left."
+    result = sentence_transcript(Transcript([Segment(text, 0, 3, words=timed_words(text))], 'en'))
+    assert [s.text for s in result.segments] == ["He said 'go.'", 'Then left.']
+
+
+def test_continuing_ellipses_do_not_count_as_punctuation():
+    text = 'so... we ' + ' '.join(['word'] * 118)
+    words = timed_words(text)  # 60 s with one "stop", an ellipsis that continues
+    calls = []
+    sentence_transcript(Transcript([Segment(text, 0, 60, words=words)], 'en'),
+                        predict=lambda texts: calls.append(texts) or [None] * len(texts))
+    assert calls
+
 def test_unmapped_segment_passes_through_and_is_reported():
     words = timed_words('Hi there.')
     source = [Segment('Hi there.', 0, 1, 'A', words), Segment('No words here', 2, 3, 'A'),
