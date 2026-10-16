@@ -31,6 +31,7 @@ dev = [
     "httpx>=0.27",
     "python-multipart>=0.0.9",
     "requests>=2.31",
+    "uvicorn>=0.29",
     "transcript[benchmark]",
 ]
 # Creator-reference accuracy scoring (benchmarks/youtube_accuracy.py): minimal
