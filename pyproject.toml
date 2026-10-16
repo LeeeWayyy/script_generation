@@ -31,6 +31,7 @@ dev = [
     "httpx>=0.27",
     "python-multipart>=0.0.9",
     "requests>=2.31",
+    "uvicorn>=0.29",
     "transcript[benchmark]",
 ]
 # Creator-reference accuracy scoring (benchmarks/youtube_accuracy.py): minimal
@@ -63,6 +64,9 @@ server = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "python-multipart>=0.0.9",
+    # unit=sentence: multilingual (incl. ja/zh) sentence-boundary model, run on
+    # CPU via onnxruntime only for sources without punctuation. Lazy-imported.
+    "punctuators>=0.0.7,<0.1",
     # Media-extraction (image_note OCR, podcast RSS). All lazy-imported.
     # Pinned <3: PaddleOCR 3.x renamed the constructor kwargs (show_log removed,
     # use_angle_cls -> use_textline_orientation, det_limit_side_len ->
@@ -102,6 +106,11 @@ path = "src/transcript/__init__.py"
 line-length = 100
 target-version = "py310"
 
+[tool.ruff.lint]
+# Ruff's long-standing default set, spelled out: newer ruff releases enable many
+# more rules by default, which turned CI red on code that hadn't changed.
+select = ["E4", "E7", "E9", "F"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["src", "."]

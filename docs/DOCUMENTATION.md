@@ -790,16 +790,64 @@ Illustrative result (times and words are examples, not measured interview output
     {"text": "Hello.", "start": 1.2, "end": 1.7,
      "speaker": "SPEAKER_00",
      "words": [{"word": "Hello.", "start": 1.2, "end": 1.7,
-                "score": 0.95, "speaker": "SPEAKER_00"}]}
+                "score": 0.95, "speaker": "SPEAKER_00",
+                "char_start": 0, "char_end": 6}]}
   ],
   "language": "en",
   "meta": {
     "align_requested": true, "align_succeeded": true,
     "diarize_requested": true, "diarize_succeeded": true,
-    "readable": {"version": 1, "punctuation_restored": false, "fallbacks": []}
+    "readable": {"version": 2, "punctuation_restored": false, "fallbacks": []}
   }
 }
 ```
+
+`char_start`/`char_end` (added in readable version 2) are each word's exact
+character span in its row's `text`, so `text[char_start:char_end] == word`.
+Only whitespace and punctuation may sit between words (aligners drop characters
+outside their vocabulary); if any letter or digit is unaccounted for, the row's
+offsets are null rather than guessed. The plain `format=json` result never
+carries offsets.
+
+#### Whole sentences
+
+```text
+GET /jobs/{id}/result?format=json&unit=sentence
+```
+
+Instead of chopping, this regroups aligned words into whole sentences across
+source segments, leaving any further splitting to the client. A sentence ends at
+terminal punctuation (`. ! ? 。 ！ ？ …`); an ellipsis followed by a lowercase word
+continues. When the source has fewer than one full stop per 30 seconds (for
+example Japanese captions), a multilingual punctuation model
+(`1-800-BAD-CODE/xlm-roberta_punctuation_fullstop_truecase`, via the
+`punctuators` package in the `server` extra, CPU) proposes sentence ends inside
+runs longer than 10 seconds. A proposal is used only when it falls between words
+and the audio has a pause of at least 0.5 seconds there; on measured captions,
+every wrong proposal (mid-word or mid-clause) had no pause. The model's rewritten
+text is only used to locate breaks; returned text is never changed
+(`punctuation_restored` stays false). `meta.sentences.punctuation_model` reports
+whether it ran and any load error (the view then falls back to pauses), and
+`meta.sentences.model_boundaries` lists rows that end at a model boundary. The
+first such request downloads/loads the model (about 30 seconds). Punctuated
+sources never call it. It never breaks at a speaker change: a mixed sentence has
+`speaker:null` and every word keeps its own `speaker`. A sentence longer than 30
+seconds (typically unpunctuated captions) is split only between words (Japanese:
+only between BudouX phrases) at the longest pause, preferring a comma or speaker
+change and keeping both sides at least 2 seconds when possible;
+`meta.sentences.forced_boundaries` lists the indices of rows that end at such a
+split rather than punctuation. Rows carry `char_start`/`char_end` as above.
+Text from two source segments joins with nothing next to a script written
+without spaces (Japanese, Chinese, Thai and full-width punctuation) and with a
+space otherwise, so `Hello` + `world.` stays two words in a Japanese transcript.
+A row spans its timed words (earliest start, latest end). When its first or last
+word has no timing, the row widens to the nearest known time outside it (the
+neighbouring rows' words, or the source segment's own edge) and is listed in
+`meta.sentences.estimated_bounds`; with no such time that bound is `null`.
+Segments whose words don't map onto their text (alignment off or failed) pass
+through unchanged and are listed in `meta.sentences.fallbacks` with a `reason`.
+Abbreviations such as "Dr." end a sentence. It is
+JSON-only and cannot be combined with `readable=true`.
 
 When alignment is unavailable or words cannot be mapped to the source text,
 text still breaks into short units. Newly split units have `start:null,end:null`
