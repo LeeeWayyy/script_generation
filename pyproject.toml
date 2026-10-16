@@ -22,6 +22,9 @@ dependencies = []
 # platform/CUDA-specific. See README for the right install command for your box.
 dev = [
     "budoux>=0.7,<1",
+    "fugashi>=1.3,<2",
+    "pypinyin>=0.51,<1",
+    "unidic-lite>=1.0.8,<2",
     "pytest>=7.4",
     "ruff>=0.4",
     # The test suite drives the FastAPI app + TestClient (which needs httpx) and
@@ -67,6 +70,11 @@ server = [
     # unit=sentence: multilingual (incl. ja/zh) sentence-boundary model, run on
     # CPU via onnxruntime only for sources without punctuation. Lazy-imported.
     "punctuators>=0.0.7,<0.1",
+    # unit=sentence readings: kana over Japanese kanji (MeCab + UniDic) and pinyin
+    # over Chinese. Lazy-imported; rows go without readings when missing.
+    "fugashi>=1.3,<2",
+    "unidic-lite>=1.0.8,<2",
+    "pypinyin>=0.51,<1",
     # Media-extraction (image_note OCR, podcast RSS). All lazy-imported.
     # Pinned <3: PaddleOCR 3.x renamed the constructor kwargs (show_log removed,
     # use_angle_cls -> use_textline_orientation, det_limit_side_len ->

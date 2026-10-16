@@ -844,6 +844,15 @@ A row spans its timed words (earliest start, latest end). When its first or last
 word has no timing, the row widens to the nearest known time outside it (the
 neighbouring rows' words, or the source segment's own edge) and is listed in
 `meta.sentences.estimated_bounds`; with no such time that bound is `null`.
+Japanese and Chinese rows also carry `readings`: spans of the row text
+(`char_start`/`char_end`, as for words) with a `reading`. Japanese gives each
+morpheme with kanji its hiragana from MeCab + UniDic (`fugashi`, `unidic-lite`),
+read in context (`行った` → `行っ` `いっ`); Chinese gives each hanzi its pinyin
+with tone marks from `pypinyin`, whose phrases settle polyphones (`银行` → `yín`
+`háng`). They are spans rather than a per-word field because Japanese words are
+aligned one character at a time. Both libraries are in the `server` extra; when
+one is missing, rows have no `readings` and `meta.sentences.readings.error` says
+why (`source` and `versions` name what read them).
 Segments whose words don't map onto their text (alignment off or failed) pass
 through unchanged and are listed in `meta.sentences.fallbacks` with a `reason`.
 Abbreviations such as "Dr." end a sentence. It is

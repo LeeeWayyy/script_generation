@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hmac
 import ipaddress
+import json
 import logging
 import math
 import os
@@ -994,7 +995,10 @@ def create_app(
                 raise HTTPException(status_code=400,
                                     detail="unit=sentence requires format=json without readable")
             from .readable import sentence_transcript
-            return render(sentence_transcript(job.transcript), format, offsets=True)
+            from .readings import attach_readings
+            sentences = sentence_transcript(job.transcript).to_dict(offsets=True)
+            return json.dumps(attach_readings(sentences, job.transcript.language),
+                              indent=2, ensure_ascii=False)
         if readable:
             if format != "json":
                 raise HTTPException(status_code=400, detail="readable=true requires format=json")
