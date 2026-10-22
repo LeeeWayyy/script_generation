@@ -9,7 +9,8 @@ Run:
     transcript-server --host 0.0.0.0 --port 8000
 
 Auth: every request (except /health) must send `Authorization: Bearer <token>`
-when TRANSCRIPT_TOKEN is set. Without a token, the CLI binds only to loopback
+when TRANSCRIPT_TOKEN is set; /health answers without it, but only with its status.
+Without a token, the CLI binds only to loopback
 unless ``--allow-open`` explicitly opts into an unauthenticated network bind.
 """
 
@@ -39,7 +40,7 @@ from typing import Optional
 # server.py is only ever imported on the server host (or in tests), both of which
 # have FastAPI; importing ``transcript`` itself stays cheap (it never imports this
 # module).
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
 from . import __version__
@@ -52,6 +53,12 @@ log = logging.getLogger("transcript.server")
 # disk before the (post-write) archive decompression cap even runs.
 MAX_UPLOAD_BYTES = int(os.environ.get("TRANSCRIPT_MAX_UPLOAD_BYTES", 8 * 1024 * 1024 * 1024))
 MAX_MULTIPART_OVERHEAD_BYTES = 1024 * 1024
+# Free space an upload must leave on the temp disk once copied. Starlette spools the
+# upload to an unnamed temp file that can't be moved, so for the length of the copy the
+# upload is on disk twice; refusing up front beats filling the disk partway through.
+UPLOAD_FREE_SPACE_RESERVE_BYTES = int(
+    os.environ.get("TRANSCRIPT_UPLOAD_RESERVE_BYTES", 512 * 1024 * 1024)
+)
 DEFAULT_MAX_QUEUE_SIZE = 32
 DEFAULT_JOB_TTL_S = 24 * 3600
 DEFAULT_MAX_TERMINAL_JOBS = 100
@@ -60,8 +67,13 @@ _ACTIVE_BUNDLE_TEMPS: set[str] = set()
 _ACTIVE_BUNDLE_TEMPS_LOCK = threading.Lock()
 
 
-class _RequestTooLarge(Exception):
-    pass
+class _RequestTooLarge(HTTPException):
+    """Raised from inside the body stream once it passes the limit. An HTTPException,
+    because FastAPI turns any other exception raised while it parses a form into a
+    400 ("There was an error parsing the body"); this one it passes on, as a 413."""
+
+    def __init__(self):
+        super().__init__(status_code=413, detail="Request body exceeds the size limit.")
 
 
 class BearerAuthMiddleware:
@@ -177,17 +189,56 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
         raise
 
 
+def _upload_size(file) -> Optional[int]:
+    """The spooled upload's length, without trusting any client-declared size."""
+    src = getattr(file, "file", None)
+    if src is None:
+        return None
+    try:
+        position = src.tell()
+        src.seek(0, os.SEEK_END)
+        size = src.tell()
+        src.seek(position)
+        return size
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def _require_free_space(directory: str, size: Optional[int]) -> None:
+    """Refuse (507) an upload whose copy would leave less than the reserve free."""
+    if size is None:
+        return
+    try:
+        free = shutil.disk_usage(directory).free
+    except OSError:
+        return
+    if free < size + UPLOAD_FREE_SPACE_RESERVE_BYTES:
+        raise HTTPException(
+            status_code=507, detail="Not enough free disk space on the server for this upload."
+        )
+
+
 def _stage_upload(file) -> "tuple[str, str, str]":
     """Save an upload to a fresh temp dir; return (local_path, source, tmp_dir).
-    Cleans up the temp dir on any failure (e.g. a 413) before re-raising."""
+    Cleans up the temp dir on any failure (e.g. a 413) before re-raising.
+
+    Starlette's spooled copy is closed (and so deleted) as soon as ours is written,
+    instead of when the response is sent, so the upload is on disk twice only while
+    it is being copied."""
     tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
     try:
         safe_name = _safe_upload_name(file.filename)
         dest = Path(tmp_dir) / safe_name
+        _require_free_space(tmp_dir, _upload_size(file))
         _save_upload(file.file, dest)
     except BaseException:
         shutil.rmtree(tmp_dir, ignore_errors=True)  # don't leak on 413
         raise
+    finally:
+        try:
+            file.file.close()
+        except Exception:  # noqa: BLE001 — closing early is best effort
+            pass
     return str(dest), f"upload:{safe_name}", tmp_dir
 
 
@@ -901,9 +952,25 @@ def create_app(
             ) from exc
         return _public(job)
 
+    expected_auth = f"Bearer {token}".encode() if token else None
+
     @app.get("/health")
-    def health():
+    def health(request: Request):
         engine = worker._engine
+        # /health stays open so a load balancer or `curl` can probe it, but with a token
+        # set only an authenticated caller sees job IDs, settings and package versions.
+        if expected_auth is not None:
+            values = [
+                value for name, value in request.scope.get("headers", ())
+                if name.lower() == b"authorization"
+            ]
+            if len(values) != 1 or not hmac.compare_digest(values[0], expected_auth):
+                return {
+                    "status": "ok",
+                    "model_loaded": bool(
+                        engine is not None and getattr(engine, "_asr", None) is not None
+                    ),
+                }
         return {
             "status": "ok",
             "model": model,

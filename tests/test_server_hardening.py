@@ -248,6 +248,78 @@ def test_request_body_limit_counts_streamed_chunks_without_content_length():
     assert sent[0]["status"] == 413
 
 
+def test_chunked_oversized_upload_is_413_not_400(monkeypatch, tmp_path):
+    # With no Content-Length the cap trips while FastAPI parses the form; it must still
+    # come back as 413, not FastAPI's generic 400 for a body it failed to parse.
+    import transcript.server as server
+
+    monkeypatch.setattr(server, "MAX_UPLOAD_BYTES", 16)
+    app = _app(monkeypatch, tmp_path)
+    body = (
+        b'--b\r\nContent-Disposition: form-data; name="file"; filename="a.mp3"\r\n'
+        b"Content-Type: application/octet-stream\r\n\r\n"
+        + b"x" * (server.MAX_MULTIPART_OVERHEAD_BYTES + 1024) + b"\r\n--b--\r\n"
+    )
+    chunks = [body[i:i + 65536] for i in range(0, len(body), 65536)]
+    messages = iter([
+        {"type": "http.request", "body": chunk, "more_body": i < len(chunks) - 1}
+        for i, chunk in enumerate(chunks)
+    ])
+    sent = []
+
+    async def receive():
+        return next(messages, {"type": "http.disconnect"})
+
+    async def send(message):
+        sent.append(message)
+
+    asyncio.run(app(
+        {
+            "type": "http", "method": "POST", "path": "/jobs", "raw_path": b"/jobs",
+            "query_string": b"", "root_path": "", "scheme": "http", "http_version": "1.1",
+            "server": ("test", 80), "client": ("test", 1),
+            "headers": [(b"content-type", b"multipart/form-data; boundary=b")],
+        },
+        receive,
+        send,
+    ))
+    assert sent[0]["status"] == 413
+
+
+def test_upload_refused_when_disk_would_fill(monkeypatch, tmp_path):
+    import transcript.server as server
+
+    monkeypatch.setattr(server, "UPLOAD_FREE_SPACE_RESERVE_BYTES", 1 << 62)
+    upload = SimpleNamespace(filename="a.mp3", file=io.BytesIO(b"audio"))
+    with pytest.raises(server.HTTPException) as refused:
+        server._stage_upload(upload)
+    assert refused.value.status_code == 507
+    assert upload.file.closed
+
+    monkeypatch.setattr(server, "UPLOAD_FREE_SPACE_RESERVE_BYTES", 0)
+    upload = SimpleNamespace(filename="a.mp3", file=io.BytesIO(b"audio"))
+    path, _, directory = server._stage_upload(upload)
+    try:
+        assert upload.file.closed  # the spooled copy goes as soon as ours is written
+        with open(path, "rb") as staged:
+            assert staged.read() == b"audio"
+    finally:
+        shutil.rmtree(directory)
+
+
+def test_health_hides_details_without_the_token(monkeypatch, tmp_path):
+    monkeypatch.setenv("TRANSCRIPT_TOKEN", "secret")
+    with TestClient(_app(monkeypatch, tmp_path)) as client:
+        anonymous = client.get("/health")
+        wrong = client.get("/health", headers={"Authorization": "Bearer nope"})
+        signed = client.get("/health", headers={"Authorization": "Bearer secret"})
+
+    assert anonymous.status_code == 200
+    assert anonymous.json() == {"status": "ok", "model_loaded": False}
+    assert wrong.json() == {"status": "ok", "model_loaded": False}
+    assert {"queued_or_running", "versions", "device"} <= set(signed.json())
+
+
 def test_bearer_auth_rejects_before_body_limit_or_receive():
     import transcript.server as server
 
