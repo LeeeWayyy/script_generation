@@ -32,7 +32,7 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import NewType, Optional
 
 # FastAPI types are imported at module level (not lazily) so that the request
 # models' stringified annotations — e.g. ``Optional[UploadFile]`` under
@@ -64,6 +64,10 @@ DEFAULT_JOB_TTL_S = 24 * 3600
 DEFAULT_MAX_TERMINAL_JOBS = 100
 DEFAULT_JANITOR_INTERVAL_S = 900
 _ACTIVE_BUNDLE_TEMPS: set[str] = set()
+# A form flag. Newer FastAPI reads a missing `bool` form field as an unchecked HTML
+# checkbox, False, whatever its default; that would turn diarize/align off for any
+# client that leaves them out. A distinct type keeps the declared default.
+_FormFlag = NewType("_FormFlag", bool)
 _ACTIVE_BUNDLE_TEMPS_LOCK = threading.Lock()
 
 
@@ -993,9 +997,9 @@ def create_app(
     def create_job(
         url: Optional[str] = Form(default=None),
         file: Optional[UploadFile] = File(default=None),
-        diarize: bool = Form(default=True),
-        align: bool = Form(default=True),
-        detect_music: bool = Form(default=False),
+        diarize: _FormFlag = Form(default=True),
+        align: _FormFlag = Form(default=True),
+        detect_music: _FormFlag = Form(default=False),
         language: Optional[str] = Form(default=None),
         min_speakers: Optional[int] = Form(default=None),
         max_speakers: Optional[int] = Form(default=None),
@@ -1095,13 +1099,13 @@ def create_app(
         kind: str = Form(...),
         url: Optional[str] = Form(default=None),
         file: Optional[UploadFile] = File(default=None),
-        diarize: bool = Form(default=True),
-        align: bool = Form(default=True),
-        detect_music: bool = Form(default=False),
+        diarize: _FormFlag = Form(default=True),
+        align: _FormFlag = Form(default=True),
+        detect_music: _FormFlag = Form(default=False),
         language: Optional[str] = Form(default=None),
         min_speakers: Optional[int] = Form(default=None),
         max_speakers: Optional[int] = Form(default=None),
-        frames: bool = Form(default=False),
+        frames: _FormFlag = Form(default=False),
         cadence_s: Optional[float] = Form(default=None),
         feed_url: Optional[str] = Form(default=None),
         episode_guid: Optional[str] = Form(default=None),
