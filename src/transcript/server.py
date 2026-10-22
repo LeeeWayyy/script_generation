@@ -9,7 +9,8 @@ Run:
     transcript-server --host 0.0.0.0 --port 8000
 
 Auth: every request (except /health) must send `Authorization: Bearer <token>`
-when TRANSCRIPT_TOKEN is set. Without a token, the CLI binds only to loopback
+when TRANSCRIPT_TOKEN is set; /health answers without it, but only with its status.
+Without a token, the CLI binds only to loopback
 unless ``--allow-open`` explicitly opts into an unauthenticated network bind.
 """
 
@@ -31,7 +32,7 @@ import uuid
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import NewType, Optional
 
 # FastAPI types are imported at module level (not lazily) so that the request
 # models' stringified annotations — e.g. ``Optional[UploadFile]`` under
@@ -39,7 +40,7 @@ from typing import Optional
 # server.py is only ever imported on the server host (or in tests), both of which
 # have FastAPI; importing ``transcript`` itself stays cheap (it never imports this
 # module).
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, Response, StreamingResponse
 
 from . import __version__
@@ -52,16 +53,51 @@ log = logging.getLogger("transcript.server")
 # disk before the (post-write) archive decompression cap even runs.
 MAX_UPLOAD_BYTES = int(os.environ.get("TRANSCRIPT_MAX_UPLOAD_BYTES", 8 * 1024 * 1024 * 1024))
 MAX_MULTIPART_OVERHEAD_BYTES = 1024 * 1024
+# Free space an upload must leave on the temp disk once copied. Starlette spools the
+# upload to an unnamed temp file that can't be moved, so for the length of the copy the
+# upload is on disk twice; refusing up front beats filling the disk partway through.
+UPLOAD_FREE_SPACE_RESERVE_BYTES = int(
+    os.environ.get("TRANSCRIPT_UPLOAD_RESERVE_BYTES", 512 * 1024 * 1024)
+)
 DEFAULT_MAX_QUEUE_SIZE = 32
 DEFAULT_JOB_TTL_S = 24 * 3600
 DEFAULT_MAX_TERMINAL_JOBS = 100
 DEFAULT_JANITOR_INTERVAL_S = 900
 _ACTIVE_BUNDLE_TEMPS: set[str] = set()
+# A form flag. Newer FastAPI reads a missing `bool` form field as an unchecked HTML
+# checkbox, False, whatever its default; that would turn diarize/align off for any
+# client that leaves them out. A distinct type keeps the declared default.
+_FormFlag = NewType("_FormFlag", bool)
 _ACTIVE_BUNDLE_TEMPS_LOCK = threading.Lock()
 
 
-class _RequestTooLarge(Exception):
-    pass
+class _RequestTooLarge(HTTPException):
+    """Raised from inside the body stream once it passes the limit. An HTTPException,
+    because FastAPI turns any other exception raised while it parses a form into a
+    400 ("There was an error parsing the body"); this one it passes on, as a 413."""
+
+    def __init__(self):
+        super().__init__(status_code=413, detail="Request body exceeds the size limit.")
+
+
+class _InsufficientStorage(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=507, detail="Not enough free disk space on the server for this upload."
+        )
+
+
+# How often (in bytes received or copied) an upload re-checks free disk space.
+_DISK_CHECK_INTERVAL_BYTES = 8 * 1024 * 1024
+
+
+def _short_of_space(directory: str, needed: int) -> bool:
+    """Whether ``directory``'s disk has less than ``needed`` plus the reserve free."""
+    try:
+        free = shutil.disk_usage(directory).free
+    except OSError:
+        return False
+    return free < needed + UPLOAD_FREE_SPACE_RESERVE_BYTES
 
 
 class BearerAuthMiddleware:
@@ -90,7 +126,13 @@ class BearerAuthMiddleware:
 
 
 class RequestBodyLimitMiddleware:
-    """Reject oversized bodies before or while Starlette parses multipart data."""
+    """Reject oversized bodies before or while Starlette parses multipart data.
+
+    Also refuses (507) a body the temp disk can't hold. Starlette spools an upload to
+    the temp disk while it parses the form, and the server then copies it, so a body
+    needs room for itself twice. That's checked up front from Content-Length, and
+    again every few MiB as it arrives: each check sees the space other uploads have
+    already taken, so concurrent uploads can't all pass one stale reading."""
 
     def __init__(self, app, max_bytes: int):
         self.app = app
@@ -108,28 +150,37 @@ class RequestBodyLimitMiddleware:
         if declared > self.max_bytes:
             await self._reject(scope, receive, send)
             return
+        spool_dir = tempfile.gettempdir()
+        if declared > _DISK_CHECK_INTERVAL_BYTES and _short_of_space(spool_dir, 2 * declared):
+            await self._reject(scope, receive, send, _InsufficientStorage())
+            return
 
         received = 0
+        next_disk_check = _DISK_CHECK_INTERVAL_BYTES
 
         async def limited_receive():
-            nonlocal received
+            nonlocal received, next_disk_check
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > self.max_bytes:
                     raise _RequestTooLarge
+                if received >= next_disk_check:
+                    next_disk_check = received + _DISK_CHECK_INTERVAL_BYTES
+                    # What has arrived is spooled already; it still needs room for its copy.
+                    if _short_of_space(spool_dir, received):
+                        raise _InsufficientStorage
             return message
 
         try:
             await self.app(scope, limited_receive, send)
-        except _RequestTooLarge:
-            await self._reject(scope, receive, send)
+        except (_RequestTooLarge, _InsufficientStorage) as exc:
+            await self._reject(scope, receive, send, exc)
 
     @staticmethod
-    async def _reject(scope, receive, send):
-        response = JSONResponse(
-            {"detail": "Request body exceeds the size limit."}, status_code=413
-        )
+    async def _reject(scope, receive, send, exc: Optional[HTTPException] = None):
+        exc = exc or _RequestTooLarge()
+        response = JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         await response(scope, receive, send)
 
 
@@ -158,9 +209,11 @@ class _CleanupStreamingResponse(StreamingResponse):
 
 def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
     """Stream an UploadFile to ``dest`` in chunks, aborting (HTTPException 413) if
-    it exceeds ``max_bytes`` — never trusts a client-declared length."""
+    it exceeds ``max_bytes`` — never trusts a client-declared length. Refuses (507)
+    once the disk gets down to the reserve, which other uploads may be filling too."""
     max_bytes = MAX_UPLOAD_BYTES if max_bytes is None else max_bytes
     written = 0
+    next_disk_check = 0
     try:
         with dest.open("wb") as fh:
             while True:
@@ -170,6 +223,10 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
                 written += len(chunk)
                 if written > max_bytes:
                     raise HTTPException(status_code=413, detail="Upload exceeds the size limit.")
+                if written >= next_disk_check:
+                    next_disk_check = written + _DISK_CHECK_INTERVAL_BYTES
+                    if _short_of_space(str(dest.parent), len(chunk)):
+                        raise _InsufficientStorage
                 fh.write(chunk)
     except BaseException:
         # Any failure (413, or an OSError like disk-full) must not leave a partial.
@@ -177,17 +234,48 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
         raise
 
 
+def _upload_size(file) -> Optional[int]:
+    """The spooled upload's length, without trusting any client-declared size."""
+    src = getattr(file, "file", None)
+    if src is None:
+        return None
+    try:
+        position = src.tell()
+        src.seek(0, os.SEEK_END)
+        size = src.tell()
+        src.seek(position)
+        return size
+    except (AttributeError, OSError, ValueError):
+        return None
+
+
+def _require_free_space(directory: str, size: Optional[int]) -> None:
+    """Refuse (507) an upload whose copy would leave less than the reserve free."""
+    if size is not None and _short_of_space(directory, size):
+        raise _InsufficientStorage
+
+
 def _stage_upload(file) -> "tuple[str, str, str]":
     """Save an upload to a fresh temp dir; return (local_path, source, tmp_dir).
-    Cleans up the temp dir on any failure (e.g. a 413) before re-raising."""
+    Cleans up the temp dir on any failure (e.g. a 413) before re-raising.
+
+    Starlette's spooled copy is closed (and so deleted) as soon as ours is written,
+    instead of when the response is sent, so the upload is on disk twice only while
+    it is being copied."""
     tmp_dir = tempfile.mkdtemp(prefix="transcript-upload-")
     try:
         safe_name = _safe_upload_name(file.filename)
         dest = Path(tmp_dir) / safe_name
+        _require_free_space(tmp_dir, _upload_size(file))
         _save_upload(file.file, dest)
     except BaseException:
         shutil.rmtree(tmp_dir, ignore_errors=True)  # don't leak on 413
         raise
+    finally:
+        try:
+            file.file.close()
+        except Exception:  # noqa: BLE001 — closing early is best effort
+            pass
     return str(dest), f"upload:{safe_name}", tmp_dir
 
 
@@ -901,9 +989,25 @@ def create_app(
             ) from exc
         return _public(job)
 
+    expected_auth = f"Bearer {token}".encode() if token else None
+
     @app.get("/health")
-    def health():
+    def health(request: Request):
         engine = worker._engine
+        # /health stays open so a load balancer or `curl` can probe it, but with a token
+        # set only an authenticated caller sees job IDs, settings and package versions.
+        if expected_auth is not None:
+            values = [
+                value for name, value in request.scope.get("headers", ())
+                if name.lower() == b"authorization"
+            ]
+            if len(values) != 1 or not hmac.compare_digest(values[0], expected_auth):
+                return {
+                    "status": "ok",
+                    "model_loaded": bool(
+                        engine is not None and getattr(engine, "_asr", None) is not None
+                    ),
+                }
         return {
             "status": "ok",
             "model": model,
@@ -926,9 +1030,9 @@ def create_app(
     def create_job(
         url: Optional[str] = Form(default=None),
         file: Optional[UploadFile] = File(default=None),
-        diarize: bool = Form(default=True),
-        align: bool = Form(default=True),
-        detect_music: bool = Form(default=False),
+        diarize: _FormFlag = Form(default=True),
+        align: _FormFlag = Form(default=True),
+        detect_music: _FormFlag = Form(default=False),
         language: Optional[str] = Form(default=None),
         min_speakers: Optional[int] = Form(default=None),
         max_speakers: Optional[int] = Form(default=None),
@@ -1028,13 +1132,13 @@ def create_app(
         kind: str = Form(...),
         url: Optional[str] = Form(default=None),
         file: Optional[UploadFile] = File(default=None),
-        diarize: bool = Form(default=True),
-        align: bool = Form(default=True),
-        detect_music: bool = Form(default=False),
+        diarize: _FormFlag = Form(default=True),
+        align: _FormFlag = Form(default=True),
+        detect_music: _FormFlag = Form(default=False),
         language: Optional[str] = Form(default=None),
         min_speakers: Optional[int] = Form(default=None),
         max_speakers: Optional[int] = Form(default=None),
-        frames: bool = Form(default=False),
+        frames: _FormFlag = Form(default=False),
         cadence_s: Optional[float] = Form(default=None),
         feed_url: Optional[str] = Form(default=None),
         episode_guid: Optional[str] = Form(default=None),

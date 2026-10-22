@@ -411,7 +411,7 @@ published.
 
 | Method & path | Auth | Body / params | Returns |
 |---------------|------|---------------|---------|
-| `GET /health` | none | — | status, queue, active inference settings, model-loaded state, package versions |
+| `GET /health` | none (details need bearer when a token is set) | — | status and model-loaded state; with a valid bearer token, or with no token configured, also queue, active inference settings, package versions |
 | `POST /jobs` | bearer | multipart: exactly one `file` or public HTTP(S) `url`; optional `diarize`, `align`, `language`, speaker hints, `detect_music` | transcript job status |
 | `GET /jobs` | bearer | — | list of jobs |
 | `GET /jobs/{id}` | bearer | — | status (`queued`, `running`, `done`, `error`) |
@@ -447,7 +447,9 @@ and `error`; they do not promise percentages or an ETA. A durable extraction
 found after restart exposes only the smaller persisted status record.
 
 Auth: when `TRANSCRIPT_TOKEN` is set, every endpoint except `/health` requires
-`Authorization: Bearer <token>`. The CLI defaults to `127.0.0.1`; a non-loopback
+`Authorization: Bearer <token>`. `/health` always answers, but without a valid
+token it returns only `status` and `model_loaded`, so job IDs, settings, and
+package versions stay private. The CLI defaults to `127.0.0.1`; a non-loopback
 bind without a token requires the explicit `--allow-open` opt-in and is suitable
 only for a separately isolated, firewalled environment.
 
@@ -568,6 +570,7 @@ the default pipeline.
 | `TRANSCRIPT_OCR_MODEL_DIR` | server | Pinned OCR root containing `det/rec/cls`. |
 | `TRANSCRIPT_OCR_ALLOW_DOWNLOAD=1` | server | Explicitly allow PaddleOCR first-run downloads. |
 | `TRANSCRIPT_MAX_UPLOAD_BYTES` | server | Uploaded file-byte cap; default 8 GiB. |
+| `TRANSCRIPT_UPLOAD_RESERVE_BYTES` | server | Free temp-disk space an upload must leave after it is copied, else `507`; default 512 MiB. |
 | `TRANSCRIPT_MAX_DOWNLOAD_BYTES` | local, server | yt-dlp media-file cap; default 8 GiB. |
 | `TRANSCRIPT_DOWNLOAD_TIMEOUT_S` | local, server | yt-dlp subprocess deadline; default 3600 seconds. |
 | `TRANSCRIPT_MAX_AUDIO_BYTES` | local, server | Decoded 16 kHz mono WAV cap; default 8 GiB. |
@@ -672,8 +675,15 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
   controlled tests or an isolated deployment with independently enforced egress.
 - Upload filenames are treated as untrusted. `TRANSCRIPT_MAX_UPLOAD_BYTES` caps
   file bytes; the ASGI body limit automatically adds 1 MiB for multipart
-  framing. Configure a smaller reverse-proxy ingress cap if 8 GiB is unnecessary
-  for your deployment.
+  framing. A body over the cap is a `413` whether or not the client sent a
+  `Content-Length`. Configure a smaller reverse-proxy ingress cap if 8 GiB is
+  unnecessary for your deployment.
+- An upload is briefly on the temp disk twice: Starlette spools it while parsing
+  the form, and that copy is deleted as soon as the server's own copy is written.
+  An upload that would leave less than `TRANSCRIPT_UPLOAD_RESERVE_BYTES` free is
+  refused with `507`: up front from `Content-Length`, and otherwise as the body
+  arrives and while it is copied, so concurrent uploads can't all pass on one
+  reading.
 - URL downloads and OCR have separate byte/time/pixel ceilings (§9.4). These are
   process safeguards, not substitutes for filesystem quotas and outbound policy.
 - The launch scripts restrict persisted token files to the current owner. The

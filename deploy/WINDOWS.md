@@ -126,9 +126,11 @@ Test connectivity first:
 
 ```bash
 curl http://<windows-lan-ip>:8000/health
+curl -H "Authorization: Bearer <token>" http://<windows-lan-ip>:8000/health
 ```
 
-The response includes the active device, compute type, batch/beam settings,
+Without the token, `/health` answers only `status` and `model_loaded`. With it,
+the response includes the active device, compute type, batch/beam settings,
 whether the model is loaded, and the installed Torch/WhisperX/faster-whisper/
 CTranslate2 versions. With the supplied Windows launcher, `model_loaded` should
 be `true` before the server becomes reachable.
@@ -151,7 +153,7 @@ $env:TRANSCRIPT_PORT = "8001"
 .\deploy\run-server.ps1
 ```
 
-From the Mac, confirm `/health` reports the candidate version and rerun the same
+From the Mac, confirm `/health` (sent with the bearer token) reports the candidate version and rerun the same
 pinned benchmark corpus against port `8001`. Promote the environment only if
 WER/CER do not regress and median latency/RTF improve; otherwise keep the
 existing production environment. This also catches CUDA/driver incompatibility
