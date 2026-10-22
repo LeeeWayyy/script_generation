@@ -80,6 +80,26 @@ class _RequestTooLarge(HTTPException):
         super().__init__(status_code=413, detail="Request body exceeds the size limit.")
 
 
+class _InsufficientStorage(HTTPException):
+    def __init__(self):
+        super().__init__(
+            status_code=507, detail="Not enough free disk space on the server for this upload."
+        )
+
+
+# How often (in bytes received or copied) an upload re-checks free disk space.
+_DISK_CHECK_INTERVAL_BYTES = 8 * 1024 * 1024
+
+
+def _short_of_space(directory: str, needed: int) -> bool:
+    """Whether ``directory``'s disk has less than ``needed`` plus the reserve free."""
+    try:
+        free = shutil.disk_usage(directory).free
+    except OSError:
+        return False
+    return free < needed + UPLOAD_FREE_SPACE_RESERVE_BYTES
+
+
 class BearerAuthMiddleware:
     """Reject unauthenticated requests before anything reads their body."""
 
@@ -106,7 +126,13 @@ class BearerAuthMiddleware:
 
 
 class RequestBodyLimitMiddleware:
-    """Reject oversized bodies before or while Starlette parses multipart data."""
+    """Reject oversized bodies before or while Starlette parses multipart data.
+
+    Also refuses (507) a body the temp disk can't hold. Starlette spools an upload to
+    the temp disk while it parses the form, and the server then copies it, so a body
+    needs room for itself twice. That's checked up front from Content-Length, and
+    again every few MiB as it arrives: each check sees the space other uploads have
+    already taken, so concurrent uploads can't all pass one stale reading."""
 
     def __init__(self, app, max_bytes: int):
         self.app = app
@@ -124,28 +150,37 @@ class RequestBodyLimitMiddleware:
         if declared > self.max_bytes:
             await self._reject(scope, receive, send)
             return
+        spool_dir = tempfile.gettempdir()
+        if declared > _DISK_CHECK_INTERVAL_BYTES and _short_of_space(spool_dir, 2 * declared):
+            await self._reject(scope, receive, send, _InsufficientStorage())
+            return
 
         received = 0
+        next_disk_check = _DISK_CHECK_INTERVAL_BYTES
 
         async def limited_receive():
-            nonlocal received
+            nonlocal received, next_disk_check
             message = await receive()
             if message["type"] == "http.request":
                 received += len(message.get("body", b""))
                 if received > self.max_bytes:
                     raise _RequestTooLarge
+                if received >= next_disk_check:
+                    next_disk_check = received + _DISK_CHECK_INTERVAL_BYTES
+                    # What has arrived is spooled already; it still needs room for its copy.
+                    if _short_of_space(spool_dir, received):
+                        raise _InsufficientStorage
             return message
 
         try:
             await self.app(scope, limited_receive, send)
-        except _RequestTooLarge:
-            await self._reject(scope, receive, send)
+        except (_RequestTooLarge, _InsufficientStorage) as exc:
+            await self._reject(scope, receive, send, exc)
 
     @staticmethod
-    async def _reject(scope, receive, send):
-        response = JSONResponse(
-            {"detail": "Request body exceeds the size limit."}, status_code=413
-        )
+    async def _reject(scope, receive, send, exc: Optional[HTTPException] = None):
+        exc = exc or _RequestTooLarge()
+        response = JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         await response(scope, receive, send)
 
 
@@ -174,9 +209,11 @@ class _CleanupStreamingResponse(StreamingResponse):
 
 def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
     """Stream an UploadFile to ``dest`` in chunks, aborting (HTTPException 413) if
-    it exceeds ``max_bytes`` — never trusts a client-declared length."""
+    it exceeds ``max_bytes`` — never trusts a client-declared length. Refuses (507)
+    once the disk gets down to the reserve, which other uploads may be filling too."""
     max_bytes = MAX_UPLOAD_BYTES if max_bytes is None else max_bytes
     written = 0
+    next_disk_check = 0
     try:
         with dest.open("wb") as fh:
             while True:
@@ -186,6 +223,10 @@ def _save_upload(src, dest: "Path", max_bytes: Optional[int] = None) -> None:
                 written += len(chunk)
                 if written > max_bytes:
                     raise HTTPException(status_code=413, detail="Upload exceeds the size limit.")
+                if written >= next_disk_check:
+                    next_disk_check = written + _DISK_CHECK_INTERVAL_BYTES
+                    if _short_of_space(str(dest.parent), len(chunk)):
+                        raise _InsufficientStorage
                 fh.write(chunk)
     except BaseException:
         # Any failure (413, or an OSError like disk-full) must not leave a partial.
@@ -210,16 +251,8 @@ def _upload_size(file) -> Optional[int]:
 
 def _require_free_space(directory: str, size: Optional[int]) -> None:
     """Refuse (507) an upload whose copy would leave less than the reserve free."""
-    if size is None:
-        return
-    try:
-        free = shutil.disk_usage(directory).free
-    except OSError:
-        return
-    if free < size + UPLOAD_FREE_SPACE_RESERVE_BYTES:
-        raise HTTPException(
-            status_code=507, detail="Not enough free disk space on the server for this upload."
-        )
+    if size is not None and _short_of_space(directory, size):
+        raise _InsufficientStorage
 
 
 def _stage_upload(file) -> "tuple[str, str, str]":

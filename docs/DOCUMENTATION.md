@@ -678,10 +678,12 @@ startup cleanup. Tune only after measuring workload with the variables in §9.4.
   framing. A body over the cap is a `413` whether or not the client sent a
   `Content-Length`. Configure a smaller reverse-proxy ingress cap if 8 GiB is
   unnecessary for your deployment.
-- An upload is briefly on the temp disk twice: Starlette's spooled copy is
-  deleted as soon as the server's own copy is written. An upload that would leave
-  less than `TRANSCRIPT_UPLOAD_RESERVE_BYTES` free is refused with `507` before
-  copying starts.
+- An upload is briefly on the temp disk twice: Starlette spools it while parsing
+  the form, and that copy is deleted as soon as the server's own copy is written.
+  An upload that would leave less than `TRANSCRIPT_UPLOAD_RESERVE_BYTES` free is
+  refused with `507`: up front from `Content-Length`, and otherwise as the body
+  arrives and while it is copied, so concurrent uploads can't all pass on one
+  reading.
 - URL downloads and OCR have separate byte/time/pixel ceilings (§9.4). These are
   process safeguards, not substitutes for filesystem quotas and outbound policy.
 - The launch scripts restrict persisted token files to the current owner. The

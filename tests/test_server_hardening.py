@@ -307,6 +307,79 @@ def test_upload_refused_when_disk_would_fill(monkeypatch, tmp_path):
         shutil.rmtree(directory)
 
 
+def test_body_refused_while_it_arrives_once_disk_runs_short(monkeypatch):
+    # Starlette spools the whole upload before any route runs, so the disk check has
+    # to happen as the body arrives, not only before the server's own copy.
+    import transcript.server as server
+
+    monkeypatch.setattr(server, "_DISK_CHECK_INTERVAL_BYTES", 4)
+    free = {"left": 10}
+    monkeypatch.setattr(
+        server, "_short_of_space", lambda directory, needed: needed > free["left"],
+    )
+
+    def run(headers, chunks):
+        consumed = []
+
+        async def inner(scope, receive, send):
+            while True:
+                message = await receive()
+                consumed.append(message)
+                if not message.get("more_body"):
+                    break
+            await server.JSONResponse({"ok": True})(scope, receive, send)
+
+        messages = iter([
+            {"type": "http.request", "body": chunk, "more_body": i < len(chunks) - 1}
+            for i, chunk in enumerate(chunks)
+        ])
+        sent = []
+
+        async def receive():
+            return next(messages, {"type": "http.disconnect"})
+
+        async def send(message):
+            sent.append(message)
+
+        middleware = server.RequestBodyLimitMiddleware(inner, max_bytes=1000)
+        asyncio.run(middleware(
+            {"type": "http", "method": "POST", "path": "/jobs", "headers": headers},
+            receive, send,
+        ))
+        return sent[0]["status"], len(consumed)
+
+    assert run([], [b"x" * 5, b"x" * 5]) == (200, 2)
+    # The third chunk brings it to 15 > 10: refused as it arrives, never handed on.
+    assert run([], [b"x" * 5, b"x" * 5, b"x" * 5]) == (507, 2)
+    # A declared length that can't fit twice is refused before anything is read.
+    assert run([(b"content-length", b"8")], [b"x" * 8]) == (507, 0)
+
+
+def test_copy_stops_when_disk_reaches_the_reserve(monkeypatch, tmp_path):
+    # Two uploads can pass the preflight on the same free-space reading; the copy
+    # re-checks as it writes, so the second one stops instead of filling the disk.
+    import transcript.server as server
+
+    monkeypatch.setattr(server, "_DISK_CHECK_INTERVAL_BYTES", 1)
+    checks = []
+
+    def short(directory, needed):
+        checks.append(needed)
+        return len(checks) > 1
+
+    monkeypatch.setattr(server, "_short_of_space", short)
+
+    class Chunks(io.BytesIO):
+        def read(self, size=-1):
+            return super().read(2)
+
+    dest = tmp_path / "copy.bin"
+    with pytest.raises(server.HTTPException) as refused:
+        server._save_upload(Chunks(b"abcdef"), dest)
+    assert refused.value.status_code == 507
+    assert not dest.exists()
+
+
 def test_health_hides_details_without_the_token(monkeypatch, tmp_path):
     monkeypatch.setenv("TRANSCRIPT_TOKEN", "secret")
     with TestClient(_app(monkeypatch, tmp_path)) as client:
